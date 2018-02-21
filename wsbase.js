@@ -22,6 +22,9 @@ class Coin
     xpriv2priv(xpriv);//converts an xpriv to the equivalent priv
     xpub2pub(xpub);//converts an xpub to the equivalent pub
 
+    
+    //this is the regex for descend: (?:m\/)?(\d+'?(?:\/\d+'?)*)
+    //https://regex101.com/r/1CFC9E/1
     descend(xprivorxpub,path); //path is a string matching a regex, or a single integer, or a list of numbers.  If the number is negative, then it's the 'hardened'.
         //It's important that -0 is accepted and distinguished from 0..can be done with Object.is(x,+0); https://stackoverflow.com/questions/7223359/are-0-and-0-the-same    
     //end0
