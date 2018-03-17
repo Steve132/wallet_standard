@@ -1,6 +1,9 @@
 import hashlib,hmac
 from binascii import hexlify,unhexlify
 import struct
+import _crypto
+import _slip44
+
 #https://github.com/iancoleman/bip39/issues/58#issuecomment-281905574
 def _hparse(s):
 	try:
@@ -9,12 +12,16 @@ def _hparse(s):
 	except ValueError:
 		return s
 
-_xkeydatastruct=struct.Struct("!LBLL32s33s")
 def _parse256(I):
 	pass #todo: verify if valid key
 
 def _dblsha256(byts):
 	return hashlib.sha256(hashlib.sha256(byts).digest()).digest()
+def _hash160(byts):
+	rmd=hashlib.new('ripemd160')
+	rmd.update(hashlib.sha256(byts).digest())
+	return rmd.digest()
+
 def _bytes2int(byts):
 	return int(hexlify(byts),16)
 def _int2bytes(bint,mxlen=None):
@@ -22,7 +29,6 @@ def _int2bytes(bint,mxlen=None):
 	sv=fmt % bint
 	sv = '0'+sv if len(sv) & 1 else sv
 	return unhexlify(sv)
-
 
 def _bytes2checksum(byts):
 	return _dblsha256(byts)[:4]
@@ -68,62 +74,125 @@ def _base58c2bytes(b58str):
 		raise Exception("Base58check checksum for %s did not validate" % (b58str))
 	return byts
 
-class _Hardened(object):
-	def __init__(self,k):
-		self.k=abs(int(k))
+_xkeydatastruct=struct.Struct("!LBLL32s33s")
+class ExtendedKey(object):
+	def __init__(self,version,depth=None,fingerprint=None,child=None,chaincode=None,keydata=None):
+		if(depth is None and fingerprint is None and child is None and chaincode is None and keydata is None):
+			data=_base58c2bytes(b58str)
+			self.version,self.depth,self.fingerprint,self.child,self.chaincode,self.keydata=_xkeydatastruct.unpack(data)
+		else:
+			self.version=version
+			self.depth=depth
+			self.fingerprint=fingerprint
+			self.child=child
+			self.chaincode=chaincode
+			self.keydata=keydata
+		
+	def __str__(self):
+		data=_xkeydatastruct.pack(self.version,self.depth,self.fingerprint,self.child,self.chaincode,self.keydata)
+		return _bytes2base58c(data)
+
+	def toxpub(self):
+		if(not self.is_private()):
+			return self
+		
+			
+	def is_private(self):
+		return (xkey.keydata[0]==b'\x00')
+		
+
+_xkeydatastruct=struct.Struct("!LBLL32s33s")
+class PrivateKey(object):
+	def __init__(self,serialdata):
+		data=_base58c2bytes(b58str)
 
 def h(k):
-	return _Hardened(k)
-	
+	return (abs(k) | (1 << 31)) & (0xFFFFFFFF)
+
+
 class Coin(object):
 	def __init__(self,ticker,network='main'):
 		self.ticker=ticker
 		self.network=network
-
-	def _serializexkey(self,version,depth,fingerprint,child,chaincode,keydata):
-		data=_xkeydatastruct.pack(version,depth,fingerprint,child,chaincode,keydata)
-		return _bytes2base58c(data)
-	def _deserializexkey(self,b58str):
-		data=_base58c2bytes(b58str)
-		return _xkeydatastruct.unpack(data)
-
+	
 	def seed2master(self,seed):
 		seed=_hparse(seed)
 		digest=hmac.new(b"Bitcoin seed",seed,hashlib.sha512).digest()
-		I_left,I_right=digest[32:],digest[:32]
-		Irp=_parse256(I_right) #errror check
+		I_left,I_right=digest[:32],digest[32:]
+		Ilp=_parse256(I_left) #errror check
 		version=self.masterversion(private=True)
-		return self._serializexkey(version,0,0,0,I_left,b'\x00'+I_right)
+		return ExtendedKey(version,0,0,0,I_right,b'\x00'+I_left)
 
-	def descend(self,xkey,child):
-		if(isinstance(child,basestr)):
-			pass //do regex split and descend.
+	def descend(self,xkey,child,ignore_tag=False):
+		def _descend_extend(xkeyparent,isprivate,data,childindex):
+			data+=unhexlify("%08X" % (childindex))
+			digest=hmac.new(xkey.chaincode,data,hashlib.sha512).digest()
+			I_left,I_right=digest[:32],digest[32:]
+			Ilp=_parse256(I_left) #errror check
+			if(isprivate):
+				child_key=b'\x00'+_crypto.privkey_add(I_left,xkey.keydata[1:])
+				parent_pubkey=_crypto.privkey_to_compressed_pubkey(xkey.keydata[1:])
+			else:
+				pk=privkey_to_compressed_pubkey(I_left)
+				child_key=_crypto.pubkey_add(pk,xkey.keydata)
+				parent_pubkey=xkey.keydata
+				
+			child_chain=I_right
+			fg=int(hexlify(_hash160(parent_pubkey)[:4]),16)
+			return ExtendedKey(xkey.version,xkey.depth+1,fg,childindex,child_chain,child_key)
+
+		if(isinstance(xkey,basestring)):
+			xkey=ExtendedKey(xkey)
+
+		if(isinstance(child,basestring)):
+			def _checkvoidpath(p):
+				return (p=="/" or p=="" or p.lower()=="m")
+			
+			child=child.strip()
+			if(_checkvoidpath(child)):
+				return xkey
+			components=child.strip().split("/")
+			if(_checkvoidpath(components[0])):
+				components=components[1:]
+			if(components[-1]==''):
+				components=components[:-1]
+			components=[(h(int(x.strip("'H"))) if ("'" in x or "H" in x) else int(x)) for x in components]
+			return reduce(lambda xk,c: self.descend(xk,c),components,xkey)
 		try:
 			children=list(child)
-			return reduce(lambda xk,c: self.descend(xk,c),children,xk)
+			return reduce(lambda xk,c: self.descend(xk,c),children,xkey)
 		except TypeError:
 			pass
 
-		isHardened=False
-		if(isinstance(child,_Hardened)):
-			isHardened=True
-			dex=int(child.k)
-		else:	
-			dex=int(child)
-			if(dex < 0):
-				isHardened=True
-		version,depth,fingerprint,child,chaincode,keydata=self._deserializexkey(xkey)
-		private=(keydata[0]==b'\x00')
-		#if(keydata[0]==b'\x00'):
-			#if(version==self.masterversion(private=True)): #if it's a private key (can't trust the version info for this really...I mean I guess you could but meh)
-			#private=True
-		#else:
+		try:
+			child=int(child)
+		except TypeError:
+			raise Exception("Could not descend")
 
-		if(private):
-			
-			
+		isHardened=(child >= 0x70000000)
 		
+		private=(xkey.keydata[0]==b'\x00')
+		
+		if(private and (ignore_tag or xkey.version==self.masterversion(private==True))):
+			if(isHardened):
+				data=xkey.keydata
+			else:
+				data=_crypto.privkey_to_compressed_pubkey(xkey.keydata)
+			return _descend_extend(xkey,True,data,child)
+		elif(ignore_tag or xkey.version==self.masterversion(private==False)):
+			if(isHardened):
+				raise Exception("Cannot find the child of hardened key %s" % (xkey))
+			else:
+				data=xkey.keydata
+				return _descend_extend(xkey,False,data,child)
+		else:
+			raise Exception("The key type disagrees with the tag type")
+	
+	#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+	def cointypeid(self):
+		return _slip44.lookups[self.ticker]
 
+#segwitcoin
 class BTC(Coin):
 	def __init__(self,network='main'):
 		super(BTC,self).__init__('BTC',network)
@@ -133,4 +202,4 @@ class BTC(Coin):
 		else:
 			return 0x04358394 if private else 0x043587CF
 	
-		
+

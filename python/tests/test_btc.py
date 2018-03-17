@@ -1,4 +1,4 @@
-import wallet
+from .. import wallet
 from binascii import hexlify,unhexlify
 btc=wallet.BTC()
 
@@ -20,39 +20,14 @@ case1={'seed':"000102030405060708090a0b0c0d0e0f",
 	}
 	}
 
-case3={'seed':"4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be",
-	"paths":
-	{
-	"m":{"priv":"xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6",
-		"pub":"xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13"},
-	"m/0'":{"priv":"xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
-		"pub":"xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y"}
-	
-	}
-	}
-
 
 def testcase(coin,case):
 	seed=case['seed']
 	m=coin.seed2master(seed)
-	allpaths=True
 	for p,keys in case['paths'].items():
 		xprv=coin.descend(m,p)
-		testresult=str(xprv)==keys["priv"]
-		allpaths = allpaths and testresult
-		if(not testresult):
-			print(str(xprv))
-			print(keys["priv"])
-			print("TEST '%s' FAILED" % (p))
-	return allpaths
-	
+		print(str(xprv))
+		print(keys["priv"])
+		print(str(xprv)==keys["priv"])
 
-allcases=True
-cases=[case1,case3]
-for c in cases:
-	allcases = allcases and testcase(btc,c)
-
-if(allcases):
-	print("All tests passed")
-else:
-	print("Some tests failed")
+testcase(case1)
