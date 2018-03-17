@@ -192,14 +192,6 @@ class Coin(object):
 	def cointypeid(self):
 		return _slip44.lookups[self.ticker]
 
-#segwitcoin
-class BTC(Coin):
-	def __init__(self,network='main'):
-		super(BTC,self).__init__('BTC',network)
-	def masterversion(self,private):
-		if(self.network=='main'):
-			return 0x0488ADE4 if private else 0x0488B21E
-		else:
-			return 0x04358394 if private else 0x043587CF
+
 	
 
