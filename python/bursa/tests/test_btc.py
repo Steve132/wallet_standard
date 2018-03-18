@@ -1,6 +1,7 @@
-from .. import wallet
+from ... import wallet
 from binascii import hexlify,unhexlify
-btc=wallet.BTC()
+import coins.BTC
+btc=BTC()
 
 case1={'seed':"000102030405060708090a0b0c0d0e0f",
 	"paths":
@@ -31,3 +32,5 @@ def testcase(coin,case):
 		print(str(xprv)==keys["priv"])
 
 testcase(case1)
+
+print(btc.parse_privkey("Kzf4STdSAv2wPuQpRk8tCr9avyiHeqruJmNNopUMLJoVWakwLkhA"))

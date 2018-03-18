@@ -18,6 +18,10 @@ def _encode_priv(priv):
 def signdigest(privkey_bytes,digest):
 	pass
 
+def privkey_verify(privkey_bytes):
+	v=_decode_priv(privkey_bytes)
+	return v < _pybitcointoolscrypto.N
+
 def privkey_add(privkey_bytes1,privkey_bytes2):
 	a=_decode_priv(privkey_bytes1)
 	b=_decode_priv(privkey_bytes2)

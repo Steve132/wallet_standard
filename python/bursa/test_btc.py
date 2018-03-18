@@ -1,6 +1,8 @@
 import wallet
 from binascii import hexlify,unhexlify
-btc=wallet.BTC()
+import coins.btc
+
+btc=coins.btc.BTC()
 
 case1={'seed':"000102030405060708090a0b0c0d0e0f",
 	"paths":
