@@ -1,3 +1,6 @@
+import hashlib
+from binascii import hexlify,unhexlify
+
 #https://github.com/iancoleman/bip39/issues/58#issuecomment-281905574
 
 def dblsha256(byts):

@@ -1,7 +1,18 @@
-from ...wallet import *
+from ..wallet import *
+from .. import _base
+from .. import _slip44
+import hashlib
+
 
 def h(k):
 	return (abs(k) | (1 << 31)) & (0xFFFFFFFF)
+
+def _hparse(s):
+	try:
+		a=int(s,16)
+		return unhexlify(s)
+	except ValueError:
+		return s
 
 class Coin(object):
 	def __init__(self,ticker,is_testnet):
@@ -12,12 +23,12 @@ class Coin(object):
 	
 	def seed2master(self,seed,version=None):
 		if(not version):
-			version=self.bip32_default_prefix_private if private else self.bip32_default_prefix_public
+			version=self.bip32_default_prefix_private
 
 		seed=_hparse(seed)
 		digest=hmac.new(b"Bitcoin seed",seed,hashlib.sha512).digest()
 		I_left,I_right=digest[:32],digest[32:]
-		Ilp=_parse256(I_left) #errror check
+		Ilp=PrivateKey(I_left,is_compressed=True) #errror check
 		return ExtendedKey(version,0,0,0,I_right,b'\x00'+I_left)
 
 	def descend(self,xkey,child,ignore_tag=False):
@@ -27,11 +38,12 @@ class Coin(object):
 			I_left,I_right=digest[:32],digest[32:]
 			Ilp=PrivateKey(I_left,is_compressed=True) #errror check
 			if(isprivate):
-				child_key=b'\x00'+_crypto.privkey_add(I_left,xkey.keydata[1:])
+				Irp=PrivateKey(xkey.keydata[1:],is_compressed=True)
+				child_key=b'\x00'+(Ilp+Irp).privkeydata
 				parent_pubkey=PrivateKey(xkey.keydata[1:],is_compressed=True).pub().pubkeydata
 			else:
-				pk=Ilp.pub().pubkeydata
-				child_key=_crypto.pubkey_add(pk,xkey.keydata)
+				pk=Ilp.pub()+PublicKey(xkey.keydata,is_compressed=True)
+				child_key=pk.pubkeydata
 				parent_pubkey=xkey.keydata
 				
 			child_chain=I_right
@@ -74,7 +86,7 @@ class Coin(object):
 			if(isHardened):
 				data=xkey.keydata
 			else:
-				data=_crypto.privkey_to_compressed_pubkey(xkey.keydata)
+				data=PrivateKey(xkey.keydata,is_compressed=True).pub().pubkeydata
 			return _descend_extend(xkey,True,data,child)
 		elif(ignore_tag or xkey.version==self.bip32_prefix_public):
 			if(isHardened):

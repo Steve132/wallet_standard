@@ -1,4 +1,6 @@
-from ...wallet import *
+from ..wallet import *
+from _coin import *
+from _segwitcoin import *
 
 class BTC(SegwitCoin):
 	def __init__(self,is_testnet=False):

@@ -1,5 +1,7 @@
+from _satoshicoin import *
+
 #TODO switch all properties to true property implementations.
-class SegwitCoin(object):
+class SegwitCoin(SatoshiCoin):
 	def __init__(self,ticker,is_testnet):
 		super(SegwitCoin,self).__init__(ticker,is_testnet)
 	
