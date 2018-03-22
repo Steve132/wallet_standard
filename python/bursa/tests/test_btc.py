@@ -41,10 +41,14 @@ def testcase(coin,case):
 	for p,keys in case['paths'].items():
 		xprv=coin.descend(m,p)
 		testresult=str(xprv)==keys["priv"]
+		xpub=coin.xpriv2xpub(xprv)
+		testresult=testresult and (str(xpub)==keys["pub"])
 		allpaths = allpaths and testresult
 		if(not testresult):
 			print(str(xprv))
 			print(keys["priv"])
+			print(str(xpub))
+			print(keys["pub"])
 			print("TEST '%s' FAILED" % (p))
 	return allpaths
 	

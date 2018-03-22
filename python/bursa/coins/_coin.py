@@ -108,7 +108,14 @@ class Coin(object):
 
 	def parse_pubkey(self,pkstring):
 		raise NotImplementedError
-	
+
+	def xpriv2xpub(self,xpriv,version=None):
+		if(version is None):
+			version=self.bip32_prefix_public
+		if(isinstance(xpriv,basestring)):
+			xpriv=ExtendedKey(xpriv)
+
+		return xpriv.xpub(version)
 	#Todo: come up with a coin-agnostic unspent serialize/deserialzie
 
 

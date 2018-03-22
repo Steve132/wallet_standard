@@ -3,8 +3,8 @@ from _coin import *
 from _segwitcoin import *
 
 class BTC(SegwitCoin):
-	def __init__(self,is_testnet=False):
-		super(BTC,self).__init__('BTC',is_testnet)
+	def __init__(self,is_testnet=False,segwit=False,embed_in_legacy=True,bech32=False):
+		super(BTC,self).__init__('BTC',is_testnet,segwit=segwit,embed_in_legacy=embed_in_legacy,bech32=bech32)
 		if(not is_testnet):
 			self.bip32_prefix_private=0x0488ADE4
 			self.bip32_prefix_public=0x0488B21E
