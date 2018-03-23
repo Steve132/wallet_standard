@@ -52,13 +52,35 @@ def testcase(coin,case):
 			print("TEST '%s' FAILED" % (p))
 	return allpaths
 	
+def testhdwallets(coin):
+	allcases=True
+	cases=[case1,case3]
+	for c in cases:
+		allcases = allcases and testcase(btc,c)
+	return allcases
 
-allcases=True
-cases=[case1,case3]
-for c in cases:
-	allcases = allcases and testcase(btc,c)
-
+allcases=testhdwallets(btc)
 if(allcases):
 	print("All tests passed")
 else:
 	print("Some tests failed")
+
+#txstring="01000000017b1eabe0209b1fe794124575ef807057c77ada2138ae4fa8d6c4de0398a14f3f0000000000ffffffff01f0ca052a010000001976a914cbc20a7664f2f69e5355aa427045bc15e7c6c77288ac00000000"
+txstring="""01000000017b1eabe0209b1fe794124575ef807057c77ada213
+             8ae4fa8d6c4de0398a14f3f00000000494830450221008949f0
+             cb400094ad2b5eb399d59d01c14d73d8fe6e96df1a7150deb38
+             8ab8935022079656090d7f6bac4c9a94e0aad311a4268e082a7
+             25f8aeae0573fb12ff866a5f01ffffffff01f0ca052a0100000
+             01976a914cbc20a7664f2f69e5355aa427045bc15e7c6c77288
+             ac00000000"""
+
+txstring="".join(txstring.split())
+txstring=unhexlify(txstring)
+txo=btc.deserializetx(txstring)
+print(txo)
+print(btc.txtodict(txo))
+
+#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-transaction-types/
+
+
+

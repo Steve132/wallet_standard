@@ -5,7 +5,7 @@ import hashlib
 
 
 def h(k):
-	return (abs(k) | (1 << 31)) & (0xFFFFFFFF)
+	return (abs(k) | (0x80000000)) & (0xFFFFFFFF)
 
 def _hparse(s):
 	try:
@@ -78,7 +78,7 @@ class Coin(object):
 		except TypeError:
 			raise Exception("Could not descend")
 
-		isHardened=(child >= 0x70000000)
+		isHardened=(child >= 0x80000000)
 		
 		private=(xkey.keydata[0]==b'\x00')
 		
@@ -116,6 +116,9 @@ class Coin(object):
 			xpriv=ExtendedKey(xpriv)
 
 		return xpriv.xpub(version)
+
 	#Todo: come up with a coin-agnostic unspent serialize/deserialzie
+	
+	
 
 
