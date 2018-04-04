@@ -3,6 +3,7 @@ from _coin import *
 from ..wallet import *
 from cStringIO import StringIO
 from binascii import hexlify,unhexlify
+from _satoshiscript import *
 
 
 class VarInt(object):
@@ -48,6 +49,9 @@ class Outpoint(object):
 
 	def todict(self):
 		return {"txid":hexlify(self.txid),"index":self.index}
+	@staticmethod
+	def fromdict(self,dct):
+		return Outpoint(unhexlify(dct["txid"]),dct["index"])
 
 
 class Input(object):
@@ -75,6 +79,9 @@ class Input(object):
 
 	def todict(self):
 		return {"outpoint":self.outpoint.todict(),"scriptSig":hexlify(self.scriptSig),"sequence":self.sequence}
+	@staticmethod
+	def fromdict(self,dct):
+		return Input(Outpoint.fromdct(dct["outpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
 			
 class Output(object):
 	def __init__(self,value,scriptPubKey):
@@ -97,6 +104,9 @@ class Output(object):
 
 	def todict(self):
 		return {"value":self.value,"scriptPubKey":hexlify(self.scriptPubKey)}
+	@staticmethod
+	def fromdict(self,dct):
+		return Output(dct["value"],unhexlify(dct["scriptPubKey"]))
 
 #TODO: this really only applies to a satoshicoin.				
 class Transaction(object):
@@ -138,34 +148,42 @@ class Transaction(object):
 	@staticmethod
 	def fromdict(self,dct):
 		lt=dct.get("locktime",0)
-		lt=dct.get("version",1)
-		insdict=dct.get("ins",[])
-		outsdict=dct.get("outs",[])
+		v=dct.get("version",1)
+		ins=dct.get("ins",[])
+		outs=dct.get("outs",[])
 
-		ins=[t.todict() for t in self.ins]
-		outs=[t.todict() for t in self.outs]
-		return {"version":self.version,"ins":ins,"outs":outs,"locktime":self.locktime}
-
+		ins=[Input.fromdict(t) for t in ins]
+		outs=[Output.fromdict(t) for t in outs]
+		return Transaction(version=version,ins=ins,outs=outs,locktime=lt)
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
-	def __init__(self,ticker,is_testnet):
-		super(SatoshiCoin,self).__init__(ticker,is_testnet)
+	def __init__(self,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
+		super(SatoshiCoin,self).__init__(
+			ticker=ticker,
+			is_testnet=is_testnet,
+			bip32_prefix_private=bip32_prefix_private,
+			bip32_prefix_public=bip32_prefix_public
+			bip32_seed_salt=bip32_seed_salt)
 
-
+		self.wif_prefix=wif_prefix
+		self.pkh_prefix=pkh_prefix
+		self.sh_prefix=sh_prefix
+		self.sig_prefix=sig_prefix
+		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2addr_bytes(self,pubkeys,*args,**kwargs):
+	def pubkeys2addr_bytes(self,pubkeys):
 		if(isinstance(pubkeys,basestring)):
 			pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		pubkeys=[PublicKey(pub) for pub in pubkeys]
 		multisig=len(pubkeys) > 1
 		if(multisig):#P2SH multisig
-			pass #TODO implement this #self.sh_version()
+			raise NotImplementedError #TODO implement this #self.sh_version()
 		else:  #P2PKH
 			h160=_base.hash160(pubkeys[0].keydata)
 			return chr(self.pkh_prefix)+h160
 
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
-		abytes=self.pubkeys2addr_bytes(pubkeys,*args,**kwargs)
+	def pubkeys2addr(self,pubkeys):
+		abytes=self.pubkeys2addr_bytes(pubkeys)
 		return _base.bytes2base58c(abytes)
 
 	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
@@ -195,7 +213,26 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def parse_pubkey(self,pkstring):
 		raise NotImplementedError
 
+	def parse_addr(self,addrstring):
+		self.address2scriptPubKey(addrstring)
+		return _base.base58c2bytes(addrstring)
 
+	def address2scriptPubKey(self,addrstring):
+		addrbytes=parse_addr(addrstring)
+		version=addrbytes[0]
+		if(version==self.pkh_prefix):
+			return sum([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes[1:],OP_EQUALVERIFY,OP_CHECKSIG],b'')
+		elif(version==self.sh_prefix):
+			return sum([OP_HASH160,chr(len(addrbytes)),addrbytes[1:],OP_EQUAL],b'')
+		else:
+			raise Exception("Invalid Address Version %h for address" % (ord(version),addrstring))
+		raise NotImplementedError
+
+	def mktx(self,intxos,outputs,*args,**kwargs):
+		raise NotImplementedError
+
+
+	"""
 	def serializetx(self,txo):
 		return Transaction._sc_serialize(txo)
 
@@ -209,9 +246,11 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def txfromdict(self,dct):
 		return Transaction.fromdict(dct)
-	
 
-#todo: obviously broken
+	"""
+
+	
+	#todo: obviously broken
 
 
 

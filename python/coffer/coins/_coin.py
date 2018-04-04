@@ -15,21 +15,23 @@ def _hparse(s):
 		return s
 
 class Coin(object):
-	def __init__(self,ticker,is_testnet):
+	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt):
 		self.ticker=ticker
 		self.is_testnet=is_testnet
-		self.childid=_slip44.lookups[self.ticker]
 		#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-	
-	def seed2master(self,seed,version=None):
-		if(not version):
-			version=self.bip32_default_prefix_private
+		self.childid=_slip44.lookups[self.ticker]
 
+		self.bip32_prefix_private=bip32_prefix_private
+		self.bip32_prefix_public=bip32_prefix_public
+		self.bip32_seed_salt=bip32_seed_salt
+
+	
+	def seed2master(self,seed):
 		seed=_hparse(seed)
-		digest=hmac.new(b"Bitcoin seed",seed,hashlib.sha512).digest()
+		digest=hmac.new(self.bip32_seed_salt,seed,hashlib.sha512).digest()
 		I_left,I_right=digest[:32],digest[32:]
 		Ilp=PrivateKey(I_left,is_compressed=True) #errror check
-		return ExtendedKey(version,0,0,0,I_right,b'\x00'+I_left)
+		return ExtendedKey(self.bip32_prefix_private,0,0,0,I_right,b'\x00'+I_left)
 
 	def descend(self,xkey,child,ignore_tag=False):
 		def _descend_extend(xkeyparent,isprivate,data,childindex):
@@ -109,6 +111,9 @@ class Coin(object):
 	def parse_pubkey(self,pkstring):
 		raise NotImplementedError
 
+	def parse_addr(self,addrstring):
+		raise NotImplementedError
+
 	def xpriv2xpub(self,xpriv,version=None):
 		if(version is None):
 			version=self.bip32_prefix_public
@@ -117,8 +122,10 @@ class Coin(object):
 
 		return xpriv.xpub(version)
 
-	#Todo: come up with a coin-agnostic unspent serialize/deserialzie
-	
-	
+	def mktx(self,intxos,outputs,*args,**kwargs):
+		raise NotImplementedError
 
+	def blockchain(self):
+		raise NotImplementedError
+	
 
