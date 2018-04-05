@@ -23,7 +23,7 @@ class Coin(object):
 
 		self.bip32_prefix_private=bip32_prefix_private
 		self.bip32_prefix_public=bip32_prefix_public
-		self.bip32_seed_salt=bip32_seed_salt
+		self.bip32_seed_salt=b'Bitcoin seed'	#non-negotiable
 
 	
 	def seed2master(self,seed):

@@ -12,8 +12,10 @@ def hash160(byts):
 
 def bytes2int(byts):
 	return int(hexlify(byts),16)
+
 def int2bytes(bint,mxlen=None):
-	fmt=("\%0%dX" % mxlen) if mxlen else "%X"
+	print(mxlen)
+	fmt=("%%0%dX" % (2*mxlen)) if mxlen else "%X"
 	sv=fmt % bint
 	sv = '0'+sv if len(sv) & 1 else sv
 	return unhexlify(sv)
@@ -32,6 +34,7 @@ def bytes2baseX(byts,basechars):
 		maxint //=base
 		out.append(basechars[cur])
 	return "".join(out[::-1][1:]) #todo is this correct?
+
 def baseX2bytes(bXstr,basechars):
 	base=len(basechars)
 	bint=0
@@ -44,7 +47,8 @@ def baseX2bytes(bXstr,basechars):
 		except ValueError:
 			raise Exception("Error, cannot convert %s to base %d." % (c,base))
 	bsize=len(int2bytes(maxint-1))
-	byts=int2bytes(bint)
+
+	byts=int2bytes(bint,bsize)
 	return byts
 
 

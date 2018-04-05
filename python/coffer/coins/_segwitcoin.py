@@ -10,7 +10,14 @@ class SegwitCoin(SatoshiCoin):
 		bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix,
 		segwit,embed_in_legacy,bech32):
 
-		super(SegwitCoin,self).__init__(ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix)
+		super(SegwitCoin,self).__init__(ticker=ticker,is_testnet=is_testnet,
+			bip32_prefix_private=bip32_prefix_private,
+			bip32_prefix_public=bip32_prefix_public,
+			bip32_seed_salt=bip32_seed_salt,
+			wif_prefix=wif_prefix,
+			pkh_prefix=pkh_prefix,
+			sh_prefix=sh_prefix,
+			sig_prefix=sig_prefix)
 		self.segwit=segwit
 		self.embed_in_legacy=embed_in_legacy
 		self.bech32=bech32
@@ -44,7 +51,7 @@ class SegwitCoin(SatoshiCoin):
 	def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one
 		try:
-			return parsebeck32(addrstring)
+			return parsebech32(addrstring)
 		except:
 			return super(SegwitCoin,self).parse_addr(addrstring)
 

@@ -4,7 +4,7 @@ from ..wallet import *
 from cStringIO import StringIO
 from binascii import hexlify,unhexlify
 from _satoshiscript import *
-
+from .. import _base
 
 class VarInt(object):
 	@staticmethod
@@ -157,12 +157,12 @@ class Transaction(object):
 		return Transaction(version=version,ins=ins,outs=outs,locktime=lt)
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
-	def __init__(self,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
+	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 		super(SatoshiCoin,self).__init__(
 			ticker=ticker,
 			is_testnet=is_testnet,
 			bip32_prefix_private=bip32_prefix_private,
-			bip32_prefix_public=bip32_prefix_public
+			bip32_prefix_public=bip32_prefix_public,
 			bip32_seed_salt=bip32_seed_salt)
 
 		self.wif_prefix=wif_prefix
@@ -171,7 +171,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.sig_prefix=sig_prefix
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2addr_bytes(self,pubkeys):
+	def pubkeys2addr_bytes(self,pubkeys,*args,**kwargs):
 		if(isinstance(pubkeys,basestring)):
 			pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		pubkeys=[PublicKey(pub) for pub in pubkeys]
@@ -182,8 +182,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			h160=_base.hash160(pubkeys[0].keydata)
 			return chr(self.pkh_prefix)+h160
 
-	def pubkeys2addr(self,pubkeys):
-		abytes=self.pubkeys2addr_bytes(pubkeys)
+	def pubkeys2addr(self,pubkeys,*args,**kwargs):
+		abytes=self.pubkeys2addr_bytes(pubkeys,*args,**kwargs)
 		return _base.bytes2base58c(abytes)
 
 	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
@@ -214,7 +214,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		raise NotImplementedError
 
 	def parse_addr(self,addrstring):
-		self.address2scriptPubKey(addrstring)
 		return _base.base58c2bytes(addrstring)
 
 	def address2scriptPubKey(self,addrstring):

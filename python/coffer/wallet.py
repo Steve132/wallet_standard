@@ -45,7 +45,6 @@ class ExtendedKey(object):
 		self.chaincode=chaincode
 		self.keydata=keydata
 		
-		
 	def __str__(self):
 		data=_xkeydatastruct.pack(self.version,self.depth,self.fingerprint,self.child,self.chaincode,self.keydata)
 		return _base.bytes2base58c(data)

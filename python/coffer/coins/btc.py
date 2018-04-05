@@ -21,7 +21,7 @@ class BTC(SegwitCoin):
 			wif_prefix=0xEF
 
 		sig_prefix=b'\x18Bitcoin Signed Message:\n'
-		bip32_seed_prefix=b'Bitcoin seed'
+		bip32_seed_salt=b'Bitcoin seed'
 		
 		super(BTC,self).__init__('BTC',is_testnet=is_testnet,
 			bip32_prefix_private=bip32_prefix_private,
@@ -30,8 +30,5 @@ class BTC(SegwitCoin):
 			sh_prefix=sh_prefix,
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix,
-			bip32_seed_prefix=bip32_seed_prefix,
+			bip32_seed_salt=bip32_seed_salt,
 			segwit=segwit,embed_in_legacy=embed_in_legacy,bech32=bech32)
-
-	
-
