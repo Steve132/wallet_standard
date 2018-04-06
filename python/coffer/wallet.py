@@ -58,13 +58,13 @@ class ExtendedKey(object):
 		else:
 			return ExtendedKey(pubversion,self.depth,self.fingerprint,self.child,self.chaincode,PrivateKey(self.keydata[1:],is_compressed=True).pub().pubkeydata)
 
-		
+
 
 #hierarchical wallet
 #sign
-class Wallet(object):
-	def addresses(): #return a series of address,tickers
-		pass
-	def add(self,keyobject,coin,meta=None): #..must be a (xpub or xpriv) or (priv or pub) OBJECT or string
-		pass
+#class Wallet(object):
+#	def addresses(): #return a series of address,tickers
+#		pass
+#	def add(self,keyobject,coin,meta=None): #..must be a (xpub or xpriv) or (priv or pub) OBJECT or string
+#		pass
 	

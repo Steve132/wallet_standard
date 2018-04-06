@@ -1,6 +1,16 @@
 from _interface import *
 from _insight import *
 
+
+def getbci(coin):
+	lookups={'btc':btc,
+		'bch':bch}
+	cticker=coin.ticker.lower()
+	if(cticker in lookups):
+		return lookups[cticker.lower()](coin)
+	else:
+		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (coin.ticker))
+
 def btc(coin):
 	subcoins=[]
 	
@@ -19,16 +29,11 @@ def btc(coin):
 		]
 
 	insights=[InsightBlockchainInterface(coin,u) for u in insighturls]
-	subcoins.extend[insights]
+	subcoins.extend(insights)
 	return MultiBlockchainInterface(coin,subcoins)
 
 def bch(coin):
-	subcoins[]
-	https://insight.yours.org/insight-api
-	#https://blockdozer.com/insight/
-	#https://bch-insight.bitpay.com/api
-	#https://bch-bitcore2.trezor.io/
-	#bitcoincash.blockexplorer.com/api
+	subcoins=[]
 
 	if(not coin.is_testnet):
 		insighturls=[
@@ -36,7 +41,7 @@ def bch(coin):
 			"https://bitcoincash.blockexplorer.com/api",
 			"https://bch-bitcore2.trezor.io/api",
 			"https://blockdozer.com/insight-api",
-			"https://bch-insight.bitpay.com/api
+			"https://bch-insight.bitpay.com/api"
 		]
 	else:
 		insighturls=[
@@ -45,7 +50,7 @@ def bch(coin):
 		]
 
 	insights=[InsightBlockchainInterface(coin,u) for u in insighturls]
-	subcoins.extend[insights]
+	subcoins.extend(insights)
 	return MultiBlockchainInterface(coin,subcoins)
 
 

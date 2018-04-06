@@ -1,5 +1,5 @@
 #from ecdsa import SigningKey, VerifyingKey, SECP256k1
-import _pybitcointoolscrypto
+from lib import _pybitcointoolscrypto
 import binascii
 
 

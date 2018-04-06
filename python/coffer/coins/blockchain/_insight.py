@@ -1,14 +1,30 @@
 from _interface import *
 from binascii import hexlify,unhexlify
+from .._coin import Previous
 
+
+def _jsonunspent2utxo(coin,ju):
+	amount=coin.denomination_float2whole(float(ju['amount']))
+	if('satoshis' in ju):
+		amount=int(ju['satoshis'])
+	address=ju['address']#todo: normalize
+	confirmations=ju['confirmations']
+	height=int(ju['height'])
+	meta={'scriptPubKey':ju['scriptPubKey']}
+	unspentid=ju['txid']+':'+str(ju['vout'])
+	return Previous(unspentid=unspentid,address=address,height=height,amount=amount,confirmations=confirmations,meta=meta)
+	
 class InsightBlockchainInterface(HttpBlockchainInterface):
 	def __init__(self,coin,endpoint):
 		super(InsightBlockchainInterface,self).__init__(coin,endpoint)
+
+	
 	
 	def unspents_block(self,addressblock,retry_counter=1):
 		data={'addrs':','.join(addressblock)}
-		return self.make_json_request('POST','/addrs/utxo',data,retry_counter=retry_counter)
-	
+		results=self.make_json_request('POST','/addrs/utxo',data,retry_counter=retry_counter)
+		return [_jsonunspent2utxo(self.coin,r) for r in results]
+			
 	def transactions_block(self,addressblock,retry_counter=1):
 		data={'addrs':','.join(addressblock)}
 		return self.make_json_request('POST','/addrs/txs',data,retry_counter=retry_counter)

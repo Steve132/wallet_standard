@@ -64,14 +64,13 @@ class BlockchainInterface(object):
 		raise NotImplementedError
 	
 _exempt_members=['subchains','coin','unspents','_addrfunc','transactions']
-
 class MultiBlockchainInterface(BlockchainInterface):
 	def __init__(self,coin,subchains):
 		super(MultiBlockchainInterface,self).__init__(coin)
 		self.subchains=subchains
 		
 	def __getattribute__(self,name):
-		if(name in ['subchains','coin']):
+		if(name in _exempt_members):
 			return BlockchainInterface.__getattribute__(self,name)
 
 		valid_subchains=[]

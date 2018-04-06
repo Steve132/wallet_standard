@@ -6,7 +6,7 @@ from binascii import hexlify,unhexlify
 from _satoshiscript import *
 from .. import _base
 
-class VarInt(object):
+class SVarInt(object):
 	@staticmethod
 	def _sc_serialize(vi):
 		vi=abs(vi)
@@ -18,7 +18,7 @@ class VarInt(object):
 			return '\xfe'+struct.pack('<L',vi)
 		elif(vi <= 0xFFFFFFFFFFFFFFFF):
 			return '\xff'+struct.pack('<Q',vi)
-		raise Exception("Integer too large to store in a varint")
+		raise Exception("Integer too large to store in a SVarInt")
 
 	@staticmethod
 	def _sc_deserialize(sio):
@@ -33,7 +33,7 @@ class VarInt(object):
 			return ord(first)
 
 #txid needs to be serialized backwards for strange reasons
-class Outpoint(object):
+class SOutpoint(object):
 	def __init__(self,txid,index):
 		self.txid=txid
 		self.index=index
@@ -45,45 +45,45 @@ class Outpoint(object):
 	def _sc_deserialize(sio):
 		tid,dex=struct.unpack('<32sL',sio.read(36))
 		tid=tid[::-1]
-		return Outpoint(tid,dex)
+		return SOutpoint(tid,dex)
 
 	def todict(self):
 		return {"txid":hexlify(self.txid),"index":self.index}
 	@staticmethod
 	def fromdict(self,dct):
-		return Outpoint(unhexlify(dct["txid"]),dct["index"])
+		return SOutpoint(unhexlify(dct["txid"]),dct["index"])
 
 
-class Input(object):
-	def __init__(self,outpoint,scriptSig,sequence=0xFFFFFFFF):
-		self.outpoint=outpoint
+class SInput(object):
+	def __init__(self,SOutpoint,scriptSig,sequence=0xFFFFFFFF):
+		self.SOutpoint=SOutpoint
 		self.scriptSig=scriptSig
 		self.sequence=sequence
 
 	@staticmethod
 	def _sc_serialize(txin):
 		out=b''
-		out+=Outpoint._sc_serialize(txin.outpoint)
-		out+=VarInt._sc_serialize(len(txin.scriptSig))
+		out+=SOutpoint._sc_serialize(txin.SOutpoint)
+		out+=SVarInt._sc_serialize(len(txin.scriptSig))
 		out+=txin.scriptSig
 		out+=struct.pack('<L',txin.sequence)
 		return out
 
 	@staticmethod
 	def _sc_deserialize(sio):
-		outpoint=Outpoint._sc_deserialize(sio)
-		scriptSig_size=VarInt._sc_deserialize(sio)
+		SOutpoint=SOutpoint._sc_deserialize(sio)
+		scriptSig_size=SVarInt._sc_deserialize(sio)
 		sSig=sio.read(scriptSig_size)
 		seq=struct.unpack('<L',sio.read(4))[0]
-		return Input(outpoint,sSig,seq)
+		return SInput(SOutpoint,sSig,seq)
 
 	def todict(self):
-		return {"outpoint":self.outpoint.todict(),"scriptSig":hexlify(self.scriptSig),"sequence":self.sequence}
+		return {"SOutpoint":self.SOutpoint.todict(),"scriptSig":hexlify(self.scriptSig),"sequence":self.sequence}
 	@staticmethod
 	def fromdict(self,dct):
-		return Input(Outpoint.fromdct(dct["outpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
+		return SInput(SOutpoint.fromdct(dct["SOutpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
 			
-class Output(object):
+class SOutput(object):
 	def __init__(self,value,scriptPubKey):
 		self.value=value
 		self.scriptPubKey=scriptPubKey
@@ -92,21 +92,21 @@ class Output(object):
 	def _sc_serialize(outp):
 		out=b''
 		out+=struct.pack('<Q',outp.value)
-		out+=VarInt._sc_serialize(len(outp.scriptPubKey))
+		out+=SVarInt._sc_serialize(len(outp.scriptPubKey))
 		out+=outp.scriptPubKey
 	
 	@staticmethod
 	def _sc_deserialize(sio):
 		v=struct.unpack('<Q',sio.read(8))[0]
-		scriptPubKey_size=VarInt._sc_deserialize(sio)
+		scriptPubKey_size=SVarInt._sc_deserialize(sio)
 		scriptPubKey=sio.read(scriptPubKey_size)
-		return Output(v,scriptPubKey)
+		return SOutput(v,scriptPubKey)
 
 	def todict(self):
 		return {"value":self.value,"scriptPubKey":hexlify(self.scriptPubKey)}
 	@staticmethod
 	def fromdict(self,dct):
-		return Output(dct["value"],unhexlify(dct["scriptPubKey"]))
+		return SOutput(dct["value"],unhexlify(dct["scriptPubKey"]))
 
 #TODO: this really only applies to a satoshicoin.				
 class Transaction(object):
@@ -120,22 +120,22 @@ class Transaction(object):
 	def _sc_serialize(txo):
 		out=b''
 		out+=struct.pack('<L',txo.version)
-		out+=VarInt._sc_serialize(len(txo.ins))
+		out+=SVarInt._sc_serialize(len(txo.ins))
 		for inv in txo.ins:
-			out+=Input._sc_serialize(inv)
-		out+=VarInt._sc_serialize(len(txo.outs))
+			out+=SInput._sc_serialize(inv)
+		out+=SVarInt._sc_serialize(len(txo.outs))
 		for ot in txo.outs:
-			out+=Output._sc_serialize(ot)
+			out+=SOutput._sc_serialize(ot)
 		out+=struct.pack('<L',txo.locktime)
 		return out
 
 	@staticmethod
 	def _sc_deserialize(sio):
 		version=struct.unpack('<L',sio.read(4))[0]
-		num_ins=VarInt._sc_deserialize(sio)
-		ins=[Input._sc_deserialize(sio) for k in range(num_ins)]
-		num_outs=VarInt._sc_deserialize(sio)
-		outs=[Output._sc_deserialize(sio) for k in range(num_outs)]
+		num_ins=SVarInt._sc_deserialize(sio)
+		ins=[SInput._sc_deserialize(sio) for k in range(num_ins)]
+		num_outs=SVarInt._sc_deserialize(sio)
+		outs=[SOutput._sc_deserialize(sio) for k in range(num_outs)]
 		locktime=struct.unpack('<L',sio.read(4))[0]
 
 		return Transaction(version,ins,outs,locktime)
@@ -152,8 +152,8 @@ class Transaction(object):
 		ins=dct.get("ins",[])
 		outs=dct.get("outs",[])
 
-		ins=[Input.fromdict(t) for t in ins]
-		outs=[Output.fromdict(t) for t in outs]
+		ins=[SInput.fromdict(t) for t in ins]
+		outs=[SOutput.fromdict(t) for t in outs]
 		return Transaction(version=version,ins=ins,outs=outs,locktime=lt)
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
@@ -227,8 +227,14 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("Invalid Address Version %h for address" % (ord(version),addrstring))
 		raise NotImplementedError
 
-	def mktx(self,intxos,outputs,*args,**kwargs):
+	def mktx(self,intxos,SOutputs,*args,**kwargs):
 		raise NotImplementedError
+
+	def denomination_float2whole(self,x):
+		return int(x*100000000.0)
+	
+	def denomination_whole2float(self,x):
+		raise float(x)/100000000.0
 
 
 	"""

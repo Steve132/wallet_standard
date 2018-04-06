@@ -1,8 +1,7 @@
 from ..wallet import *
 from .. import _base
-from .. import _slip44
+import _slip44
 import hashlib
-
 
 def h(k):
 	return (abs(k) | (0x80000000)) & (0xFFFFFFFF)
@@ -122,10 +121,60 @@ class Coin(object):
 
 		return xpriv.xpub(version)
 
-	def mktx(self,intxos,outputs,*args,**kwargs):
+	def serializetx(self,txo):
+		raise NotImplementedError
+	def unserializetx(self,txb):
 		raise NotImplementedError
 
-	def blockchain(self):
+	def denomination_float2whole(self,x):
 		raise NotImplementedError
 	
+	def denomination_whole2float(self,x):
+		raise NotImplementedError
 
+
+def _amountcheck(x):
+	if(not isinstance(x, (int, long))):
+		raise Exception("Amount must be an integer not %r" % (type(x)))
+	return x
+
+class Output(object):
+	def __init__(self,address,amount,meta={}):
+		self.address=address
+		self._amount=_amountcheck(amount)
+		self.meta=meta
+	@property
+	def amount(self):
+		return self._amount
+	@amount.setter
+	def amount(self,x):
+		self._amount=_amountcheck(amount)
+
+class Previous(Output):
+	def __init__(self,unspentid,height,confirmations,amount,address,meta={}):
+		super(Previous,self).__init__(address,amount,meta)
+		self.unspentid=unspentid
+		self.height=height
+		self.confirmations=confirmations
+		
+	def __repr__(self):
+		fmt='%s(unspentid=%s,address=%s,amount=%d,confirmations=%d,meta=%r'
+		tpl=(
+			type(self).__name__,
+			self.unspentid[:8]+'...:'+self.unspentid.split(':')[-1],
+			self.address,
+			self._amount,
+			self.confirmations,
+			self.meta
+			)
+		return fmt % tpl
+
+class Transaction(object):
+	def __init__(self,unspents,dsts,spent=False,confirmations=0,time=None,meta={}):
+		self.prevs=prevs
+		self.dsts=dsts
+		self.spent=False
+		self.meta=meta
+		self.confirmations=confirmations
+		self.time=None
+	
