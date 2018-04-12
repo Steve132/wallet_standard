@@ -23,7 +23,7 @@ class Wordlist(list):
 		return x in self.lookup
 
 reader = codecs.getreader("utf-8")
-_wordlists_path=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wordlists.json.bz2')
+_wordlists_path=os.path.join(os.path.dirname(os.path.realpath(__file__)),'lib','wordlists.json.bz2')
 wordlists = dict([(k,Wordlist(v)) for k,v in json.load(reader(bz2.BZ2File(_wordlists_path,'r'))).items()])
 
 def _getdefaultname(default='en'):

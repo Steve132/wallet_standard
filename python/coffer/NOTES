@@ -1,0 +1,16 @@
+Todo: import signing functionaltiy for btc.  Test.  Import signing functionality for bch.  test. 
+import signing functionality for ltc, doge, gold.  Test?
+
+You need to probably look at the way the hashcode bytes work in the sign_abc implementation.  the forkId is not used.
+
+If you decide to do the gui you have to do (possibly javascript side encryption?  or just make sure nothing secret goes over the link...OOOH or that it's verified on both sides, I like that".
+
+Also make sure you host on 127.0.0.1 NOT localhost or 0.0.0.0.  Important.
+
+Use ssl is not impossible but might make a bad user experience because of a self-signed certificate for localhost.
+
+include basis database
+
+a transaction sign request http://docs.electrum.org/en/latest/transactions.html
+
+Electrum has a format for this.

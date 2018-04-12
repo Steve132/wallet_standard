@@ -7,13 +7,12 @@ def parsebech32(addrstring):
 #TODO switch all properties to true property implementations.
 class SegwitCoin(SatoshiCoin):
 	def __init__(self,ticker,is_testnet,
-		bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix,
+		bip32_prefix_private,bip32_prefix_public,wif_prefix,pkh_prefix,sh_prefix,sig_prefix,
 		segwit,embed_in_legacy,bech32):
 
 		super(SegwitCoin,self).__init__(ticker=ticker,is_testnet=is_testnet,
 			bip32_prefix_private=bip32_prefix_private,
 			bip32_prefix_public=bip32_prefix_public,
-			bip32_seed_salt=bip32_seed_salt,
 			wif_prefix=wif_prefix,
 			pkh_prefix=pkh_prefix,
 			sh_prefix=sh_prefix,
@@ -25,10 +24,9 @@ class SegwitCoin(SatoshiCoin):
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
 	def pubkeys2addr_bytes(self,pubkeys):
 		
-		if(isinstance(pubkeys,basestring)):
-			pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
-
-		pubkeys=[PublicKey(pub) for pub in pubkeys]
+		#if(isinstance(pubkeys,basestring)):
+		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
+		#pubkeys=[PublicKey(pub) for pub in pubkeys]
 		multisig=len(pubkeys) > 1
 		if(not self.segwit):
 			return super(SegwitCoin,self).pubkeys2addr_bytes(pubkeys) 
@@ -48,6 +46,7 @@ class SegwitCoin(SatoshiCoin):
 		if(self.bech32):
 			raise NotImplementedError
 		return super(SegwitCoin,self).pubkeys2addr(pubkeys)
+
 	def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one
 		try:

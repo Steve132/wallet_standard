@@ -14,7 +14,6 @@ def bytes2int(byts):
 	return int(hexlify(byts),16)
 
 def int2bytes(bint,mxlen=None):
-	print(mxlen)
 	fmt=("%%0%dX" % (2*mxlen)) if mxlen else "%X"
 	sv=fmt % bint
 	sv = '0'+sv if len(sv) & 1 else sv

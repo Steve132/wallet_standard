@@ -96,11 +96,9 @@ class MultiBlockchainInterface(BlockchainInterface):
 			for s in valid_subchains:
 				try:
 					cb=s.__getattribute__(name)
-					print(cb)
 					return cb(*args,**kwargs)
 				except Exception as e:
 					logging.warning("Exception found trying %r on %r" % (name,s))
-					print(str(e))
 					last=e
 			if(last):
 				raise last

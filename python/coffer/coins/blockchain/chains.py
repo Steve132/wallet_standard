@@ -53,7 +53,17 @@ def bch(coin):
 	subcoins.extend(insights)
 	return MultiBlockchainInterface(coin,subcoins)
 
+def btg(coin):
+	subcoins=[]
+	if(not coin.is_testnet):
+		insighturls=[
+			"https://btgexplorer.com/api",
+			"https://explorer.bitcoingold.org/insight-api"
+		]
 
+	insights=[InsightBlockchainInterface(coin,u) for u in insighturls]
+	subcoins.extend(insights)
+	return MultiBlockchainInterface(coin,subcoins)
 
 #https://insight.litecore.io/
 #https://insight.dash.org/insight/

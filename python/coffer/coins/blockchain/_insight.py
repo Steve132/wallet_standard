@@ -8,11 +8,14 @@ def _jsonunspent2utxo(coin,ju):
 	if('satoshis' in ju):
 		amount=int(ju['satoshis'])
 	address=ju['address']#todo: normalize
-	confirmations=ju['confirmations']
-	height=int(ju['height'])
-	meta={'scriptPubKey':ju['scriptPubKey']}
-	unspentid=ju['txid']+':'+str(ju['vout'])
-	return Previous(unspentid=unspentid,address=address,height=height,amount=amount,confirmations=confirmations,meta=meta)
+	meta={'scriptPubKey':unhexlify(ju['scriptPubKey'])}
+	if('confirmations' in ju):
+		meta['confirmations']=ju['confirmations']
+	if('height' in ju):
+		meta['height']=int(ju['height'])
+	previd=ju['txid']+':'+str(ju['vout'])
+	
+	return Previous(previd=previd,address=address,amount=amount,meta=meta)
 	
 class InsightBlockchainInterface(HttpBlockchainInterface):
 	def __init__(self,coin,endpoint):

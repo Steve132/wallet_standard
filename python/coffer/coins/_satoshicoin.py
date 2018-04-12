@@ -109,7 +109,7 @@ class SOutput(object):
 		return SOutput(dct["value"],unhexlify(dct["scriptPubKey"]))
 
 #TODO: this really only applies to a satoshicoin.				
-class Transaction(object):
+class STransaction(object):
 	def __init__(self,version,ins,outs,locktime):
 		self.version=version
 		self.ins=ins
@@ -138,7 +138,7 @@ class Transaction(object):
 		outs=[SOutput._sc_deserialize(sio) for k in range(num_outs)]
 		locktime=struct.unpack('<L',sio.read(4))[0]
 
-		return Transaction(version,ins,outs,locktime)
+		return STransaction(version,ins,outs,locktime)
 
 	def todict(self):
 		ins=[t.todict() for t in self.ins]
@@ -154,16 +154,15 @@ class Transaction(object):
 
 		ins=[SInput.fromdict(t) for t in ins]
 		outs=[SOutput.fromdict(t) for t in outs]
-		return Transaction(version=version,ins=ins,outs=outs,locktime=lt)
+		return STransaction(version=version,ins=ins,outs=outs,locktime=lt)
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
-	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
+	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 		super(SatoshiCoin,self).__init__(
 			ticker=ticker,
 			is_testnet=is_testnet,
 			bip32_prefix_private=bip32_prefix_private,
-			bip32_prefix_public=bip32_prefix_public,
-			bip32_seed_salt=bip32_seed_salt)
+			bip32_prefix_public=bip32_prefix_public)
 
 		self.wif_prefix=wif_prefix
 		self.pkh_prefix=pkh_prefix
@@ -172,14 +171,15 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
 	def pubkeys2addr_bytes(self,pubkeys,*args,**kwargs):
-		if(isinstance(pubkeys,basestring)):
-			pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
-		pubkeys=[PublicKey(pub) for pub in pubkeys]
+		#if(isinstance(pubkeys,basestring)):
+		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
+		#pubkeys=[(PublicKey(pub) if isinstance(pub,basestr) else pub) for pub in pubkeys] #if there's a string test
+		
 		multisig=len(pubkeys) > 1
 		if(multisig):#P2SH multisig
 			raise NotImplementedError #TODO implement this #self.sh_version()
 		else:  #P2PKH
-			h160=_base.hash160(pubkeys[0].keydata)
+			h160=_base.hash160(pubkeys[0].pubkeydata)
 			return chr(self.pkh_prefix)+h160
 
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
@@ -188,7 +188,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
 	#https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
-	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-transaction-types/
+	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-STransaction-types/
 	def parse_privkey(self,pkstring):
 		try:
 			ak=int(pkstring,16)
@@ -227,9 +227,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("Invalid Address Version %h for address" % (ord(version),addrstring))
 		raise NotImplementedError
 
-	def mktx(self,intxos,SOutputs,*args,**kwargs):
-		raise NotImplementedError
-
 	def denomination_float2whole(self,x):
 		return int(x*100000000.0)
 	
@@ -237,29 +234,25 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		raise float(x)/100000000.0
 
 
-	"""
 	def serializetx(self,txo):
-		return Transaction._sc_serialize(txo)
+		stxo=STransaction.fromtxo(txo)
+		return STransaction._sc_serialize(stxo)
 
-	def deserializetx(self,sio):
-		if(isinstance(sio,basestring)):
-			sio=StringIO(sio)
-		return Transaction._sc_deserialize(sio)
+	#def deserializetx(self,sio):
+	#	if(isinstance(sio,basestring)):
+	#		sio=StringIO(sio)
+	#	return STransaction._sc_deserialize(sio)
 
 	def txtodict(self,tx):
 		return tx.todict()
 
 	def txfromdict(self,dct):
-		return Transaction.fromdict(dct)
+		return STransaction.fromdict(dct)
 
 	"""
 
 	
 	#todo: obviously broken
-
-
-
-
-
+	"""
 
 	

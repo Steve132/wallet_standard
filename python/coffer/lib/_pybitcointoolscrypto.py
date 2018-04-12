@@ -112,9 +112,9 @@ def privkey_to_pubkey(privkey_int):
     pubkey_val=fast_multiply(G, privkey)
     return pubkey_val
 
-def decompress_pub(x):
+def decompress_pub(prefix,x):
         beta = pow(int(x*x*x+A*x+B), int((P+1)//4), int(P))
-        y = (P-beta) if ((beta + ord(pub[0])) % 2) else beta
+        y = (P-beta) if ((beta + prefix) % 2) else beta
         return (x, y)
 
 def add_privkeys(p1,p2):
@@ -123,3 +123,108 @@ def add_privkeys(p1,p2):
 def add_pubkeys(p1,p2):
 	return fast_add(p1,p2)
 
+
+def encode_sig(v, r, s):
+    vb, rb, sb = from_int_to_byte(v), encode(r, 256), encode(s, 256)
+    
+    result = base64.b64encode(vb+b'\x00'*(32-len(rb))+rb+b'\x00'*(32-len(sb))+sb)
+    return result if is_python2 else str(result, 'utf-8')
+
+
+def decode_sig(sig):
+    bytez = base64.b64decode(sig)
+    return from_byte_to_int(bytez[0]), decode(bytez[1:33], 256), decode(bytez[33:], 256)
+
+# https://tools.ietf.org/html/rfc6979#section-3.2
+
+
+def deterministic_generate_k(msghash, priv):
+    v = b'\x01' * 32
+    k = b'\x00' * 32
+    priv = encode_privkey(priv, 'bin')
+    msghash = encode(hash_to_int(msghash), 256, 32)
+    k = hmac.new(k, v+b'\x00'+priv+msghash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    k = hmac.new(k, v+b'\x01'+priv+msghash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    return decode(hmac.new(k, v, hashlib.sha256).digest(), 256)
+
+
+def ecdsa_raw_sign(msghash, priv):
+
+    z = hash_to_int(msghash)
+    k = deterministic_generate_k(msghash, priv)
+    #print('k:'+str(k))
+
+    r, y = fast_multiply(G, k)
+    s = inv(k, N) * (z + r*decode_privkey(priv)) % N
+
+    v, r, s = 27+((y % 2) ^ (0 if s * 2 < N else 1)), r, s if s * 2 < N else N - s
+    if 'compressed' in get_privkey_format(priv):
+        v += 4
+    return v, r, s
+
+
+def ecdsa_sign(msg, priv):
+    v, r, s = ecdsa_raw_sign(electrum_sig_hash(msg), priv)
+    sig = encode_sig(v, r, s)
+    assert ecdsa_verify(msg, sig, 
+        privtopub(priv)), "Bad Sig!\t %s\nv = %d\n,r = %d\ns = %d" % (sig, v, r, s)
+    return sig
+
+
+def ecdsa_raw_verify(msghash, vrs, pub):
+    v, r, s = vrs
+    if not (27 <= v <= 34):
+        return False
+
+    w = inv(s, N)
+    z = hash_to_int(msghash)
+
+    u1, u2 = z*w % N, r*w % N
+    x, y = fast_add(fast_multiply(G, u1), fast_multiply(decode_pubkey(pub), u2))
+    return bool(r == x and (r % N) and (s % N))
+
+def der_encode_sig(v, r, s):
+    b1, b2 = safe_hexlify(encode(r, 256)), safe_hexlify(encode(s, 256))
+    if len(b1) and b1[0] in '89abcdef':
+        b1 = '00' + b1
+    if len(b2) and b2[0] in '89abcdef':
+        b2 = '00' + b2
+    left = '02'+encode(len(b1)//2, 16, 2)+b1
+    right = '02'+encode(len(b2)//2, 16, 2)+b2
+    return '30'+encode(len(left+right)//2, 16, 2)+left+right
+
+def der_decode_sig(sig):
+    leftlen = decode(sig[6:8], 16)*2
+    left = sig[8:8+leftlen]
+    rightlen = decode(sig[10+leftlen:12+leftlen], 16)*2
+    right = sig[12+leftlen:12+leftlen+rightlen]
+    return (None, decode(left, 16), decode(right, 16))
+
+def is_bip66(sig):
+    """Checks hex DER sig for BIP66 consistency"""
+    #https://raw.githubusercontent.com/bitcoin/bips/master/bip-0066.mediawiki
+    #0x30  [total-len]  0x02  [R-len]  [R]  0x02  [S-len]  [S]  [sighash]
+    sig = bytearray.fromhex(sig) if re.match('^[0-9a-fA-F]*$', sig) else bytearray(sig)
+    if (sig[0] == 0x30) and (sig[1] == len(sig)-2):     # check if sighash is missing
+            sig.extend(b"\1")		                   	# add SIGHASH_ALL for testing
+    #assert (sig[-1] & 124 == 0) and (not not sig[-1]), "Bad SIGHASH value"
+    
+    if len(sig) < 9 or len(sig) > 73: return False
+    if (sig[0] != 0x30): return False
+    if (sig[1] != len(sig)-3): return False
+    rlen = sig[3]
+    if (5+rlen >= len(sig)): return False
+    slen = sig[5+rlen]
+    if (rlen + slen + 7 != len(sig)): return False
+    if (sig[2] != 0x02): return False
+    if (rlen == 0): return False
+    if (sig[4] & 0x80): return False
+    if (rlen > 1 and (sig[4] == 0x00) and not (sig[5] & 0x80)): return False
+    if (sig[4+rlen] != 0x02): return False
+    if (slen == 0): return False
+    if (sig[rlen+6] & 0x80): return False
+    if (slen > 1 and (sig[6+rlen] == 0x00) and not (sig[7+rlen] & 0x80)):
+        return False
+    return True
