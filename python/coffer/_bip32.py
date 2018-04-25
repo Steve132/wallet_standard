@@ -316,22 +316,6 @@ if __name__=='__main__':
 
 #44h_60h,0h,145h_0h-15h,5h_45-*,100_0-1
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #purpose: communicate 
 
 def parse_xurl_path(x):

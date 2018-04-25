@@ -3,6 +3,8 @@ from .. import _base
 import _slip44
 from .. import _bip32
 
+
+
 class Coin(_bip32._Bip32):
 	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public):
 		super(Coin,self).__init__(bip32_prefix_private=bip32_prefix_private,
