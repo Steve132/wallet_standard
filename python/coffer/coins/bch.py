@@ -1,6 +1,7 @@
 from ..wallet import *
 from _coin import *
 from _satoshicoin import *
+from .. import _base
 
 class CashAddrChecksumError(Exception):
 	def __init__(self,msg):
@@ -33,7 +34,7 @@ class BCH(SatoshiCoin):
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix)
 
-	def cashaddr_checksum(prefix,addrstring):
+	def cashaddr_checksum(self,prefix,addrstring):
 		data=[ord(p) & 0x1F for p in prefix]
 		data+=[0]
 		data+=[_base32chars.index(a) for a in addrstring[:-8]]
@@ -76,7 +77,7 @@ class BCH(SatoshiCoin):
 		if(prefix == None):
 			prefix="bchtest" if self.is_testnet else "bitcoincash"
 			
-		if(cashaddr_checksum(prefix,addrstring)!=checksum):
+		if(self.cashaddr_checksum(prefix,addrstring)!=checksum):
 			raise CashAddrChecksumError('CashAddr checksum failed for "%s"' % (addrstring))
 		
 		addrversions=[self.pkh_prefix,self.sh_prefix]
@@ -95,30 +96,30 @@ class BCH(SatoshiCoin):
 		csprefix=prefix if prefix != '' else 'bitcoincash'
 		addrpayload=abytes[1:]
 		addrversion=abytes[0]
-		vtype=[self.pkh_prefix,self.sh_prefix].index(addrversion)
+		
+		vtype=[self.pkh_prefix,self.sh_prefix].index(ord(addrversion))
 		vsize=(len(addrpayload)-20)//4
 		version=chr((vtype << 3) | vsize)
 		frontstr=b''+version+addrpayload+'\x00'*5
 		b32nocs=_base.bytes2baseX(frontstr,_base32chars)
-		checksum=cashaddr_checksum(csprefix,addrstring)
+		checksum=self.cashaddr_checksum(csprefix,addrstring)
 		frontstr=b''+version+addrpayload+checksum
 		return _base.bytes2baseX(frontstr,_base32chars)
 
-	def pubkeys2addr(self,pubkeys,cashaddr=False,prefix=None,*args,**kwargs):
-		abytes=self.pubkeys2addr_bytes(pubkeys,*args,**kwargs)
+	def format_addr(self,addr,cashaddr=False,prefix=None,*args,**kwargs):
 		if(cashaddr):
-			return self._write_cashaddr(abytes,prefix)
+			return self._write_cashaddr(addr.addrdata,prefix)
 		else:
-			return _base.bytes2base58c(abytes)
+			return _base.bytes2base58c(addr.addrdata)
 
-	def parse_addr(self,addrstring)
+	def parse_addr(self,addrstring):
 		if(':' in addrstring):
 			return self.parse_cashaddr(addrstring)
 		try:
 			return self.parse_cashaddr(addrstring)
 		except Exception as caerr:
 			try:
-				return _base.base58c2bytes(addrstring)
+				return Address(_base.base58c2bytes(addrstring))
 			except Exception as err:
 				raise Exception("Could not parse BCH address: %r,%r" % (err.msg,caerr.msg))
 

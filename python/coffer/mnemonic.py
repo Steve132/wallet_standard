@@ -72,8 +72,8 @@ except ImportError:
 
 #https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md#japanese
 def words_to_seed(words,passphrase=u''):
-	np=unicodedata.normalize(u' '.join(words),form='NFKD')
-	ns=unicodedata.normalize(passphrase,u'mnemonic'+passphrase,form='NFKD')
+	np=unicodedata.normalize('NFKD',u' '.join(words))
+	ns=unicodedata.normalize('NFKD',u'mnemonic'+passphrase)
 	return pbkdf2_hmac_sha512(password=np,salt=ns)
 
 def words_to_mnemonic_int(words, wordlist=default_wordlist):

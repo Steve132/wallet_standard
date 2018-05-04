@@ -8,6 +8,12 @@ class PublicKey(object):
 	def __init__(self,pubkeydata,is_compressed=None):
 		self.pubkeydata=pubkeydata
 		self.is_compressed=is_compressed
+		if(is_compressed==None):
+			self.is_compressed = len(self.pubkeydata) <= 33
+		if(not self.is_compressed):
+			raise Exception("Uncompressed public keys not implemented!")
+			
+
 	def __add__(self,o):
 		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata),is_compressed=self.is_compressed)
 
@@ -30,3 +36,12 @@ class PrivateKey(object):
 		return PrivateKey(_crypto.privkey_add(self.privkeydata,o.privkeydata),is_compressed=self.is_compressed)
 	
 
+
+class Address(object):
+	def __init__(self,addrdata):
+		self.addrdata=addrdata
+		
+	def __str__(self):
+		raise NotImplementedError
+	def __repr__(self):
+		raise NotImplementedError

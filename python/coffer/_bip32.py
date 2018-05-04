@@ -94,9 +94,17 @@ class _Bip32(object):
 			child=child.strip()
 			if(_checkvoidpath(child)):
 				return xkey
-			components=child.strip().lstrip('/mM').rstrip('/').split("/")
-			components=[(h(int(x.strip("'HhsS"))) if ("'" in x or "H" in x.lower()) else int(x)) for x in components]
-			return reduce(lambda xk,c: self.descend(xk,c),components,xkey)
+			components=child.strip().lstrip('/mM').rstrip('/').split("/")	
+			finalcomp=[]
+			for x in components:
+				xistr=int(x.strip("'HhsS"))
+				ival=int(xistr)
+				if("'" in x or "h" in x.lower()):
+					finalcomp.append(h(ival))
+				else:
+					finalcomp.append(ival)
+
+			return reduce(lambda xk,c: self.descend(xk,c),finalcomp,xkey)
 		try:
 			children=list(child)
 			return reduce(lambda xk,c: self.descend(xk,c),children,xkey)

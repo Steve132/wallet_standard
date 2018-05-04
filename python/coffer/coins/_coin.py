@@ -2,8 +2,7 @@ from ..key import *
 from .. import _base
 import _slip44
 from .. import _bip32
-
-
+from binascii import hexlify,unhexlify
 
 class Coin(_bip32._Bip32):
 	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public):
@@ -14,27 +13,50 @@ class Coin(_bip32._Bip32):
 		#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 		self.childid=_slip44.lookups[self.ticker]
 
-
-	def pubkeys2addr_bytes(self,pubkeys,*args,**kwargs):
-		raise NotImplementedError
-
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		raise NotImplementedError
 
-	def parse_privkey(self,pkstring):
-		raise NotImplementedError
-
-	def parse_pubkey(self,pkstring):
-		raise NotImplementedError
 
 	def parse_addr(self,addrstring):
 		raise NotImplementedError
 
-	def serializetx(self,txo):
+	def format_addr(self,addr,*args,**kwargs):
 		raise NotImplementedError
 
-	def unserializetx(self,txb):
+
+	def parse_privkey(self,pkstring):
 		raise NotImplementedError
+
+	def format_privkey(self,privkey):
+		raise NotImplementedError
+
+
+	def parse_pubkey(self,pkstring):
+		return PublicKey(unhexlify(pkstring))
+
+	def format_pubkey(self,pubkey):
+		return hexlify(pubkey.pubkeydata)
+
+
+	def parse_tx(self,txstring):
+		raise NotImplementedError
+
+	def format_tx(self,txo):
+		raise NotImplementedError
+
+	def format(self,obj,*args,**kwargs):
+		if(isinstance(obj,PrivateKey)):
+			return self.format_privkey(obj,*args,**kwargs)
+		if(isinstance(obj,PublicKey)):
+			return self.format_pubkey(obj,*args,**kwargs)
+		if(isinstance(obj,Address)):
+			return self.format_addr(obj,*args,**kwargs)
+		if(isinstance(obj,Transaction)):
+			return self.format_tx(obj,*args,**kwargs)
+		if(isinstance(obj,ExtendedKey)):
+			return str(obj)
+		raise Exception("I don't know how to format %r" % (obj))
+
 
 	def denomination_float2whole(self,x):
 		raise NotImplementedError
@@ -43,7 +65,13 @@ class Coin(_bip32._Bip32):
 		raise NotImplementedError
 
 
+	def txpreimage(self,tx):
+		raise NotImplementedError
 
+	def signtx(self,tx,privkeys):
+		raise NotImplementedError
+			
+			
 class Output(object):
 	@staticmethod	
 	def _amountcheck(x):
@@ -90,7 +118,7 @@ class Transaction(object):
 		self.prevs=prevs
 		self.dsts=dsts
 		self.meta=meta
-
+		self.signatures=None
 		#self.confirmations=confirmations
 		#self.time=None
 	

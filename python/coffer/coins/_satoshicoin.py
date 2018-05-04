@@ -6,6 +6,10 @@ from binascii import hexlify,unhexlify
 from _satoshiscript import *
 from .. import _base
 
+
+	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
+	#https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
+
 class SVarInt(object):
 	@staticmethod
 	def _sc_serialize(vi):
@@ -170,7 +174,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.sig_prefix=sig_prefix
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2addr_bytes(self,pubkeys,*args,**kwargs):
+	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		#if(isinstance(pubkeys,basestring)):
 		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		#pubkeys=[(PublicKey(pub) if isinstance(pub,basestr) else pub) for pub in pubkeys] #if there's a string test
@@ -180,14 +184,15 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise NotImplementedError #TODO implement this #self.sh_version()
 		else:  #P2PKH
 			h160=_base.hash160(pubkeys[0].pubkeydata)
-			return chr(self.pkh_prefix)+h160
+			return Address(chr(self.pkh_prefix)+h160)
 
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
-		abytes=self.pubkeys2addr_bytes(pubkeys,*args,**kwargs)
-		return _base.bytes2base58c(abytes)
+	def format_addr(self,addr,*args,**kwargs):
+		return _base.bytes2base58c(addr.addrdata)
 
-	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
-	#https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
+	def format_privkey(self,privkey):
+		oarray=chr(self.wif_prefix)+privkey.privkeydata+(b'\x01' if privkey.is_compressed else b'')
+		return _base.bytes2base58c(oarray)
+
 	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-STransaction-types/
 	def parse_privkey(self,pkstring):
 		try:
@@ -214,10 +219,10 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		raise NotImplementedError
 
 	def parse_addr(self,addrstring):
-		return _base.base58c2bytes(addrstring)
+		return Address(_base.base58c2bytes(addrstring))
 
-	def address2scriptPubKey(self,addrstring):
-		addrbytes=parse_addr(addrstring)
+	def address2scriptPubKey(self,addr):
+		addrbytes=addr.addrdata
 		version=addrbytes[0]
 		if(version==self.pkh_prefix):
 			return sum([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes[1:],OP_EQUALVERIFY,OP_CHECKSIG],b'')
@@ -234,9 +239,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		raise float(x)/100000000.0
 
 
-	def serializetx(self,txo):
-		stxo=STransaction.fromtxo(txo)
-		return STransaction._sc_serialize(stxo)
+	#def format_tx(self,txo):
+	#	stxo=STransaction.fromtxo(txo)
+	#	return STransaction._sc_serialize(stxo)
 
 	#def deserializetx(self,sio):
 	#	if(isinstance(sio,basestring)):
@@ -255,4 +260,31 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	#todo: obviously broken
 	"""
 
-	
+	#note: this method is from update_signatures.  Could also need to use sign() from electrum
+	def _signtxsatoshi(self,stx,privkeys):
+		"""Add new signatures to a transaction"""
+
+		for i, txin in enumerate(self.inputs()):
+			pubkeys, x_pubkeys = self.get_sorted_pubkeys(txin)
+			sigs1 = txin.get('signatures')
+			sigs2 = d['inputs'][i].get('signatures')
+			for sig in sigs2:
+				if sig in sigs1:
+					continue
+
+			pre_hash = Hash(bfh(self.serialize_preimage(i)))
+			# der to string
+			order = ecdsa.ecdsa.generator_secp256k1.order()
+			r, s = ecdsa.util.sigdecode_der(bfh(sig[:-2]), order)
+			sig_string = ecdsa.util.sigencode_string(r, s, order)
+			compressed = True
+			for recid in range(4):
+				public_key = MyVerifyingKey.from_signature(sig_string, recid, pre_hash, curve = SECP256k1)
+				pubkey = bh2u(point_to_ser(public_key.pubkey.point, compressed))
+				if pubkey in pubkeys:
+					public_key.verify_digest(sig_string, pre_hash, sigdecode = ecdsa.util.sigdecode_string)
+					j = pubkeys.index(pubkey)
+					print_error("adding sig", i, j, pubkey, sig)
+					self._inputs[i]['signatures'][j] = sig
+
+		        	break
