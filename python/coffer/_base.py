@@ -29,19 +29,29 @@ def bytes2checksum(byts):
 def bytes2int(x):
 	return int(hexlify(x),16)
 
-def bytes2baseX(x,chs):
+def bytes2baseX(x,chs,extend=False):
 	xi=bytes2int(x)
 	b=len(chs)
 	u=(1 << 8*len(x))-1
 	
 	outchrs=[]
+	l=0
 	while(xi):
 		sel=xi % b
 		xi//=b
 		u//=b
+		l+=1
 		outchrs.append(chs[sel])
 		#print(sel,xi,b,outchrs)
-	return "".join(reversed(outchrs))
+
+	while(u):
+		l+=1
+		u//=b
+	outchrs="".join(reversed(outchrs))
+	if(extend):
+		outchrs=outchrs.rjust(l,chs[0])
+
+	return outchrs
 
 def baseX2bytes(x,chs):
 	xi=0
