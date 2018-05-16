@@ -53,7 +53,7 @@ class BCH(SatoshiCoin):
 		addrversion=abytes[0]
 		vint=[self.pkh_prefix,self.sh_prefix].index(ord(addrversion))
 		out=_cashaddr.encode(tprefix,vint,addrpayload)
-		if(prefix==None):
+		if(prefix==None or prefix==False):
 			return out.split(':')[1]
 		
 		return out

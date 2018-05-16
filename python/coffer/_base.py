@@ -81,7 +81,6 @@ def bytes2base58c(byts):
 	bytscs=byts+csb
 	
 	aa=_b58cs[0]*nz+bytes2baseX(bytscs[nz:],_b58cs)
-	print("AA2:"+aa)
 	return aa
 
 def base58c2bytes(b58str):
