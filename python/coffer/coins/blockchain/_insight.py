@@ -24,6 +24,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 	
 	
 	def unspents_block(self,addressblock,retry_counter=1):
+		addressblock=[self.coin.format(a) for a in addressblock]
 		data={'addrs':','.join(addressblock)}
 		results=self.make_json_request('POST','/addrs/utxo',data,retry_counter=retry_counter)
 		return [_jsonunspent2utxo(self.coin,r) for r in results]

@@ -41,8 +41,6 @@ class BlockchainInterface(object):
 		outs=[]
 		for addrblock in _break_into_blocks(addressiter,gap):
 			done=True
-			for addr in addrblock:
-				self.coin.parse_addr(addr)
 
 			for sp in func(addrblock,*args,**kwargs):
 				done=False
@@ -100,10 +98,11 @@ class MultiBlockchainInterface(BlockchainInterface):
 				except Exception as e:
 					logging.warning("Exception found trying %r on %r" % (name,s))
 					last=e
-			if(last):
-				raise last
 			else:
-				raise Exception("%r never found as a method" % (name))
+				if(last):
+					raise last
+				else:
+					raise Exception("%r never found as a method" % (name))
 
 		return _multicaller
 			

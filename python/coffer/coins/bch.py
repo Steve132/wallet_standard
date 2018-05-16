@@ -42,7 +42,7 @@ class BCH(SatoshiCoin):
 	
 	def _write_cashaddr(self,abytes,prefix=None):
 		tprefix=prefix
-		if(prefix==None or prefix==True):
+		if(prefix==None or prefix==True or prefix==False):
 			if(self.is_testnet):
 				tprefix='bchtest'
 			else:
@@ -58,7 +58,7 @@ class BCH(SatoshiCoin):
 		
 		return out
 
-	def format_addr(self,addr,cashaddr=False,prefix=None,*args,**kwargs):
+	def format_addr(self,addr,cashaddr=True,prefix=None,*args,**kwargs):
 		if(cashaddr):
 			return self._write_cashaddr(addr.addrdata,prefix)
 		else:

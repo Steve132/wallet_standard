@@ -102,14 +102,14 @@ def encode(prefix,version_int,payload):
     checksum = calculate_checksum(prefix, payload)
     return prefix + ':' + b32encode(payload + checksum)
 
-_allprefixes=['bitcoincash','bchtest','bchreg']
+allprefixes=['bitcoincash','bchtest','bchreg']
 def decode(address_string):
     if address_string.upper() != address_string and address_string.lower() != address_string:
         raise InvalidAddress('Cash address contains uppercase and lowercase characters')
     address_string = address_string.lower()
 
     if ':' not in address_string:
-        for tpfx in _allprefixes:
+        for tpfx in allprefixes:
             try:
                 taddrstr=tpfx+':'+address_string
                 return decode(taddrstr)

@@ -30,3 +30,5 @@ class BTC(SegwitCoin):
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix,
 			segwit=segwit,embed_in_legacy=embed_in_legacy,bech32=bech32)
+		if(is_testnet):
+			self.childid=0x80000001 #bip44 testnet for BTC
