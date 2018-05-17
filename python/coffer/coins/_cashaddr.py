@@ -4,6 +4,7 @@ class InvalidAddress(Exception):
     pass
 
 CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
+PAYLOAD_LENGTHS=[((vsize+5-(vsize & 4))*(4 + (vsize & 4))) for vsize in range(8)]
 
 def polymod(values):
     chk = 1
@@ -91,9 +92,11 @@ def bytes2intlist(s):
 
 def encode(prefix,version_int,payload):
     payload = bytes2intlist(payload)
-    vsize=(len(payload)-20)//4
-    if(vsize > 0x7):
+    try:
+        vsize=PAYLOAD_LENGTHS.index(len(payload))
+    except IndexError:
         raise InvalidAddress("Payload too long for CashAddr format")
+
     version_int = (version_int & 0x0F) << 3
     version_int = version_int | vsize
 
@@ -127,7 +130,7 @@ def decode(address_string):
     converted=convertbits(decoded,5,8)
     version=(int(converted[0]) >> 3) & 0xF 
     vsize=(int(converted[0])) & 0x07
-    vsizebytes=20+4*vsize
+    vsizebytes=PAYLOAD_LENGTHS[vsize]
 
     payload=converted[1:-6]
     if(len(payload) != vsizebytes):

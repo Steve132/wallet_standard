@@ -1,5 +1,6 @@
 from _bip32 import *
 from itertools import islice,count
+
 import xurl
 
 class Account(object):
@@ -18,7 +19,7 @@ class SingleAddressAccount(Account):
 		return lst
 
 class XPubAccount(Account):
-	def __init__(self,coin,xpub,path="0/*"):
+	def __init__(self,coin,xpub,path="0/*"): #change is "1/*"
 		super(XPubAccount,self).__init__(coin)
 		self.xpub=coin.xpriv2xpub(xpub)
 		self.path=path
@@ -33,13 +34,7 @@ class XPubAccount(Account):
 			yield self.coin.pubkeys2addr([vpub.key()],*pkargs,**pkkwargs)
 
 
-#multichain address set:  itertools.zip_longest(*iterables, fillvalue=None)
-		
-#hierarchical wallet
-#sign
-#class Wallet(object):
-#	def addresses(): #return a series of address,tickers
-#		pass
-#	def add(self,keyobject,coin,meta=None): #..must be a (xpub or xpriv) or (priv or pub) OBJECT or string
-#		pass
+
+
+class Bip44Account(Account):
 	

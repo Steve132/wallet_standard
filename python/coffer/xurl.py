@@ -105,7 +105,6 @@ def paths(pathstring,maxaddrs=1000000):
 		raise Exception('The path "%s" generates more keys than the supplied limit of %d' % (pathstring,maxaddrs))
 
 	for ispvalue in infiter:
-		print(subpaths)
 		spiters=[subpath_iterable(sp) for sp in subpaths]
 		for pout in itertools.product(*spiters):
 			a=list(pout)
