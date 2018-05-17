@@ -1,13 +1,37 @@
 from _bip32 import *
 from itertools import islice,count
-#itertools.chain(*iterables)
+import xurl
 
-class AddressSet(object):
+class Account(object):
 	def __init__(self,coin):
 		self.coin=coin
 
-	def addresses(self,start=0,stop=-1,step=1):
+	def addresses(self):
 		not ImplementedError
+
+class SingleAddressAccount(Account):
+	def __init__(self,coin,address):
+		super(SingleAddressAccount,self).__init__(coin)
+		self.address=address
+	def addresses(self):
+		lst=[self.address]
+		return lst
+
+class XPubAccount(Account):
+	def __init__(self,coin,xpub,path="0/*"):
+		super(XPubAccount,self).__init__(coin)
+		self.xpub=coin.xpriv2xpub(xpub)
+		self.path=path
+
+	def __iter__(self):
+		for p in xurl.paths(self.path):
+			print(p)
+			yield self.coin.descend(self.xpub,p)
+
+	def addresses(self,*pkargs,**pkkwargs):
+		for vpub in iter(self):
+			yield self.coin.pubkeys2addr([vpub.key()],*pkargs,**pkkwargs)
+
 
 #multichain address set:  itertools.zip_longest(*iterables, fillvalue=None)
 		
