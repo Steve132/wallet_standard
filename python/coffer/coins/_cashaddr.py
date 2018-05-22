@@ -53,25 +53,24 @@ def b32encode(inputs):
     return out
 
 
+
 def convertbits(data, frombits, tobits, pad=True):
+    """General power-of-2 base conversion."""
     acc = 0
     bits = 0
     ret = []
     maxv = (1 << tobits) - 1
     max_acc = (1 << (frombits + tobits - 1)) - 1
     for value in data:
-        if value < 0 or (value >> frombits):
-            return None
-        acc = ((acc << frombits) | value) & max_acc
+        acc = ((acc << frombits) | value ) & max_acc
         bits += frombits
         while bits >= tobits:
             bits -= tobits
             ret.append((acc >> bits) & maxv)
-    if pad:
-        if bits:
-            ret.append((acc << (tobits - bits)) & maxv)
-    elif bits >= frombits or ((acc << (tobits - bits)) & maxv):
-        return None
+
+    if pad and bits:
+        ret.append((acc << (tobits - bits)) & maxv)
+
     return ret
 
 
@@ -97,6 +96,7 @@ def encode(prefix,version_int,payload):
     except IndexError:
         raise InvalidAddress("Payload too long for CashAddr format")
 
+    #print(vsize)
     version_int = (version_int & 0x0F) << 3
     version_int = version_int | vsize
 
@@ -127,20 +127,48 @@ def decode(address_string):
     if not verify_checksum(prefix, decoded):
         raise InvalidAddress('Bad cash address checksum')
 
-    converted=convertbits(decoded,5,8)
-    version=(int(converted[0]) >> 3) & 0xF 
-    vsize=(int(converted[0])) & 0x07
+    converted=convertbits(decoded,5,8,False)
+    version=(converted[0] >> 3) & 0xF 
+    vsize=(converted[0]) & 0x07
     vsizebytes=PAYLOAD_LENGTHS[vsize]
 
-    payload=converted[1:-6]
-    if(len(payload) != vsizebytes):
+    payload=converted[1:-5]
+    if(len(payload) != (vsizebytes)):
         raise InvalidAddress('Size bits in CashAddr do not match length')
 
     return prefix,version,intlist2bytes(payload)
 
+
+
 if __name__=="__main__":
     from binascii import unhexlify,hexlify
-    z=encode('bitcoincash',0,unhexlify('76a04053bda0a88bda5177b86a15c3b29f559873'))
-    print(z)
-    f,v,p=decode(z)
-    print(hexlify(p))
+    from random import getrandbits,choice
+    def print_testcase(prefix,typ,hx,printre=True):
+	z=encode(prefix,typ,unhexlify(hx))
+	f,v,p=decode(z)
+	if(printre):
+		print("%s\t%s\t%s" % (z,hexlify(p),hx))
+        if(hexlify(p).lower()!=hx.lower()):
+		raise "INVALID conversion found!"
+
+    for pl in PAYLOAD_LENGTHS:
+	payload=getrandbits(pl*8)
+	plhx = ("%%0%dX" % (pl*2)) % (payload)
+        print_testcase('bitcoincash',0,plhx)
+        print_testcase('bchtest',1,plhx)
+        print_testcase('pref',1,plhx)
+
+
+    for k in range(1 << 16):
+	pl=choice(PAYLOAD_LENGTHS)
+	payload=getrandbits(pl*8)
+ 	plhx = ("%%0%dX" % (pl*2)) % (payload)
+        print_testcase('bitcoincash',0,plhx,printre=False)
+       
+    #print_testcase('bitcoincash',0,'76a04053bda0a88bda5177b86a15c3b29f559873')
+    #z=encode('bitcoincash',0,unhexlify('76a04053bda0a88bda5177b86a15c3b29f559873'))
+    #print(z)
+    #f,v,p=decode(z)
+    #print(hexlify(p))
+
+
