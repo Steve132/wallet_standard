@@ -13,6 +13,15 @@ class Coin(_bip32._Bip32):
 		#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 		self.childid=_slip44.lookups[self.ticker]
 
+	def __cmp__(self,other):
+		cv=cmp(self.ticker.lower(),other.ticker.lower()
+		if(cv==0):
+			return cmp(self.is_testnet,other.is_testnet)
+		return cv
+	def __hash__(self):
+		return hash(self.ticker.lower()+str(self.is_testnet))
+		
+
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		raise NotImplementedError
 

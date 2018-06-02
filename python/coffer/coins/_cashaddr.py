@@ -147,7 +147,7 @@ if __name__=="__main__":
 	z=encode(prefix,typ,unhexlify(hx))
 	f,v,p=decode(z)
 	if(printre):
-		print("%s\t%s\t%s" % (z,hexlify(p),hx))
+		print("%d|%s|%s" % (len(hx)//2,z,hx))
         if(hexlify(p).lower()!=hx.lower()):
 		raise "INVALID conversion found!"
 
