@@ -31,11 +31,12 @@ class XPubAddressSet(AddressSet):
 			yield self.coin.pubkeys2addr([vpub.key()],*pkargs,**pkkwargs)
 
 class Account(object):
-	def __init__(self,incoming,change=[]):
-		coincmps=set([x.coin for x in incoming+change])
+	def __init__(self,external,internal=[]):
+		coincmps=set([x.coin for x in internal+external])
 		if(len(coincmps) != 1):
 			raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
 
-		self.incoming=incoming
-		self.change=change
-
+		self.external=external
+		self.internal=internal if len(internal) > 0 else external
+		
+		
