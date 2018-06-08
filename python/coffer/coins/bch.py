@@ -3,6 +3,9 @@ from _coin import *
 from _satoshicoin import *
 from .. import _base
 import _cashaddr
+from blockchain._insight import InsightBlockchainInterface
+from blockchain._interface import MultiBlockchainInterface
+
 
 class BCH(SatoshiCoin):
 	def __init__(self,is_testnet=False,cashaddr=False):
@@ -74,5 +77,27 @@ class BCH(SatoshiCoin):
 				return Address(_base.base58c2bytes(addrstring))
 			except Exception as err:
 				raise Exception("Could not parse BCH address: %r,%r" % (err.msg,caerr.msg))
+
+	def blockchain(self):
+		subcoins=[]
+
+		if(not self.is_testnet):
+			insighturls=[
+				"https://insight.yours.org/insight-api",
+				"https://bitcoincash.blockexplorer.com/api",
+				"https://bch-bitcore2.trezor.io/api",
+				"https://blockdozer.com/insight-api",
+				"https://bch-insight.bitpay.com/api"
+			]
+		else:
+			insighturls=[
+				"https://tbch.blockdozer.com/insight-api",
+				"https://test-bch-insight.bitpay.com/api"
+			]
+
+		insights=[InsightBlockchainInterface(self,u) for u in insighturls]
+		subcoins.extend(insights)
+		return MultiBlockchainInterface(self,subcoins).select()
+
 
 	

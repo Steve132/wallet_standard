@@ -1,6 +1,8 @@
 from ..wallet import *
 from _coin import *
 from _segwitcoin import *
+from blockchain._insight import InsightBlockchainInterface
+from blockchain._interface import MultiBlockchainInterface
 
 class BTC(SegwitCoin):
 	def __init__(self,is_testnet=False,segwit=False,embed_in_legacy=True,bech32=False):
@@ -32,3 +34,24 @@ class BTC(SegwitCoin):
 			segwit=segwit,embed_in_legacy=embed_in_legacy,bech32=bech32)
 		if(is_testnet):
 			self.childid=0x80000001 #bip44 testnet for BTC
+
+	def blockchain(self,*args,**kwargs):
+		subcoins=[]
+	
+		if(not self.is_testnet):
+			insighturls=[
+				"https://insight.bitpay.com/api",
+				"https://blockexplorer.com/api",
+				"https://localbitcoinschain.com/api",
+				#"https://bitcore2.trezor.io/api",
+				"https://btc.blockdozer.com/insight-api"
+			]
+		else:
+			insighturls=[
+				"https://tbtc.blockdozer.com/insight-api",
+				"https://test-insight.bitpay.com/api"
+			]
+
+		insights=[InsightBlockchainInterface(self,u) for u in insighturls]
+		subcoins.extend(insights)
+		return MultiBlockchainInterface(self,subcoins).select()

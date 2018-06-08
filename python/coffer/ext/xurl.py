@@ -1,3 +1,4 @@
+from ..key import *
 
 if __name__=='__main__':
 	for p in paths('0h/0h-10h,15/0-*'):

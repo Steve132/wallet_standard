@@ -14,7 +14,7 @@ class Coin(_bip32._Bip32):
 		self.childid=_slip44.lookups[self.ticker]
 
 	def __cmp__(self,other):
-		cv=cmp(self.ticker.lower(),other.ticker.lower()
+		cv=cmp(self.ticker.lower(),other.ticker.lower())
 		if(cv==0):
 			return cmp(self.is_testnet,other.is_testnet)
 		return cv
@@ -62,7 +62,7 @@ class Coin(_bip32._Bip32):
 			return self.format_addr(obj,*args,**kwargs)
 		if(isinstance(obj,Transaction)):
 			return self.format_tx(obj,*args,**kwargs)
-		if(isinstance(obj,ExtendedKey)):
+		if(isinstance(obj,_bip32.ExtendedKey)):
 			return str(obj)
 		raise Exception("I don't know how to format %r" % (obj))
 
@@ -79,6 +79,9 @@ class Coin(_bip32._Bip32):
 
 	def signtx(self,tx,privkeys):
 		raise NotImplementedError
+
+	def blockchain(self,*args,**kwargs):
+		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
 			
 			
 class Output(object):
@@ -100,18 +103,20 @@ class Output(object):
 		self._amount=Output._amountcheck(amount)
 
 class Previous(Output):
-	def __init__(self,previd,amount,address,meta={}):
+	def __init__(self,previd,amount,address,meta={},spentpid=None):
 		super(Previous,self).__init__(address,amount,meta)
 		self.previd=previd
-		
+		self.spentpid=spentpid
+
 	def __repr__(self):
-		fmt='%s(previd=%s,address=%s,amount=%d,meta=%r'
+		fmt='%s(previd=%s,address=%s,amount=%d,meta=%r,spentpid=%s)'
 		tpl=(
 			type(self).__name__,
 			self.previd,
 			self.address,
 			self._amount,
-			self.meta
+			self.meta,
+			self.spentpid
 			)
 		return fmt % tpl
 
@@ -123,11 +128,12 @@ class Previous(Output):
 #		self.confirmations=confirmations
 
 class Transaction(object):
-	def __init__(self,unspents,dsts,meta={}):
+	def __init__(self,prevs,dsts,meta={},txid=None):
 		self.prevs=prevs
 		self.dsts=dsts
 		self.meta=meta
 		self.signatures=None
+		self.txid=None
 		#self.confirmations=confirmations
 		#self.time=None
 	

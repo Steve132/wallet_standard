@@ -18,12 +18,12 @@ class SingleAddress(AddressSet):
 
 class XPubAddressSet(AddressSet):
 	def __init__(self,coin,xpub,path="0/*"): #change is "1/*"
-		super(XPubAccount,self).__init__(coin)
+		super(XPubAddressSet,self).__init__(coin)
 		self.xpub=coin.xpriv2xpub(xpub)
 		self.path=path
 
 	def __iter__(self):
-		for p in xurl.paths(self.path):
+		for p in paths(self.path):
 			yield self.coin.descend(self.xpub,p)
 
 	def addresses(self,*pkargs,**pkkwargs):

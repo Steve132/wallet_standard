@@ -17,6 +17,12 @@ class PublicKey(object):
 	def __add__(self,o):
 		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata),is_compressed=self.is_compressed)
 
+	def __cmp__(self,other):
+		return cmp(self.pubkeydata,other.pubkeydata)
+		
+	def __hash__(self):
+		return hash(self.pubkeydata)
+
 #TODO CANNOT HANDLE UNCOMPRESSED
 
 class PrivateKey(object):
@@ -35,11 +41,21 @@ class PrivateKey(object):
 	def __add__(self,o):
 		return PrivateKey(_crypto.privkey_add(self.privkeydata,o.privkeydata),is_compressed=self.is_compressed)
 	
-
+	def __cmp__(self,other):
+		return cmp(self.privkeydata,other.privkeydata)
+		
+	def __hash__(self):
+		return hash(self.privkeydata)
 
 class Address(object):
 	def __init__(self,addrdata):
 		self.addrdata=addrdata
+
+	def __cmp__(self,other):
+		return cmp(self.addrdata,other.addrdata)
+		
+	def __hash__(self):
+		return hash(self.addrdata)
 		
 	#def __str__(self):
 	#	raise NotImplementedError("Address Objects
