@@ -4,6 +4,22 @@ from .._coin import Previous,Transaction
 
 from pprint import pprint
 
+def _mkpid(txid,n):
+	return txid+':'+str(n)
+
+
+def _break_into_stringsize(items,size=1800):
+	curstring=[]
+	for i in items:
+		curstring.append(i)
+		slen=sum([len(x)+1 for x in curstring])
+		if(slen > size):
+			yield curstring
+			curstring=[]
+		
+	if(len(curstring)):
+		yield curstring
+		
 
 def _jsonunspent2utxo(coin,ju):
 	amount=coin.denomination_float2whole(float(ju['amount']))
@@ -15,9 +31,9 @@ def _jsonunspent2utxo(coin,ju):
 		meta['confirmations']=ju['confirmations']
 	if('height' in ju):
 		meta['height']=int(ju['height'])
-	previd=ju['txid']+':'+str(ju['vout'])
+	previd=_mkpid(ju['txid'],ju['vout'])
 	
-	return Previous(previd=previd,address=address,amount=amount,meta=meta)
+	return Previous(previd=previd,address=address,amount=amount,meta=meta,spentpid=None)
 
 def _json2tx(coin,jtx):
 	sigs={}
@@ -26,7 +42,7 @@ def _json2tx(coin,jtx):
 	for jsin in jtx['vin']:
 		paddr=jsin['addr']
 		pamount=jsin.get('valueSat',coin.denomination_float2whole(float(jsin['value'])))
-		previd=jsin['txid']+str(jsin['vout'])
+		previd=_mkpid(jsin['txid'],jsin['vout'])
 		sig=unhexlify(jsin['scriptSig']['hex'])
 		sigs[previd]=sig
 		pmeta={'scriptSig':sig,'sequence':jsin['sequence']}
@@ -40,12 +56,13 @@ def _json2tx(coin,jtx):
 		paddr=detectaddr[0] if len(detectaddr) > 0 else None
 		
 		pamount=jsout.get('valueSat',coin.denomination_float2whole(float(jsout['value'])))
-		previd=txid+str(jsout['n'])
+		previd=_mkpid(txid,jsout['n'])
 		pubkey=unhexlify(jsout['scriptPubKey']['hex'])
 		pmeta={'scriptPubKey':pubkey,
 			'spentHeight':jsout.get('spentHeight',None),
             		'spentIndex':jsout.get('spentIndex',None),
-			'spentTxId':jsout.get('spentTxId',None)
+			'spentTxId':jsout.get('spentTxId',None),
+			'humanAddr':paddr
 		}
 		if(len(detectaddr) > 1):
 			pmeta['legacy_multisig']=True
@@ -56,7 +73,7 @@ def _json2tx(coin,jtx):
 			
 		pspent=None
 		if(pmeta['spentTxId']):
-			pspent=pmeta['spentTxId']+str(pmeta['spentIndex'])
+			pspent=_mkpid(pmeta['spentTxId'],pmeta['spentIndex'])
 		
 		prev=Previous(previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta,spentpid=pspent)
 		outputs[jsout['n']]=prev
@@ -73,12 +90,32 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 	def __init__(self,coin,endpoint):
 		super(InsightBlockchainInterface,self).__init__(coin,endpoint)
 
+	"""def _transactions_block(self,addressblock,retry_counter=1):
+		addressblock=[self.coin.format(a) for a in addressblock]
+		data={'addrs':','.join(addressblock),'noAsm':1,'from':0,'to':400}
+		txresult=self.make_json_request('POST','/addrs/txs',data,retry_counter=retry_counter)
+		return txresult['items']"""
+	
 	def _transactions_block(self,addressblock,retry_counter=1):
 		addressblock=[self.coin.format(a) for a in addressblock]
-		data={'addrs':','.join(addressblock),'noAsm':'1'}
-		txresult=self.make_json_request('POST','/addrs/txs',data,retry_counter=retry_counter)
-		return txresult['items']
-		
+		txlists=[]
+		txpaginate=100
+
+		for addrs in _break_into_stringsize(addressblock,1800):
+			addrstr=','.join(addrs)
+			txoffset=0
+			txMax=None
+			txlocallists=[]
+			while(txMax==None or len(txlocallists) < txMax):
+				data=None
+
+				txresult=self.make_json_request('GET','/addrs/%s/txs?from=%d&to=%d' % (addrstr,txoffset,txoffset+txpaginate),data,retry_counter=retry_counter)
+				txMax=txresult.get('totalItems',len(txlocallists))
+				txlocallists+=txresult['items']
+				txoffset+=txpaginate
+			txlists+=txlocallists
+
+		return txlists
 
 	def transactions(self,addresses,gap=default_gap,retry_counter=1):
 		txs=[]
@@ -88,25 +125,14 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 			kkk=self._transactions_block(addrblock,retry_counter=retry_counter)
 			
 			for sp in kkk:
+				logging.warning(kkk)
 				done=False
 				txs.append(_json2tx(self.coin,sp))
 
 			if(done):
 				break
 		#pprint(txs)
-		return txs
-				
-	
-	def unspents(self,addresses,gap=default_gap,retry_counter=1):
-		utxos=[]
-		txs=self.transactions(addresses,gap,retry_counter)
-		for tx in txs:
-			for p in tx.dsts:
-				if(not p.spentpid):
-					utxos.append(p)
-		return utxos
-		#return [_jsonunspent2utxo(self.coin,r) for r in results]
-			
+		return txs		
 	
 
 	def pushtx_bytes(self,txbytes):

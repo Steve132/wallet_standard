@@ -136,4 +136,14 @@ class Transaction(object):
 		self.txid=None
 		#self.confirmations=confirmations
 		#self.time=None
+
+	def __repr__(self):
+		fmt='Transaction(txid=%r,prevs=%r,dsts=%r,meta=%r)'
+		tpl=(
+			self.txid,
+			self.prevs,
+			self.dsts,	
+			self.meta
+			)
+		return fmt % tpl
 	

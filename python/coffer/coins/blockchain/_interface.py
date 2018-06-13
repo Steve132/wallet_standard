@@ -48,8 +48,8 @@ class BlockchainInterface(object):
 	def pushtx(self,txo):
 		raise NotImplementedError
 
-	def used_addresses(self,addressiter,*args,**kwargs): #this accepts an xpub too
-		iter1,iter2=itertools.tee(addressiter, n=2)
+	def _transactions_used(self,addressiter,*args,**kwargs):
+		iter1,iter2=itertools.tee(addressiter)
 		txos=self.transactions(iter1,*args,**kwargs)
 		#addressset={k,i; for i,k in enumerate(addressiter
 		usedaddr={}
@@ -62,8 +62,22 @@ class BlockchainInterface(object):
 		output=[]
 		for k,addr in enumerate(itertools.islice(iter2,len(usedaddr))):
 			output.append((addr,usedaddr.get(addr,False)))
-		return output
-		
+		return txos,output
+
+	def unspents(self,addresses,*args,**kwargs):
+		utxos=[]
+		txos,used=self._transactions_used(addresses,*args,**kwargs)
+		used=dict(used)
+
+		for tx in txos:
+			for p in tx.dsts:
+				if(not p.spentpid and (p.address in used)):
+					utxos.append(p)
+		return utxos
+
+	def used_addresses(self,addressiter,*args,**kwargs): #this accepts an xpub too
+		txso,used=self._transactions_used(addressiter,*args,**kwargs)
+		return used
 
 	
 _exempt_members=['subchains','coin'] #'unspents','_addrfunc','transactions']
@@ -147,25 +161,29 @@ class HttpBlockchainInterface(BlockchainInterface):
 		self.endpoint=endpoint
 
 	#https://stackoverflow.com/questions/19396696/415-unsupported-media-type-post-json-to-odata-service-in-lightswitch-2012
-	def make_request(self,request_type,call,callargs=None,retry_counter=0,delay=0.1,*args,**kwargs):
+	def make_request(self,request_type,call,callargs=None,retry_counter=10,delay=0.25,*args,**kwargs):
+		encodeargs=None		
 		if(callargs):
 			encodeargs=urlencode(callargs)
 
 		headers={'User-Agent': 'Mozilla/5.0%d'%(random.randrange(1000000))}
 		
 		if(request_type is 'GET'):
-			url=self.endpoint+call+('?'+encodeargs) if encodeargs else ''
+			url=self.endpoint+call+(('?'+encodeargs) if encodeargs else '')
 			data=None
+			headers.update({'Accept':'application/json'})
 		elif(request_type is 'POST'):
 			url=self.endpoint+call
 			data=encodeargs
+			headers.update({'Accept':'application/json', 'Content-Length': str(len(data)),'Content-Type': 'application/x-www-form-urlencoded'})
 		else:
 			raise Exception("Unhandled request type")
 
 		req=Request(url,data,headers)
 		
-		for k in range(retry_counter+1):
+		for k in range(retry_counter):
 			try:
+				logging.warning("Request(%r,%r,%r)" % (url,data,headers))
 				response=urlopen(req,*args,**kwargs)
 				response=response.read().strip()
 				return response
