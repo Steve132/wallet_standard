@@ -43,7 +43,7 @@ class BTC(SegwitCoin):
 				"https://insight.bitpay.com/api",
 				"https://blockexplorer.com/api",
 				"https://localbitcoinschain.com/api",
-				#"https://bitcore2.trezor.io/api",
+				"https://bitcore2.trezor.io/api",
 				"https://btc.blockdozer.com/insight-api"
 			]
 		else:
@@ -52,6 +52,6 @@ class BTC(SegwitCoin):
 				"https://test-insight.bitpay.com/api"
 			]
 
-		insights=[InsightBlockchainInterface(self,u) for u in insighturls]
+		insights=[InsightBlockchainInterface(self,insighturls)]
 		subcoins.extend(insights)
 		return MultiBlockchainInterface(self,subcoins).select()

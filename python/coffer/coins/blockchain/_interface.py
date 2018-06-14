@@ -26,7 +26,16 @@ def break_into_blocks(iterat,gap):
 		yield lst 
 
 
-
+def retryable(f):
+	def wrapper(*args,**kwargs):
+		for k in range(args[0].retries):
+			try:
+				return f(*args,**kwargs)
+			except Exception as u:
+				logging.warning('Exception detected in try %d/%d: %r.',k,args[0].retries,u)
+				last=u
+		raise u
+	return wrapper
 
 class BlockchainInaccessibleError(Exception):
 	def __init__(self,url,err):
@@ -35,6 +44,7 @@ class BlockchainInaccessibleError(Exception):
 class BlockchainInterface(object):
 	def __init__(self,coin):
 		self.coin=coin
+		self.retries=10
 
 	def unspents(self,addressiter,*args,**kwargs):
 		raise NotImplementedError
@@ -156,24 +166,28 @@ class MultiBlockchainInterface(BlockchainInterface):
 			
 
 class HttpBlockchainInterface(BlockchainInterface):
-	def __init__(self,coin,endpoint):
+	def __init__(self,coin):
 		super(HttpBlockchainInterface,self).__init__(coin)
-		self.endpoint=endpoint
+		
+	def get_endpoint():
+		raise NotImplementedError
 
 	#https://stackoverflow.com/questions/19396696/415-unsupported-media-type-post-json-to-odata-service-in-lightswitch-2012
-	def make_request(self,request_type,call,callargs=None,retry_counter=10,delay=0.25,*args,**kwargs):
+	def make_json_request(self,request_type,call,callargs=None,retry_counter=10,delay=0.25,*args,**kwargs):
 		encodeargs=None		
 		if(callargs):
 			encodeargs=urlencode(callargs)
-
-		headers={'User-Agent': 'Mozilla/5.0%d'%(random.randrange(1000000))}
 		
+		
+		ep=self.get_endpoint()
+		headers={'User-Agent': 'Mozilla/5.0%d'%(random.randrange(1000000))}
+	
 		if(request_type is 'GET'):
-			url=self.endpoint+call+(('?'+encodeargs) if encodeargs else '')
+			url=ep+call+(('?'+encodeargs) if encodeargs else '')
 			data=None
 			headers.update({'Accept':'application/json'})
 		elif(request_type is 'POST'):
-			url=self.endpoint+call
+			url=ep+call
 			data=encodeargs
 			headers.update({'Accept':'application/json', 'Content-Length': str(len(data)),'Content-Type': 'application/x-www-form-urlencoded'})
 		else:
@@ -181,24 +195,15 @@ class HttpBlockchainInterface(BlockchainInterface):
 
 		req=Request(url,data,headers)
 		
-		for k in range(retry_counter):
-			try:
-				logging.warning("Request(%r,%r,%r)" % (url,data,headers))
-				response=urlopen(req,*args,**kwargs)
-				response=response.read().strip()
-				return response
-			except URLError as u:
-				try:
-					p = u.read().strip()
-				except:
-					p = u
-				logging.warning('Error loading URL url %s.  "%s". Try number %d',url,u,k)
-				if(k==retry_counter):
-					raise BlockchainInaccessibleError(self.endpoint,u)
-			time.sleep(delay)
+		time.sleep(delay)
+		logging.debug("Request(%r,%r,%r)" % (url,data,headers))
+		response=urlopen(req,*args,**kwargs)
+		response=response.read().strip()
+		return json.loads(response)
 
-	def make_json_request(self,request_type,call,callargs=None,retry_counter=0,*args,**kwargs):
-		return json.loads(self.make_request(request_type,call,callargs,retry_counter,*args,**kwargs))
+	#def make_json_request(self,request_type,call,callargs=None,retry_counter=0,*args,**kwargs):
+		
+	#	return json.loads(self.make_request(request_type,call,callargs,retry_counter,*args,**kwargs))
 		
 
 

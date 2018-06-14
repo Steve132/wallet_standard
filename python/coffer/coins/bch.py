@@ -95,7 +95,7 @@ class BCH(SatoshiCoin):
 				"https://test-bch-insight.bitpay.com/api"
 			]
 
-		insights=[InsightBlockchainInterface(self,u) for u in insighturls]
+		insights=[InsightBlockchainInterface(self,insighturls)]
 		subcoins.extend(insights)
 		return MultiBlockchainInterface(self,subcoins).select()
 

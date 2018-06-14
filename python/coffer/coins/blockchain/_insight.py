@@ -22,7 +22,6 @@ def _break_into_stringsize(items,size=1800):
 		
 
 def _jsonunspent2utxo(coin,ju):
-	amount=coin.denomination_float2whole(float(ju['amount']))
 	if('satoshis' in ju):
 		amount=int(ju['satoshis'])
 	address=ju['address']#todo: normalize
@@ -85,18 +84,19 @@ def _json2tx(coin,jtx):
 		
 	return tx
 	
-default_gap=16
+default_gap=20
 class InsightBlockchainInterface(HttpBlockchainInterface):
-	def __init__(self,coin,endpoint):
-		super(InsightBlockchainInterface,self).__init__(coin,endpoint)
+	def __init__(self,coin,endpoints):
+		super(InsightBlockchainInterface,self).__init__(coin)
+		self.endpoints=endpoints
 
-	"""def _transactions_block(self,addressblock,retry_counter=1):
-		addressblock=[self.coin.format(a) for a in addressblock]
-		data={'addrs':','.join(addressblock),'noAsm':1,'from':0,'to':400}
-		txresult=self.make_json_request('POST','/addrs/txs',data,retry_counter=retry_counter)
-		return txresult['items']"""
+	def get_endpoint(self):
+		return random.choice(self.endpoints)
+		
 	
-	def _transactions_block(self,addressblock,retry_counter=1):
+	
+	@retryable
+	def _transactions_block(self,addressblock):
 		addressblock=[self.coin.format(a) for a in addressblock]
 		txlists=[]
 		txpaginate=100
@@ -109,7 +109,8 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 			while(txMax==None or len(txlocallists) < txMax):
 				data=None
 
-				txresult=self.make_json_request('GET','/addrs/%s/txs?from=%d&to=%d' % (addrstr,txoffset,txoffset+txpaginate),data,retry_counter=retry_counter)
+				txresult=self.make_json_request('GET','/addrs/%s/txs?from=%d&to=%d' % (addrstr,txoffset,txoffset+txpaginate),data)
+				
 				txMax=txresult.get('totalItems',len(txlocallists))
 				txlocallists+=txresult['items']
 				txoffset+=txpaginate
@@ -117,15 +118,15 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 
 		return txlists
 
-	def transactions(self,addresses,gap=default_gap,retry_counter=1):
+	def transactions(self,addresses,gap=default_gap):
 		txs=[]
 		for addrblock in break_into_blocks(addresses,gap):
 			done=True
 			
-			kkk=self._transactions_block(addrblock,retry_counter=retry_counter)
+			kkk=self._transactions_block(addrblock)
 			
 			for sp in kkk:
-				logging.warning(kkk)
+				#logging.warning(kkk)
 				done=False
 				txs.append(_json2tx(self.coin,sp))
 
@@ -138,7 +139,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 	def pushtx_bytes(self,txbytes):
 		#TODO: error handling
 		data={"rawtx":hexlify(txbytes)}
-		return self.make_json_request('POST','/tx/send',data,retry_counter=retry_counter)
+		return self.make_json_request('POST','/tx/send',data)
 
 
 """
