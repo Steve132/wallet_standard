@@ -47,4 +47,3 @@ class Wallet(object):
 		self.name=name
 		self.groups={}
 		self.transactions={}
-		self.authrefs={}

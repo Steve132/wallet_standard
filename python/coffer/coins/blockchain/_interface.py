@@ -46,9 +46,6 @@ class BlockchainInterface(object):
 		self.coin=coin
 		self.retries=10
 
-	def unspents(self,addressiter,*args,**kwargs):
-		raise NotImplementedError
-
 	def transactions(self,addressiter,*args,**kwargs):
 		raise NotImplementedError
 
@@ -74,20 +71,14 @@ class BlockchainInterface(object):
 			output.append((addr,usedaddr.get(addr,False)))
 		return txos,output
 
-	def unspents(self,addresses,*args,**kwargs):
-		utxos=[]
-		txos,used=self._transactions_used(addresses,*args,**kwargs)
-		used=dict(used)
-
-		for tx in txos:
-			for p in tx.dsts:
-				if(not p.spentpid and (p.address in used)):
-					utxos.append(p)
-		return utxos
-
-	def used_addresses(self,addressiter,*args,**kwargs): #this accepts an xpub too
+	def used_addresses(self,addressiter,*args,**kwargs): #there should be an xpub version
 		txso,used=self._transactions_used(addressiter,*args,**kwargs)
 		return used
+
+	def unspents(self,addressiter,*args,**kwargs): #there should be an xpub version here
+		txso,used=self._transactions_used(addressiter,*args,**kwargs)
+		used=dict(used)
+		return self.coin.filter_unspents(txso,set([k for k,v in used.items() if v]))
 
 	
 _exempt_members=['subchains','coin'] #'unspents','_addrfunc','transactions']
