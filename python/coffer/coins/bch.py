@@ -37,7 +37,7 @@ class BCH(SatoshiCoin):
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):
-		prefix,version_int,payload=cashaddr.decode(addrstring)
+		prefix,version_int,payload=_cashaddr.decode(addrstring)
 		addrversions=[self.pkh_prefix,self.sh_prefix]
 		addrversion=addrversions[version_int]
 	
@@ -76,7 +76,7 @@ class BCH(SatoshiCoin):
 			try:
 				return Address(_base.base58c2bytes(addrstring))
 			except Exception as err:
-				raise Exception("Could not parse BCH address: %r,%r" % (err.msg,caerr.msg))
+				raise Exception("Could not parse BCH address %s: %r,%r" % (addrstring,err,caerr))
 
 	def blockchain(self):
 		subcoins=[]

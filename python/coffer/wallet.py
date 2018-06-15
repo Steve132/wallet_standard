@@ -17,10 +17,11 @@ class SingleAddress(AddressSet):
 		return lst
 
 class XPubAddressSet(AddressSet):
-	def __init__(self,coin,xpub,path="0/*"): #change is "1/*"
+	def __init__(self,coin,xpub,path="0/*",root=None): #change is "1/*"
 		super(XPubAddressSet,self).__init__(coin)
 		self.xpub=coin.xpriv2xpub(xpub)
 		self.path=path
+		self.root=path
 
 	def __iter__(self):
 		for p in paths(self.path):
@@ -31,12 +32,19 @@ class XPubAddressSet(AddressSet):
 			yield self.coin.pubkeys2addr([vpub.key()],*pkargs,**pkkwargs)
 
 class Account(object):
-	def __init__(self,external,internal=[]):
+	def __init__(self,external,internal=[],authref=None):
 		coincmps=set([x.coin for x in internal+external])
 		if(len(coincmps) != 1):
 			raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
 
+		self.coin=external[0].coin
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
+		self.authref=None
 		
-		
+class Wallet(object):
+	def __init__(self,name=""):
+		self.name=name
+		self.groups={}
+		self.transactions={}
+		self.authrefs={}
