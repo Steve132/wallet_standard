@@ -84,12 +84,12 @@ class Coin(_bip32._Bip32):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
 
 	def filter_unspents(self,txs,addrused,*args,**kwargs):
-		utxos=[]
+		utxos={}
 
 		for tx in txs:
 			for p in tx.dsts:
 				if(not p.spentpid and (p.address in addrused)):
-					utxos.append(p)
+					utxos[p.previd]=p
 		return utxos
 
 			

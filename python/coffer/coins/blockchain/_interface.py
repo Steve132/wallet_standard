@@ -32,7 +32,7 @@ def retryable(f):
 			try:
 				return f(*args,**kwargs)
 			except Exception as u:
-				logging.warning('Exception detected in try %d/%d: %r.',k,args[0].retries,u)
+				logging.warning('Exception detected in try %d/%d: %r,%r',k,args[0].retries,u,u.args)
 				last=u
 		raise u
 	return wrapper

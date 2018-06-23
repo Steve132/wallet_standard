@@ -1,6 +1,10 @@
 import coffer.wallet as wallet
 import coffer.coins as coins
 import json
+import zipordir
+import os,os.path
+
+
 
 
 def to_ticker(coin):
@@ -12,8 +16,8 @@ def to_ticker(coin):
 class CliWallet(wallet.Wallet):
 	def __init__(self):
 		super(CliWallet,self).__init__()
+		self.groupfilenames={}
 	
-
 	@staticmethod
 	def _read_account(daccount):
 		if(daccount['type']=='bip32'):
@@ -36,7 +40,7 @@ class CliWallet(wallet.Wallet):
 		if(account.type=='bip32'):
 			ctick=to_ticker(account.coin)
 			
-			return {'coin':ctick,
+			return {'chain':ctick,
 				'path':account.internal[0].root,
 				'authref':account.authref,
 				'internal':account.internal[0].path,
@@ -64,21 +68,31 @@ class CliWallet(wallet.Wallet):
 			groups[gn]=groupaccounts
 		return groups
 
-	def add_dict(self,dic):
-		for key,val in dic.items():
-			if(key=='accounts'):
-				self._add_accounts(val)
-
-	@staticmethod
-	def from_dict(wd):
-		dw=CliWallet()
-		dw.add_dict(wd)
-		return dw
+	def _add_group(self,filename,dic):
+		self._add_accounts(dic)
+		for k in dic.keys():
+			self.groupfilenames[k]=filename
 
 	def to_dict(self):
-		out={}
-		out['accounts']=self._write_accounts()
-		return out
+		return {'files':self.groupfilenames,'accounts':self._write_accounts()}
+		
+	@staticmethod
+	def from_archive(filename,wallet={}):
+		wallet=CliWallet()
+		arc=zipordir.ZipOrDir(filename,'r')
+		files=[x for x in arc.namelist() if x[-1] != '/']
+		for fn in files:
+			if(fn[-1] != '/'):
+				data=json.load(arc.open(fn))
+				wallet._add_group(fn,data)
+		return wallet
+
+	@staticmethod
+	def to_archive(wallet,filename):
+		pass
+		#arc=zipordir.ZipOrDir(filename,'r')
+		#json.dump(self.to_dict(),fo,indent=4)
+		    
 
 	def __repr__(self):
 		return json.dumps(self.to_dict(),indent=4)
@@ -94,6 +108,8 @@ class CliWallet(wallet.Wallet):
 					if(len(selchains)==0 or a.coin.ticker in selchains):
 						outgroup.append(a)
 				yield gname,outgroup
+
+
 				
 					
 					

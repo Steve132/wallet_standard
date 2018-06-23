@@ -40,8 +40,10 @@ class Account(object):
 		self.coin=external[0].coin
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
-		self.authref=None
-		
+		self.authref=authref
+
+
+#AccountGroup = dict
 class Wallet(object):
 	def __init__(self,name=""):
 		self.name=name

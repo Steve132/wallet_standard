@@ -119,7 +119,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 		return txlists
 
 	def transactions(self,addresses,gap=default_gap):
-		txs=[]
+		txs={}
 		for addrblock in break_into_blocks(addresses,gap):
 			done=True
 			
@@ -128,7 +128,8 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 			for sp in kkk:
 				#logging.warning(kkk)
 				done=False
-				txs.append(_json2tx(self.coin,sp))
+				txo=_json2tx(self.coin,sp)
+				txs[txo.txid]=txo
 
 			if(done):
 				break

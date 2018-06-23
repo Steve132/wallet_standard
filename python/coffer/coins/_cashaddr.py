@@ -83,10 +83,16 @@ def intlist2bytes(code_list):
         output = b''
         for code in code_list:
             output += chr(code)
-    return bytearray(output)
+    return bytes(output)
 
 def bytes2intlist(s):
-    return list(bytearray(s))
+    output=[]
+    if sys.version_info > (3, 0):
+        return list(bytes(s))
+    else:
+        for code in s:
+            output += [ord(code)]
+    return output
     
 
 def encode(prefix,version_int,payload):
