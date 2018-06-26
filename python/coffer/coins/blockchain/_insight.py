@@ -1,6 +1,6 @@
 from _interface import *
 from binascii import hexlify,unhexlify
-from .._coin import Previous,Transaction
+from ...transaction import Previous,Transaction
 
 from pprint import pprint
 
@@ -32,7 +32,7 @@ def _jsonunspent2utxo(coin,ju):
 		meta['height']=int(ju['height'])
 	previd=_mkpid(ju['txid'],ju['vout'])
 	
-	return Previous(previd=previd,address=address,amount=amount,meta=meta,spentpid=None)
+	return Previous(coin=coin,previd=previd,address=address,amount=amount,meta=meta,spentpid=None)
 
 def _json2tx(coin,jtx):
 	sigs={}
@@ -45,7 +45,7 @@ def _json2tx(coin,jtx):
 		sig=unhexlify(jsin['scriptSig']['hex'])
 		sigs[previd]=sig
 		pmeta={'scriptSig':sig,'sequence':jsin['sequence']}
-		prev=Previous(previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta)
+		prev=Previous(coin=coin,previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta)
 		inputs[jsin['n']]=prev
 
 	outputs=[None]*len(jtx['vout'])
@@ -74,12 +74,12 @@ def _json2tx(coin,jtx):
 		if(pmeta['spentTxId']):
 			pspent=_mkpid(pmeta['spentTxId'],pmeta['spentIndex'])
 		
-		prev=Previous(previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta,spentpid=pspent)
+		prev=Previous(coin=coin,previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta,spentpid=pspent)
 		outputs[jsout['n']]=prev
 
 	tmeta={k:jtx[k] for k in ['blockhash','blockheight','confirmations','locktime','time','version']}
 
-	tx=Transaction(inputs,outputs,tmeta,txid=txid)
+	tx=Transaction(coin,inputs,outputs,tmeta,txid=txid)
 	tx.signatures=sigs
 		
 	return tx

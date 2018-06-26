@@ -4,9 +4,6 @@ import json
 import zipordir
 import os,os.path
 
-
-
-
 def to_ticker(coin):
 	ctick=coin.ticker
 	if(coin.is_testnet):
@@ -58,7 +55,7 @@ class CliWallet(wallet.Wallet):
 			self.groups[gname]=groupaccounts
 
 
-	def _write_accounts(self):
+	def _write_groups(self):
 		groups={}
 		for gn,g in self.groups.items():
 			groupaccounts=[]
@@ -73,8 +70,16 @@ class CliWallet(wallet.Wallet):
 		for k in dic.keys():
 			self.groupfilenames[k]=filename
 
+	def _add_file(self,fn,fo):
+		basename,ext=os.path.splitext(fn)
+		if(ext=='accounts'):
+			data=json.load(fo)
+			wallet._add_group(fn,data)
+		elif(ext=='txs'):
+			wallet._add_txs(fn,data)
+
 	def to_dict(self):
-		return {'files':self.groupfilenames,'accounts':self._write_accounts()}
+		return {'files':self.groupfilenames,'accounts':self._write_groups()}
 		
 	@staticmethod
 	def from_archive(filename,wallet={}):
@@ -83,8 +88,7 @@ class CliWallet(wallet.Wallet):
 		files=[x for x in arc.namelist() if x[-1] != '/']
 		for fn in files:
 			if(fn[-1] != '/'):
-				data=json.load(arc.open(fn))
-				wallet._add_group(fn,data)
+				wallet.add_file(fn,arc.open(fn))
 		return wallet
 
 	@staticmethod
