@@ -53,8 +53,12 @@ class Previous(Output):
 			)
 		return fmt % tpl
 
+	@staticmethod
+	def make_id(ticker,previd):
+		return ticker+'::'+previd
+
 	def id(self):
-		return self.coin.ticker+'::'+self.previd
+		return Previous.make_id(self.coin.ticker,self.previd)
 
 	@staticmethod
 	def from_dict(dic):
@@ -129,7 +133,11 @@ class Transaction(object):
 			dic['signatures']=self.signatures
 		return dic
 
+	@staticmethod
+	def make_id(ticker,txid):
+		return ticker+'::'+txid
+
 	def id(self):
-		return self.coin.ticker+'::'+self.txid
+		return Transaction.make_id(self.coin.ticker,self.txid)
 
 

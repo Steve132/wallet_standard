@@ -32,20 +32,53 @@ class XPubAddressSet(AddressSet):
 			yield self.coin.pubkeys2addr([vpub.key()],*pkargs,**pkkwargs)
 
 class Account(object):
+	def __init__(self,coin,authref=None):
+		self.coin=coin
+		self.authref=authref
+		self.meta={}
+	def id(self):
+		raise NotImplementedError
+	
+
+class AddressSetAccount(Account):
 	def __init__(self,external,internal=[],authref=None):
 		coincmps=set([x.coin for x in internal+external])
 		if(len(coincmps) != 1):
 			raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
 
-		self.coin=external[0].coin
+		super(AddressSetAccount,self).__init__(external[0].coin,authref)
+		
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
-		self.authref=authref
 
+		self.transactions={}
+		self._id=str(hash(tuple([(ass.xpub,ass.coin.ticker,ass.path,ass.root) for ass in self.internal+self.external])))
 
+	def id(self):
+		return _id
+
+class AccountGroup(dict):
+	def __init__(self):
+		self.accounts=[]
+	def __iter__(self):
+		return self.accounts
+	
 #AccountGroup = dict
 class Wallet(object):
-	def __init__(self,name=""):
-		self.name=name
+	def __init__(self):
 		self.groups={}
-		self.transactions={}
+
+
+class Bip32Account(AddressSetAccount):
+	def __init__(self,coin,xpub,ipath="1/*",epath="0/*",index=None,root=None,authref=None,**kwargs):
+		self.xpub=coin.xpriv2xpub(xpub)
+		
+		if(root == None):
+			root=[h(44),h(coin.childid),h(self.xpub.child)]
+		
+		internal=XPubAddressSet(coin,xpub=xpub,path=ipath,root=root)
+		external=XPubAddressSet(coin,xpub=xpub,path=epath,root=root)
+		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
+
+
+

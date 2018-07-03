@@ -17,7 +17,6 @@ class Coin(_bip32._Bip32):
 		elif(self.is_testnet):
 			self.ticker+='-TEST'
 
-
 		#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 		self.childid=_slip44.lookups[self.ticker]
 

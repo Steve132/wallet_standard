@@ -45,7 +45,8 @@ def cmd_sync(wallet,args):
 	
 
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
-parser.add_argument('walletfile',type=str,help="The wallet file you are going to operate on")
+parser.add_argument('walletfile',type=str,help="The wallet file you are going to read")
+parser.add_argument('--outwallet','-o',type=str,help="The wallet file you are going to write to (defaults to read)")
 subparsers=parser.add_subparsers()
 
 balance_parser=subparsers.add_parser('balance')
@@ -60,6 +61,9 @@ sync_parser.add_argument('--group','-g',action='append',help="The wallet group(s
 sync_parser.add_argument('--unspents-only','-u',action='store_true',help="Only sync unspents <don't sync spends>")
 sync_parser.set_defaults(func=cmd_sync)
 args=parser.parse_args()
+
+if(args.outwallet is None):
+	args.outwallet=args.walletfile
 
 wallet=cliwallet.CliWallet.from_archive(args.walletfile)
 

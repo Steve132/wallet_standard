@@ -1,5 +1,6 @@
 import coffer.wallet as wallet
 import coffer.coins as coins
+from coffer.transaction import *
 import json
 import zipordir
 import os,os.path
@@ -10,34 +11,21 @@ def to_ticker(coin):
 		ctick+='-test'
 	return ctick.lower()
 
-class CliWallet(wallet.Wallet):
-	def __init__(self):
-		super(CliWallet,self).__init__()
-		self.groupfilenames={}
-	
+
+class CliAccount(object):
 	@staticmethod
-	def _read_account(daccount):
-		if(daccount['type']=='bip32'):
-			ctick=daccount['chain'].lower()
-			is_testnet=False
-			if('-test') in ctick:
-				is_testnet=True
-				ctick=ctick[:3]
-	
-			coincls=coins.fromticker(ctick)
-			coin=coincls(is_testnet=is_testnet)
-			internal=wallet.XPubAddressSet(coin,xpub=daccount['xpub'],path=daccount['internal'],root=daccount['path'])
-			external=wallet.XPubAddressSet(coin,xpub=daccount['xpub'],path=daccount['external'],root=daccount['path'])
-			wa=wallet.Account(internal=[internal],external=[external],authref=daccount['authref'])
+	def from_dict(dic):
+		if(dic['type']=='bip32'):
+			ctick=dic['chain'].lower()
+			coin=coins.fromticker(ctick)
+			wa=wallet.Bip32Account(coin,**dic)
 			wa.type='bip32'
 			return wa
 
 	@staticmethod
-	def _write_account(account):
+	def to_dict(account):
 		if(account.type=='bip32'):
-			ctick=to_ticker(account.coin)
-			
-			return {'chain':ctick,
+			return {'chain':account.coin.ticker,
 				'path':account.internal[0].root,
 				'authref':account.authref,
 				'internal':account.internal[0].path,
@@ -45,61 +33,64 @@ class CliWallet(wallet.Wallet):
 				'xpub':str(account.internal[0].xpub),
 				'type':'bip32'}
 
-	def _add_accounts(self,dic):
-		for gname,group in dic.items():
-			groupaccounts=[]
-			for daccount in group:
-				ga=CliWallet._read_account(daccount)
-				if(ga is not None):
-					groupaccounts.append(ga)
-			self.groups[gname]=groupaccounts
-
-
-	def _write_groups(self):
-		groups={}
-		for gn,g in self.groups.items():
-			groupaccounts=[]
-			for a in g:
-				groupaccounts.append(CliWallet._write_account(a))
-			
-			groups[gn]=groupaccounts
-		return groups
-
-	def _add_group(self,filename,dic):
-		self._add_accounts(dic)
-		for k in dic.keys():
-			self.groupfilenames[k]=filename
-
-	def _add_file(self,fn,fo):
-		basename,ext=os.path.splitext(fn)
-		if(ext=='accounts'):
-			data=json.load(fo)
-			wallet._add_group(fn,data)
-		elif(ext=='txs'):
-			wallet._add_txs(fn,data)
-
-	def to_dict(self):
-		return {'files':self.groupfilenames,'accounts':self._write_groups()}
-		
+class CliAccountGroup(wallet.AccountGroup):
 	@staticmethod
-	def from_archive(filename,wallet={}):
-		wallet=CliWallet()
+	def from_dict(da):
+		if(isinstance(da,list)):
+			return [CliAccount.from_dict(p) for p in da]
+		return []
+
+	@staticmethod
+	def to_dict(wg):
+		if(isinstance(wg,list)):
+			return [CliAccount.to_dict(p) for p in wg]
+			
+
+class CliWallet(wallet.Wallet):
+	def __init__(self):
+		super(CliWallet,self).__init__()	
+					
+	def _add_accountgroup_file(self,fn,fo):
+		groupname,ext=os.path.splitext(fn)
+		data=json.load(fo)
+		self.groups.setdefault(groupname,CliAccountGroup.from_dict(data))
+
+	def _write_accountgroup_arc(self,g,fn,arc):
+		data=CliAccountGroup.to_dict(g)
+		arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
+		
+	files_exts=['accountgroup','accounttxs','accountmeta']
+
+	@staticmethod
+	def from_archive(filename,wallet=None):
+		if(wallet is None):
+			wallet=CliWallet()
+
 		arc=zipordir.ZipOrDir(filename,'r')
 		files=[x for x in arc.namelist() if x[-1] != '/']
-		for fn in files:
-			if(fn[-1] != '/'):
-				wallet.add_file(fn,arc.open(fn))
+		#//add in sorted order, accountgroups first
+		
+		filesdic={}
+		for f in files:
+			bn,ext=os.path.splitext(f)
+			filesdic.setdefault(ext,[]).append(f)
+			
+	
+		for fn in filesdic['.accountgroup']:					
+			wallet._add_accountgroup_file(fn,arc.open(fn))
+	
 		return wallet
 
 	@staticmethod
 	def to_archive(wallet,filename):
-		pass
-		#arc=zipordir.ZipOrDir(filename,'r')
-		#json.dump(self.to_dict(),fo,indent=4)
-		    
+		arc=zipordir.ZipOrDir(filename,'w')
+		for f,g in wallet.groups.items():
+			fn=(f+'.accountgroup')
+			wallet._write_accountgroup_arc(g,fn,arc)
+		
 
-	def __repr__(self):
-		return json.dumps(self.to_dict(),indent=4)
+	#def __repr__(self):
+		#return #json.dumps(self.groups,indent=4)
 
 	def get_filtered_accounts(self,selgroups=[],selchains=[]):
 		selgroups=set([x.lower() for x in selgroups])

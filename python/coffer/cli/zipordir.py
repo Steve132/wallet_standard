@@ -18,7 +18,7 @@ class DirFile(object):
 	def open(self,name):
 		return open(os.path.join(self.dirname,name),'r')
 
-	def writestr(arcname, data):
+	def writestr(self,arcname, data):
 		with open(os.path.join(self.dirname,arcname),'w') as fo:
 			fo.write(data)
 	def close(self):
