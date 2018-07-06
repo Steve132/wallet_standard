@@ -69,6 +69,8 @@ wallet=cliwallet.CliWallet.from_archive(args.walletfile)
 
 args.func(wallet,args)
 
+wallet.groups['mywallet']["0"].meta['test']={'bob':32}
+
 cliwallet.CliWallet.to_archive(wallet,args.walletfile)
 
 	

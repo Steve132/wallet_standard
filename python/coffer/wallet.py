@@ -1,6 +1,11 @@
 from _bip32 import *
 from itertools import islice,count
 
+try:
+	from collections import MutableMapping
+except:
+	from collections.abc import MutableMapping
+
 class AddressSet(object):
 	def __init__(self,coin):
 		self.coin=coin
@@ -51,18 +56,11 @@ class AddressSetAccount(Account):
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
 
-		self.transactions={}
 		self._id=str(hash(tuple([(ass.xpub,ass.coin.ticker,ass.path,ass.root) for ass in self.internal+self.external])))
 
 	def id(self):
 		return _id
 
-class AccountGroup(dict):
-	def __init__(self):
-		self.accounts=[]
-	def __iter__(self):
-		return self.accounts
-	
 #AccountGroup = dict
 class Wallet(object):
 	def __init__(self):

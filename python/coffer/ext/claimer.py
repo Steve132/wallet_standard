@@ -1491,6 +1491,7 @@ if __name__=="__main__":
     parser.add_argument("--force", help="Do not require consent, submit transaction directly", action="store_true")
     parser.add_argument("--noblock", help="Do not wait for block confirmation, finish after the transaction is in mempool", action="store_true")
     parser.add_argument("--no_wtc_conv", help="Disable 100:1 up-conversion of WBTC (In practice you should never need this)", action="store_true")
+    
     #selectors to do offline behavior
     offlinegroup = parser.add_mutually_exclusive_group(required=False)    
     offlinegroup.add_argument("--sign_only_txfile",help="Do not broadcast signed transaction.  Instead, save it to the specified file.", type=argparse.FileType('w'),action="store_true")

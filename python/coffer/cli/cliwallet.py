@@ -33,18 +33,18 @@ class CliAccount(object):
 				'xpub':str(account.internal[0].xpub),
 				'type':'bip32'}
 
-class CliAccountGroup(wallet.AccountGroup):
+class CliAccountGroup(object):
 	@staticmethod
 	def from_dict(da):
-		if(isinstance(da,list)):
-			return [CliAccount.from_dict(p) for p in da]
-		return []
+		if('type' not in da):
+			return {k:CliAccount.from_dict(p) for k,p in da.items()}
+		return {}
 
 	@staticmethod
 	def to_dict(wg):
-		if(isinstance(wg,list)):
-			return [CliAccount.to_dict(p) for p in wg]
-			
+		if(isinstance(wg,dict)):
+			return {k:CliAccount.to_dict(p) for k,p in wg.items()}
+		return {}
 
 class CliWallet(wallet.Wallet):
 	def __init__(self):
@@ -58,9 +58,35 @@ class CliWallet(wallet.Wallet):
 	def _write_accountgroup_arc(self,g,fn,arc):
 		data=CliAccountGroup.to_dict(g)
 		arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
-		
-	files_exts=['accountgroup','accounttxs','accountmeta']
 
+	def _add_metadata_file(self,gn,ext,fo):
+		data=json.load(fo)
+		if(gn in self.groups):
+			g=self.groups[gn]
+			for ak,accd in data.items():
+				am=g[ak].meta.setdefault(ext,{})
+				for k,v in accd.items():
+					am[k]=v
+		else:
+			logging.warning("No account group found with groupname '%s'" % groupname)
+
+	def _write_metadata_arc(self,gn,arc):
+		if(gn in self.groups):
+			dataout={}
+			
+			g=self.groups[gn]
+			for ak,acc in g.items():
+				for ext,edata in acc.meta.items():
+					ga=dataout.setdefault(ext,{})
+					ga[ak]=edata
+			for ext,data in dataout.items():
+				if(len(data) > 0):
+					fn=gn+'.'+ext
+					arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
+		else:
+			logging.warning("No account group found with groupname '%s'" % (groupname))
+		
+	
 	@staticmethod
 	def from_archive(filename,wallet=None):
 		if(wallet is None):
@@ -73,11 +99,17 @@ class CliWallet(wallet.Wallet):
 		filesdic={}
 		for f in files:
 			bn,ext=os.path.splitext(f)
-			filesdic.setdefault(ext,[]).append(f)
+			filesdic.setdefault(ext,set()).add(f)
 			
 	
-		for fn in filesdic['.accountgroup']:					
+		for fn in filesdic['.group']:					
 			wallet._add_accountgroup_file(fn,arc.open(fn))
+	
+		for fn in files:
+			bn,ext=os.path.splitext(fn)
+			ext=ext[1:]
+			if(ext != 'group'):
+				wallet._add_metadata_file(bn,ext,arc.open(fn))
 	
 		return wallet
 
@@ -85,10 +117,10 @@ class CliWallet(wallet.Wallet):
 	def to_archive(wallet,filename):
 		arc=zipordir.ZipOrDir(filename,'w')
 		for f,g in wallet.groups.items():
-			fn=(f+'.accountgroup')
+			fn=(f+'.group')
 			wallet._write_accountgroup_arc(g,fn,arc)
-		
-
+			wallet._write_metadata_arc(f,arc)
+	
 	#def __repr__(self):
 		#return #json.dumps(self.groups,indent=4)
 
