@@ -1,5 +1,6 @@
 from _bip32 import *
 from itertools import islice,count
+from transaction import Transaction
 
 try:
 	from collections import MutableMapping
@@ -41,6 +42,7 @@ class Account(object):
 		self.coin=coin
 		self.authref=authref
 		self.meta={}
+
 	def id(self):
 		raise NotImplementedError
 	
@@ -60,6 +62,13 @@ class AddressSetAccount(Account):
 
 	def id(self):
 		return _id
+	
+	def sync(self,bci):
+		for v in self.internal+self.external:
+			m=self.meta.setdefault("txs",{})
+			txs=bci.transactions(v.addresses())
+			for k,v in txs.items():
+				m[k]=v
 
 #AccountGroup = dict
 class Wallet(object):

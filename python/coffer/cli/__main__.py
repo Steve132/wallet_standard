@@ -9,12 +9,12 @@ def balance(wallet,chainsel,groupsel):
 	all_balances={}
 	for groupname,accounts in wallet.get_filtered_accounts(groupsel,chainsel):
 		group_balances={}
-		for a in accounts:
-			tick=cliwallet.to_ticker(a.coin)
-			bci=a.coin.blockchain()
+		for a,acc in accounts.items():
+			tick=cliwallet.to_ticker(acc.coin)
+			bci=acc.coin.blockchain()
 	
 			amount=0
-			for aset in a.internal+a.external:
+			for aset in acc.internal+acc.external:
 				unspents=bci.unspents(aset.addresses())
 				amount+=sum([p.amount for p in unspents])
 
@@ -23,25 +23,23 @@ def balance(wallet,chainsel,groupsel):
 		all_balances[groupname]=group_balances
 	return all_balances
 
-
-
 def sync(wallet,chainsel,groupsel):
 	all_balances={}
 	for groupname,accounts in wallet.get_filtered_accounts(groupsel,chainsel):
 		group_balances={}
-		for a in accounts:
-			tick=cliwallet.to_ticker(a.coin)
-			bci=a.coin.blockchain()
-			group_balances[tick]=group_balances.get(tick,0)+amount
+		print(accounts)
+		for a,acc in accounts.items():
+			tick=acc.coin.ticker
+			bci=acc.coin.blockchain()
+			acc.sync(bci)
 
-		all_balances[groupname]=group_balances
-	return all_balances
+	
 
 def cmd_balance(wallet,args):
 	all_balances=balance(wallet,args.chain,args.group)
 
 def cmd_sync(wallet,args):
-	print(wallet)
+	sync(wallet,args.chain,args.group)
 	
 
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')

@@ -5,13 +5,6 @@ import json
 import zipordir
 import os,os.path
 
-def to_ticker(coin):
-	ctick=coin.ticker
-	if(coin.is_testnet):
-		ctick+='-test'
-	return ctick.lower()
-
-
 class CliAccount(object):
 	@staticmethod
 	def from_dict(dic):
@@ -33,6 +26,19 @@ class CliAccount(object):
 				'xpub':str(account.internal[0].xpub),
 				'type':'bip32'}
 
+	@staticmethod
+	def meta_from_dict(ext,mdict):
+		if(ext=="txs"):
+			return {k:Transaction.from_dict(v) for k,v in mdict.items()}
+		return mdict
+	@staticmethod
+	def meta_to_dict(ext,meta):
+		print("HELLO")
+		print(meta)
+		if(ext=="txs"):
+			return {k:Transaction.to_dict(v) for k,v in meta.items()}
+		return meta
+
 class CliAccountGroup(object):
 	@staticmethod
 	def from_dict(da):
@@ -45,6 +51,7 @@ class CliAccountGroup(object):
 		if(isinstance(wg,dict)):
 			return {k:CliAccount.to_dict(p) for k,p in wg.items()}
 		return {}
+
 
 class CliWallet(wallet.Wallet):
 	def __init__(self):
@@ -66,7 +73,7 @@ class CliWallet(wallet.Wallet):
 			for ak,accd in data.items():
 				am=g[ak].meta.setdefault(ext,{})
 				for k,v in accd.items():
-					am[k]=v
+					am[k]=CliAccount.meta_from_dict(ext,v)
 		else:
 			logging.warning("No account group found with groupname '%s'" % groupname)
 
@@ -78,10 +85,11 @@ class CliWallet(wallet.Wallet):
 			for ak,acc in g.items():
 				for ext,edata in acc.meta.items():
 					ga=dataout.setdefault(ext,{})
-					ga[ak]=edata
+					ga[ak]=CliAccount.meta_to_dict(ext,edata)
 			for ext,data in dataout.items():
 				if(len(data) > 0):
 					fn=gn+'.'+ext
+					print(data)
 					arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 		else:
 			logging.warning("No account group found with groupname '%s'" % (groupname))
@@ -130,10 +138,10 @@ class CliWallet(wallet.Wallet):
 		outgroups={}
 		for gname,g in self.groups.items():
 			if(len(selgroups)==0 or gname in selgroups):
-				outgroup=[]
-				for a in g:
-					if(len(selchains)==0 or a.coin.ticker in selchains):
-						outgroup.append(a)
+				outgroup={}
+				for a,acc in g.items():
+					if(len(selchains)==0 or acc.coin.ticker in selchains):
+						outgroup[a]=acc
 				yield gname,outgroup
 
 

@@ -25,7 +25,7 @@ def _jsonunspent2utxo(coin,ju):
 	if('satoshis' in ju):
 		amount=int(ju['satoshis'])
 	address=ju['address']#todo: normalize
-	meta={'scriptPubKey':unhexlify(ju['scriptPubKey'])}
+	meta={'scriptPubKey':ju['scriptPubKey']}
 	if('confirmations' in ju):
 		meta['confirmations']=ju['confirmations']
 	if('height' in ju):
@@ -42,7 +42,7 @@ def _json2tx(coin,jtx):
 		paddr=jsin['addr']
 		pamount=jsin.get('valueSat',coin.denomination_float2whole(float(jsin['value'])))
 		previd=_mkpid(jsin['txid'],jsin['vout'])
-		sig=unhexlify(jsin['scriptSig']['hex'])
+		sig=jsin['scriptSig']['hex']
 		sigs[previd]=sig
 		pmeta={'scriptSig':sig,'sequence':jsin['sequence']}
 		prev=Previous(coin=coin,previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta)
@@ -56,7 +56,7 @@ def _json2tx(coin,jtx):
 		
 		pamount=jsout.get('valueSat',coin.denomination_float2whole(float(jsout['value'])))
 		previd=_mkpid(txid,jsout['n'])
-		pubkey=unhexlify(jsout['scriptPubKey']['hex'])
+		pubkey=jsout['scriptPubKey']['hex']
 		pmeta={'scriptPubKey':pubkey,
 			'spentHeight':jsout.get('spentHeight',None),
             		'spentIndex':jsout.get('spentIndex',None),
@@ -78,6 +78,7 @@ def _json2tx(coin,jtx):
 		outputs[jsout['n']]=prev
 
 	tmeta={k:jtx[k] for k in ['blockhash','blockheight','confirmations','locktime','time','version']}
+
 
 	tx=Transaction(coin,inputs,outputs,tmeta,txid=txid)
 	tx.signatures=sigs
@@ -129,7 +130,8 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 				#logging.warning(kkk)
 				done=False
 				txo=_json2tx(self.coin,sp)
-				txs[txo.txid]=txo
+				print(txo)
+				txs[txo.id()]=txo
 
 			if(done):
 				break

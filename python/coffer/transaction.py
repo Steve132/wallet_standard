@@ -25,12 +25,12 @@ class Output(object):
 		amount=Output._amountcheck(int(dic['amount']))
 		address=dic['address']
 		meta=dic.get('meta',{})
-		return Output(coin,address,amount,meta)
+		return Output(coin,coin.parse_addr(address),amount,meta)
 
 	def to_dict(self):
 		dic={	'coin':self.coin.ticker,
 			'amount':str(self._amount),
-			'address':self.address,
+			'address':self.coin.format_addr(self.address),
 			'meta':self.meta
 		}
 		return dic
@@ -92,12 +92,12 @@ class Transaction(object):
 		self.dsts=dsts
 		self.meta=meta
 		self.signatures=None
-		self.txid=None
+		self.txid=txid
 		#self.confirmations=confirmations
 		#self.time=None
 
 	def __repr__(self):
-		fmt='Transaction(txid=%r,prevs=%r,dsts=%r,meta=%r)'
+		fmt='Transaction(coin=%r,txid=%r,prevs=%r,dsts=%r,meta=%r)'
 		tpl=(
 			self.coin.ticker,
 			self.txid,
