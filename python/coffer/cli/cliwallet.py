@@ -28,13 +28,16 @@ class CliAccount(object):
 
 	@staticmethod
 	def meta_from_dict(ext,mdict):
+		print("MDICT")
+		print(mdict)
 		if(ext=="txs"):
 			return {k:Transaction.from_dict(v) for k,v in mdict.items()}
 		return mdict
+
 	@staticmethod
 	def meta_to_dict(ext,meta):
-		print("HELLO")
-		print(meta)
+		#print("HELLO")
+		#print(meta)
 		if(ext=="txs"):
 			return {k:Transaction.to_dict(v) for k,v in meta.items()}
 		return meta
@@ -72,8 +75,9 @@ class CliWallet(wallet.Wallet):
 			g=self.groups[gn]
 			for ak,accd in data.items():
 				am=g[ak].meta.setdefault(ext,{})
-				for k,v in accd.items():
-					am[k]=CliAccount.meta_from_dict(ext,v)
+				nm=CliAccount.meta_from_dict(ext,accd)
+				for k,v in nm.items():
+					am[k]=v
 		else:
 			logging.warning("No account group found with groupname '%s'" % groupname)
 
@@ -89,7 +93,6 @@ class CliWallet(wallet.Wallet):
 			for ext,data in dataout.items():
 				if(len(data) > 0):
 					fn=gn+'.'+ext
-					print(data)
 					arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 		else:
 			logging.warning("No account group found with groupname '%s'" % (groupname))

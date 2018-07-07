@@ -23,23 +23,21 @@ def balance(wallet,chainsel,groupsel):
 		all_balances[groupname]=group_balances
 	return all_balances
 
-def sync(wallet,chainsel,groupsel):
+def sync(wallet,chainsel,groupsel,retries=10):
 	all_balances={}
 	for groupname,accounts in wallet.get_filtered_accounts(groupsel,chainsel):
 		group_balances={}
-		print(accounts)
 		for a,acc in accounts.items():
 			tick=acc.coin.ticker
 			bci=acc.coin.blockchain()
+			bci.retries=retries
 			acc.sync(bci)
-
-	
 
 def cmd_balance(wallet,args):
 	all_balances=balance(wallet,args.chain,args.group)
 
 def cmd_sync(wallet,args):
-	sync(wallet,args.chain,args.group)
+	sync(wallet,args.chain,args.group,retries=args.retries)
 	
 
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
@@ -56,7 +54,8 @@ balance_parser.set_defaults(func=cmd_balance)
 sync_parser=subparsers.add_parser('sync')
 sync_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
 sync_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to lookup.  Can be entered multiple times.  Defaults to all.",default=[])
-sync_parser.add_argument('--unspents-only','-u',action='store_true',help="Only sync unspents <don't sync spends>")
+sync_parser.add_argument('--retries','-n',help="The number of retries to perform before a sync is considered failed",type=int,default=10)
+#sync_parser.add_argument('--unspents_only','-u',action='store_true',help="Only sync unspents <don't sync spends>")
 sync_parser.set_defaults(func=cmd_sync)
 args=parser.parse_args()
 
@@ -66,8 +65,6 @@ if(args.outwallet is None):
 wallet=cliwallet.CliWallet.from_archive(args.walletfile)
 
 args.func(wallet,args)
-
-wallet.groups['mywallet']["0"].meta['test']={'bob':32}
 
 cliwallet.CliWallet.to_archive(wallet,args.walletfile)
 

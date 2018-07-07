@@ -1,3 +1,7 @@
+from coins import fromticker
+from binascii import hexlify,unhexlify
+from key import Address
+
 class Output(object):
 	@staticmethod	
 	def _amountcheck(x):
@@ -21,16 +25,16 @@ class Output(object):
 
 	@staticmethod
 	def from_dict(dic):
-		coin=coins.fromticker(dic['coin'])
+		coin=fromticker(dic['coin'])
 		amount=Output._amountcheck(int(dic['amount']))
 		address=dic['address']
 		meta=dic.get('meta',{})
-		return Output(coin,coin.parse_addr(address),amount,meta)
+		return Output(coin,Address(unhexlify(address)),amount,meta)
 
 	def to_dict(self):
 		dic={	'coin':self.coin.ticker,
 			'amount':str(self._amount),
-			'address':self.coin.format_addr(self.address),
+			'address':hexlify(self.address.addrdata),
 			'meta':self.meta
 		}
 		return dic
@@ -68,7 +72,7 @@ class Previous(Output):
 		
 		previd=dic['previd']
 		spentpid=dic.get('spentpid',None)
-		return Previous(out.coin,previd,out.amount,out.address,out.meta,out.spentpid)
+		return Previous(out.coin,previd,out.amount,out.address,out.meta,spentpid)
 
 	def to_dict(self):
 		dic=super(Previous,self).to_dict()
@@ -109,7 +113,7 @@ class Transaction(object):
 	
 	@staticmethod
 	def from_dict(dic):
-		coin=coins.fromticker(dic['coin'])
+		coin=fromticker(dic['coin'])
 		prevs=[Previous.from_dict(d) for d in dic['prevs']]
 		dsts=[Previous.from_dict(d) for d in dic['dsts']]
 		meta=dic['meta']

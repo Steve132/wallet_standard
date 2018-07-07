@@ -1,6 +1,6 @@
 from _interface import *
 from binascii import hexlify,unhexlify
-from ...transaction import Previous,Transaction
+from ...transaction import Transaction,Previous
 
 from pprint import pprint
 
@@ -130,7 +130,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 				#logging.warning(kkk)
 				done=False
 				txo=_json2tx(self.coin,sp)
-				print(txo)
+				#print(txo)
 				txs[txo.id()]=txo
 
 			if(done):

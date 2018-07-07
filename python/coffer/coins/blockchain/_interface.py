@@ -42,9 +42,9 @@ class BlockchainInaccessibleError(Exception):
 		super(BlockchainInaccessibleError,self).__init__("Blockchain %s was inaccessable due to %r:%r" % (url,err,err.reason))
 
 class BlockchainInterface(object):
-	def __init__(self,coin):
+	def __init__(self,coin,retries=10):
 		self.coin=coin
-		self.retries=10
+		self.retries=retries
 
 	def transactions(self,addressiter,*args,**kwargs):
 		raise NotImplementedError
