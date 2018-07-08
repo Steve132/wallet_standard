@@ -38,7 +38,6 @@ def cmd_balance(wallet,args):
 
 def cmd_sync(wallet,args):
 	sync(wallet,args.chain,args.group,retries=args.retries)
-	
 
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
 parser.add_argument('walletfile',type=str,help="The wallet file you are going to read")

@@ -172,6 +172,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.pkh_prefix=pkh_prefix
 		self.sh_prefix=sh_prefix
 		self.sig_prefix=sig_prefix
+		if(is_testnet):
+			self.childid=0x80000001 #bip44 testnet for BTC
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
