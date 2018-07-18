@@ -3,10 +3,11 @@
 def classfromticker(ticker):
 	from .btc import BTC
 	from .bch import BCH
-	#from .ltc import LTC
+	from .ltc import LTC
 
 	classes={'btc':BTC,
-		 'bch':BCH}
+		 'bch':BCH,
+		 'ltc':LTC}
 	tickers=classes.keys()
 
 	if(ticker[-5:].lower()=='-test'):

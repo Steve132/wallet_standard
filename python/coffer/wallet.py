@@ -27,7 +27,7 @@ class XPubAddressSet(AddressSet):
 		super(XPubAddressSet,self).__init__(coin)
 		self.xpub=coin.xpriv2xpub(xpub)
 		self.path=path
-		self.root=path
+		self.root=root
 
 	def __iter__(self):
 		for p in paths(self.path):

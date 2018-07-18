@@ -64,7 +64,7 @@ class _Bip32(object):
 		Ilp=PrivateKey(I_left,is_compressed=True) #errror check
 		return ExtendedKey(self.bip32_prefix_private,0,0,0,I_right,b'\x00'+I_left)
 
-	def descend(self,xkey,child,ignore_tag=False):
+	def descend(self,xkey,child,ignore_tag=True):
 		def _descend_extend(xkeyparent,isprivate,data,childindex):
 			data+=unhexlify("%08X" % (childindex))
 			digest=hmac.new(xkey.chaincode,data,hashlib.sha512).digest()

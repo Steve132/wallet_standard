@@ -100,7 +100,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 	def _transactions_block(self,addressblock):
 		addressblock=[self.coin.format(a) for a in addressblock]
 		txlists=[]
-		txpaginate=100
+		txpaginate=40
 
 		for addrs in _break_into_stringsize(addressblock,1800):
 			addrstr=','.join(addrs)
@@ -115,6 +115,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 				txMax=txresult.get('totalItems',len(txlocallists))
 				txlocallists+=txresult['items']
 				txoffset+=txpaginate
+
 			txlists+=txlocallists
 
 		return txlists

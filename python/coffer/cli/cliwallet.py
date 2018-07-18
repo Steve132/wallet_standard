@@ -19,7 +19,7 @@ class CliAccount(object):
 	def to_dict(account):
 		if(account.type=='bip32'):
 			return {'chain':account.coin.ticker,
-				'path':account.internal[0].root,
+				'root':account.internal[0].root,
 				'authref':account.authref,
 				'internal':account.internal[0].path,
 				'external':account.external[0].path,
