@@ -21,23 +21,19 @@ class CliAccount(object):
 			return {'chain':account.coin.ticker,
 				'root':account.internal[0].root,
 				'authref':account.authref,
-				'internal':account.internal[0].path,
-				'external':account.external[0].path,
+				'internal_path':account.internal[0].path,
+				'external_path':account.external[0].path,
 				'xpub':str(account.internal[0].xpub),
 				'type':'bip32'}
 
 	@staticmethod
 	def meta_from_dict(ext,mdict):
-		print("MDICT")
-		print(mdict)
 		if(ext=="txs"):
 			return {k:Transaction.from_dict(v) for k,v in mdict.items()}
 		return mdict
 
 	@staticmethod
 	def meta_to_dict(ext,meta):
-		#print("HELLO")
-		#print(meta)
 		if(ext=="txs"):
 			return {k:Transaction.to_dict(v) for k,v in meta.items()}
 		return meta
@@ -74,10 +70,11 @@ class CliWallet(wallet.Wallet):
 		if(gn in self.groups):
 			g=self.groups[gn]
 			for ak,accd in data.items():
-				am=g[ak].meta.setdefault(ext,{})
-				nm=CliAccount.meta_from_dict(ext,accd)
-				for k,v in nm.items():
-					am[k]=v
+				if(ak in g):
+					am=g[ak].meta.setdefault(ext,{})
+					nm=CliAccount.meta_from_dict(ext,accd)
+					for k,v in nm.items():
+						am[k]=v
 		else:
 			logging.warning("No account group found with groupname '%s'" % groupname)
 
@@ -140,10 +137,17 @@ class CliWallet(wallet.Wallet):
 		selchains=set([x.lower() for x in selchains])
 		outgroups={}
 		for gname,g in self.groups.items():
+			print("$")
+			print(gname,g)
 			if(len(selgroups)==0 or gname in selgroups):
 				outgroup={}
 				for a,acc in g.items():
-					if(len(selchains)==0 or acc.coin.ticker in selchains):
+					print("$$")
+					print(a,acc)
+					print(acc.coin.ticker.lower())
+					print(selchains)
+					if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
+						print(acc.coin.ticker)
 						outgroup[a]=acc
 				yield gname,outgroup
 

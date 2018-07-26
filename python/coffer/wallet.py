@@ -77,14 +77,14 @@ class Wallet(object):
 
 
 class Bip32Account(AddressSetAccount):
-	def __init__(self,coin,xpub,ipath="1/*",epath="0/*",index=None,root=None,authref=None,**kwargs):
+	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,**kwargs):
 		self.xpub=coin.xpriv2xpub(xpub)
 		
 		if(root == None):
 			root=[h(44),h(coin.childid),h(self.xpub.child)]
 		
-		internal=XPubAddressSet(coin,xpub=xpub,path=ipath,root=root)
-		external=XPubAddressSet(coin,xpub=xpub,path=epath,root=root)
+		internal=XPubAddressSet(coin,xpub=xpub,path=internal_path,root=root)
+		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root)
 		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
 
 
