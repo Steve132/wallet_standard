@@ -137,17 +137,10 @@ class CliWallet(wallet.Wallet):
 		selchains=set([x.lower() for x in selchains])
 		outgroups={}
 		for gname,g in self.groups.items():
-			print("$")
-			print(gname,g)
 			if(len(selgroups)==0 or gname in selgroups):
 				outgroup={}
 				for a,acc in g.items():
-					print("$$")
-					print(a,acc)
-					print(acc.coin.ticker.lower())
-					print(selchains)
 					if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
-						print(acc.coin.ticker)
 						outgroup[a]=acc
 				yield gname,outgroup
 

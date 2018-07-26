@@ -24,11 +24,8 @@ def balance(wallet,chainsel,groupsel):
 	return all_balances
 
 def sync(wallet,chainsel,groupsel,retries=10):
-	print(chainsel)
 	all_balances={}
 	for groupname,accounts in wallet.get_filtered_accounts(groupsel,chainsel):
-		print("####")
-		print(groupname,accounts)
 		group_balances={}
 		for a,acc in accounts.items():
 			tick=acc.coin.ticker
