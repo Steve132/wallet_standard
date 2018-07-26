@@ -100,4 +100,8 @@ class Coin(_bip32._Bip32):
 		return utxos
 
 			
-		
+	def hdpath_generator(self):
+		def default_gen(self,account=0):
+			return [_bip32.h(44),_bip32.h(self.childid),_bip32.h(account)]
+		return default_gen
+
