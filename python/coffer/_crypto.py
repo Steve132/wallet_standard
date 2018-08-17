@@ -3,9 +3,14 @@ from lib import _pybitcointoolscrypto
 import binascii
 
 def _decode_pub(pub):
-	x = int(binascii.hexlify(pub[1:33]),16)
-	p = ord(pub[0])
-	return _pybitcointoolscrypto.decompress_pub(p,x)
+	if(len(pub) > 33):
+		x=binascii.hexlify(self.pubkeydata[1:33])
+		y=binascii.hexlify(self.pubkeydata[33:])
+		return (int(x,16),int(y,16))
+	else:
+		x = int(binascii.hexlify(pub[1:33]),16)
+		p = ord(pub[0])
+		return _pybitcointoolscrypto.decompress_pub(p,x)
 
 def _encode_pub(pub):
 	return bytes(chr(2+(pub[1] % 2))) + binascii.unhexlify("%064X" % (pub[0]))

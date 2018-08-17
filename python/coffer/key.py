@@ -12,7 +12,8 @@ class PublicKey(object):
 			self.is_compressed = len(self.pubkeydata) <= 33
 		if(not self.is_compressed):
 			raise Exception("Uncompressed public keys not implemented!")
-			
+	def decompressed(self):
+		return _crypto._decode_pub(self.pubkeydata)
 
 	def __add__(self,o):
 		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata),is_compressed=self.is_compressed)
