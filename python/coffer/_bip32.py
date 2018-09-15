@@ -16,6 +16,26 @@ def _hparse(s):
 	except ValueError:
 		return s
 
+def checkvoidpath(p):
+	return (p=="/" or p=="" or p.lower()=="m")
+
+def splitpath(child):
+	pall=child.strip().lstrip('/').rstrip('/').split("/")
+	if(checkvoidpath(pall[0])):
+		return pall[1:]
+	return pall
+def evalpath(components):
+	finalcomp=[]
+	for x in components:
+		xistr=int(x.strip("'HhsS"))
+		ival=int(xistr)
+		if("'" in x or "h" in x.lower()):
+			finalcomp.append(h(ival))
+		else:
+			finalcomp.append(ival)
+	return finalcomp
+	
+
 _xkeydatastruct=struct.Struct("!LBLL32s33s")
 class ExtendedKey(object):
 	def __init__(self,version,depth=None,fingerprint=None,child=None,chaincode=None,keydata=None):
@@ -87,22 +107,8 @@ class _Bip32(object):
 			xkey=ExtendedKey(xkey)
 
 		if(isinstance(child,basestring)):
-			def _checkvoidpath(p):
-				return (p=="/" or p=="" or p.lower()=="m")
-			
-			child=child.strip()
-			if(_checkvoidpath(child)):
-				return xkey
-			components=child.strip().lstrip('/mM').rstrip('/').split("/")	
-			finalcomp=[]
-			for x in components:
-				xistr=int(x.strip("'HhsS"))
-				ival=int(xistr)
-				if("'" in x or "h" in x.lower()):
-					finalcomp.append(h(ival))
-				else:
-					finalcomp.append(ival)
-
+			components=splitpath(child)	
+			finalcomp=evalpath(components)
 			return reduce(lambda xk,c: self.descend(xk,c),finalcomp,xkey)
 		try:
 			children=list(child)

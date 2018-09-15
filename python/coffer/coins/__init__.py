@@ -1,15 +1,20 @@
 
 
-def classfromticker(ticker):
+def classes():
 	from .btc import BTC
 	from .bch import BCH
 	from .ltc import LTC
 
-	classes={'btc':BTC,
-		 'bch':BCH,
-		 'ltc':LTC}
+	lclasses={'BTC':BTC,
+		 'BCH':BCH,
+		 'LTC':LTC}
+	return lclasses
+
+
+def tickers():
 	tickers=classes.keys()
 
+def classfromticker(ticker):
 	if(ticker[-5:].lower()=='-test'):
 		ticker=ticker[:-5]
 	return classes[ticker.lower()]

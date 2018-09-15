@@ -2,8 +2,9 @@
 import argparse
 import cliwallet
 import json
+from ..coins import fromticker
 from pprint import pprint
-	
+import re
 #this is a synced balance	
 def balance(wallet,chainsel,groupsel):
 	all_balances={}
@@ -39,6 +40,17 @@ def cmd_balance(wallet,args):
 def cmd_sync(wallet,args):
 	sync(wallet,args.chain,args.group,retries=args.retries)
 
+def cmd_add_account_auths(wallet,args):
+	re.compile(r'([\w\-]+)(?::([\w\/]+))?')
+	auth=cliwallet.CliAuth.from_file(args.auth)
+	for p in args.paths:
+		mo=re.match(p)
+		if(not mo):
+			raise Exception("'%s' is not recognized as an accountpath")
+		ticker,pa=mo.groups(1),mo.groups(2)
+		print(auth)
+		print(ticker,pa)
+
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
 parser.add_argument('walletfile',type=str,help="The wallet file you are going to read")
 parser.add_argument('--outwallet','-o',type=str,help="The wallet file you are going to write to (defaults to read)")
@@ -56,6 +68,17 @@ sync_parser.add_argument('--group','-g',action='append',help="The wallet group(s
 sync_parser.add_argument('--retries','-n',help="The number of retries to perform before a sync is considered failed",type=int,default=10)
 #sync_parser.add_argument('--unspents_only','-u',action='store_true',help="Only sync unspents <don't sync spends>")
 sync_parser.set_defaults(func=cmd_sync)
+
+add_account_auth_parser=subparsers.add_parser('add_account_from_auth')
+add_account_auth.add_argument('--group','-g',help="The wallet group(s) to lookup.  Can be entered multiple times.",default='*')
+add_account_auth.add_argument('paths',action='append',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]")
+add_account_auth.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
+#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
+
+sync_parser.set_defaults(func=cmd_add_account_auth)
+args=parser.parse_args()
+
+
 args=parser.parse_args()
 
 if(args.outwallet is None):

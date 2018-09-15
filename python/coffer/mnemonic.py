@@ -70,13 +70,20 @@ except ImportError:
 		return _pbkdf2_hmac_pure(password=password,salt=salt,c=iters,digestmod=hashlib.sha512)
 
 
+def _nwords(words):
+	if(isinstance(words,basestr)):
+		words=words.split()
+	return [w.strip().lower() for w in words]
+
 #https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md#japanese
 def words_to_seed(words,passphrase=u''):
+	words=_nwords(words)
 	np=unicodedata.normalize('NFKD',u' '.join(words))
 	ns=unicodedata.normalize('NFKD',u'mnemonic'+passphrase)
 	return pbkdf2_hmac_sha512(password=np,salt=ns)
 
 def words_to_mnemonic_int(words, wordlist=default_wordlist):
+	words=_nwords(words)
 	return sum([wordlist.index(w) << (11 * x) for x, w in enumerate(words[::-1])])
 
 def mnemonic_int_verify(mint, mint_bits):
@@ -89,6 +96,7 @@ def mnemonic_int_verify(mint, mint_bits):
 	return csint == ecsint
 
 def words_verify(words,wordlist=default_wordlist):
+	words=_nwords(words)
 	mint,mintsize=words_to_mnemonic_int(words)
 	mint_bits=len(words)*11
 	return mnemonic_int_verify(mint,mint_bits)

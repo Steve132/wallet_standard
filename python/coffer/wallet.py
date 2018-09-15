@@ -79,7 +79,6 @@ class Wallet(object):
 class Bip32Account(AddressSetAccount):
 	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,**kwargs):
 		self.xpub=coin.xpriv2xpub(xpub)
-		
 		if(root == None):
 			root=[h(44),h(coin.childid),h(self.xpub.child)]
 		
@@ -87,5 +86,38 @@ class Bip32Account(AddressSetAccount):
 		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root)
 		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
 
+class Auth(object):
+	def __init__(self):
+		pass
+	def privkey(self,coin,account,address):
+		pass
+
+
+class Bip32SeedAuth(Auth):
+	def __init__(self,words=None,seed=None):
+		if(words):
+			self.seed=mnemonic.words_to_seed(words)
+		if(seed):
+			self.seed=seed
+		if(not self.seed):
+			raise Exception("either seed or seedwords must be given")
+	
+	def childauth(self,account):
+		masterxpriv=account.coin.seed2master(self.seed)
+		xpriv=coin.descend(account.root)
+		return Bip32Auth(account,xpriv,account.root)
+	
+class Bip32Auth(Auth):
+	def __init__(self,xpriv,root):
+		self.coin=coin
+		self.xpriv=xpriv
+		self.root=root
+
+	def childauth(self,account):
+		return self
+
+class HexPrivKeyAuth(Auth):
+	def __init__(self,key):
+		pass
 
 

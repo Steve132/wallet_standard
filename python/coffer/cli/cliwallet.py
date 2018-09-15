@@ -4,6 +4,7 @@ from coffer.transaction import *
 import json
 import zipordir
 import os,os.path
+from binascii import hexlify,unhexlify
 
 class CliAccount(object):
 	@staticmethod
@@ -37,6 +38,39 @@ class CliAccount(object):
 		if(ext=="txs"):
 			return {k:Transaction.to_dict(v) for k,v in meta.items()}
 		return meta
+
+class CliAuth(object):
+	def __init__(self):
+		self.subauths=[]
+
+	@staticmethod
+	def parse_auth(s):
+		def checkhex(x):
+			try:
+				a=int(x,16)
+				return True
+			except ValueError:
+				return False
+
+		s.strip()
+		if(s[:6]=='bip32:'):
+			s=s.split().join().split(':')[-1]
+			s=unhexlify(s)
+			return wallet.Bip32SeedAuth(seed=s)
+		elif(' ' in s):
+			return wallet.Bip32SeedAuth(words=s)
+		elif(checkhex(x)):
+			return wallet.HexPrivKeyAuth(key=x)
+		else:
+			return wallet.Bip32Auth() #TODO
+		
+	@staticmethod
+	def from_file(fo):
+		ca=CliAuth()		
+		for al in fo:
+			ca.subauths.append(CliAuth.parse_auth(al))
+		return ca
+
 
 class CliAccountGroup(object):
 	@staticmethod
@@ -143,6 +177,8 @@ class CliWallet(wallet.Wallet):
 					if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
 						outgroup[a]=acc
 				yield gname,outgroup
+
+		
 
 
 				
