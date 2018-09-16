@@ -1,6 +1,7 @@
 from _bip32 import *
 from itertools import islice,count
 from transaction import Transaction
+import mnemonic
 
 try:
 	from collections import MutableMapping
@@ -58,10 +59,12 @@ class AddressSetAccount(Account):
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
 
-		self._id=str(hash(tuple([(ass.xpub,ass.coin.ticker,ass.path,ass.root) for ass in self.internal+self.external])))
+		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
+		
+		self._id=hashlib.sha256(str(idt)).hexdigest()
 
 	def id(self):
-		return _id
+		return self._id
 	
 	def sync(self,bci):
 		for v in self.internal+self.external:
@@ -81,7 +84,7 @@ class Bip32Account(AddressSetAccount):
 		self.xpub=coin.xpriv2xpub(xpub)
 		if(root == None):
 			root=[h(44),h(coin.childid),h(self.xpub.child)]
-		
+		self.type='bip32'
 		internal=XPubAddressSet(coin,xpub=xpub,path=internal_path,root=root)
 		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root)
 		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
@@ -89,6 +92,10 @@ class Bip32Account(AddressSetAccount):
 class Auth(object):
 	def __init__(self):
 		pass
+
+	def toaccount(self,coin):
+		raise NotImplementedError
+
 	def privkey(self,coin,account,address):
 		pass
 
@@ -101,11 +108,18 @@ class Bip32SeedAuth(Auth):
 			self.seed=seed
 		if(not self.seed):
 			raise Exception("either seed or seedwords must be given")
+
+	def toaccount(self,coin,authref=None,root=None,accountnum=0,*args,**kwargs):
+		master=coin.seed2master(self.seed)
+		if(root is None):
+			root="44h/%dh/%dh" % (coin.childid-h(0),accountnum)
+		xpriv=coin.descend(master,root)
+		return Bip32Account(coin,xpriv,root=root,authref=authref)
 	
-	def childauth(self,account):
-		masterxpriv=account.coin.seed2master(self.seed)
-		xpriv=coin.descend(account.root)
-		return Bip32Auth(account,xpriv,account.root)
+	#def childauth(self,account):
+	#masterxpriv=account.coin.seed2master(self.seed)
+	#xpriv=coin.descend(account.root)
+	#return Bip32Auth(account,xpriv,account.root)
 	
 class Bip32Auth(Auth):
 	def __init__(self,xpriv,root):

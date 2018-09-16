@@ -16,9 +16,11 @@ class Coin(_bip32._Bip32):
 			self.is_testnet=True
 		elif(self.is_testnet):
 			self.ticker+='-TEST'
-
-		#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-		self.childid=_slip44.lookups[self.ticker]
+		if(self.is_testnet):
+			self.childid=0x80000001
+		else:
+			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+			self.childid=_slip44.lookups[self.ticker]
 
 	def __cmp__(self,other):
 		cv=cmp(self.ticker.lower(),other.ticker.lower())

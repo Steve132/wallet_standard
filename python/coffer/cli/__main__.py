@@ -40,16 +40,25 @@ def cmd_balance(wallet,args):
 def cmd_sync(wallet,args):
 	sync(wallet,args.chain,args.group,retries=args.retries)
 
-def cmd_add_account_auths(wallet,args):
-	re.compile(r'([\w\-]+)(?::([\w\/]+))?')
+def cmd_add_account_auth(wallet,args):
+	pre=re.compile(r'([\w\-]+)(?::([\w\/]+))?')
 	auth=cliwallet.CliAuth.from_file(args.auth)
+	
 	for p in args.paths:
-		mo=re.match(p)
+		mo=pre.match(p)
 		if(not mo):
 			raise Exception("'%s' is not recognized as an accountpath")
-		ticker,pa=mo.groups(1),mo.groups(2)
-		print(auth)
-		print(ticker,pa)
+		ticker,pa=mo.group(1,2)
+		coin=fromticker(ticker)
+		for subauth in auth.subauths:
+			acc=subauth.toaccount(coin,root=pa,authref=args.authname)
+			
+			g=wallet.groups.setdefault(args.group,{})
+			g[acc.id()]=acc
+			print(acc.id())
+
+
+	
 
 parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
 parser.add_argument('walletfile',type=str,help="The wallet file you are going to read")
@@ -70,13 +79,15 @@ sync_parser.add_argument('--retries','-n',help="The number of retries to perform
 sync_parser.set_defaults(func=cmd_sync)
 
 add_account_auth_parser=subparsers.add_parser('add_account_from_auth')
-add_account_auth.add_argument('--group','-g',help="The wallet group(s) to lookup.  Can be entered multiple times.",default='*')
-add_account_auth.add_argument('paths',action='append',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]")
-add_account_auth.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
-#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
+add_account_auth_parser.add_argument('--group','-g',help="The wallet group(s) to lookup.  Can be entered multiple times.",default='main')
+add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]")
+add_account_auth_parser.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
+add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
+add_account_auth_parser.add_argument('--name','-n',help='Account name',type=str)
 
-sync_parser.set_defaults(func=cmd_add_account_auth)
-args=parser.parse_args()
+#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
+add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
+
 
 
 args=parser.parse_args()

@@ -144,7 +144,7 @@ class CliWallet(wallet.Wallet):
 			filesdic.setdefault(ext,set()).add(f)
 			
 	
-		for fn in filesdic['.group']:					
+		for fn in filesdic.get('.group',[]):					
 			wallet._add_accountgroup_file(fn,arc.open(fn))
 	
 		for fn in files:

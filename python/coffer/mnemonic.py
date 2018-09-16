@@ -6,6 +6,8 @@ import locale
 import _base
 import unicodedata
 
+
+
 ###BOTH
 
 class Wordlist(list):
@@ -71,7 +73,7 @@ except ImportError:
 
 
 def _nwords(words):
-	if(isinstance(words,basestr)):
+	if(isinstance(words,basestring)):
 		words=words.split()
 	return [w.strip().lower() for w in words]
 
