@@ -29,12 +29,12 @@ class Output(object):
 		amount=Output._amountcheck(int(dic['amount']))
 		address=dic['address']
 		meta=dic.get('meta',{})
-		return Output(coin,Address(unhexlify(address)),amount,meta)
+		return Output(coin,coin.parse_addr(address),amount,meta)
 
 	def to_dict(self):
 		dic={	'coin':self.coin.ticker,
 			'amount':str(self._amount),
-			'address':hexlify(self.address.addrdata),
+			'address':str(self.address),
 			'meta':self.meta
 		}
 		return dic

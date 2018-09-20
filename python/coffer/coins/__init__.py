@@ -18,14 +18,14 @@ def tickers():
 	tickers=classes().keys()
 
 def classfromticker(ticker):
-	if(ticker[-5:].lower()=='-test'):
+	if(ticker[-5:].upper()=='-TEST'):
 		ticker=ticker[:-5]
 	lclasses=classes()
 	return lclasses[ticker.upper()]
 
 def fromticker(ticker,*args,**kwargs):
 	is_testnet=False
-	if(ticker[-5:].lower()=='-test'):
+	if(ticker[-5:].upper()=='-TEST'):
 		is_testnet=True
 		
 	coincls=classfromticker(ticker)

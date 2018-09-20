@@ -180,13 +180,13 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		#if(isinstance(pubkeys,basestring)):
 		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		#pubkeys=[(PublicKey(pub) if isinstance(pub,basestr) else pub) for pub in pubkeys] #if there's a string test
-		
+
 		multisig=len(pubkeys) > 1
 		if(multisig):#P2SH multisig
 			raise NotImplementedError #TODO implement this #self.sh_version()
 		else:  #P2PKH
 			h160=_base.hash160(pubkeys[0].pubkeydata)
-			return Address(chr(self.pkh_prefix)+h160)
+			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
 
 	def format_addr(self,addr,*args,**kwargs):
 		return _base.bytes2base58c(addr.addrdata)
@@ -221,7 +221,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		raise NotImplementedError
 
 	def parse_addr(self,addrstring):
-		return Address(_base.base58c2bytes(addrstring))
+		return Address(_base.base58c2bytes(addrstring),self)
 
 	def address2scriptPubKey(self,addr):
 		addrbytes=addr.addrdata

@@ -1,4 +1,5 @@
 import coffer.wallet as wallet
+import coffer.account as account
 import coffer.coins as coins
 from coffer.transaction import *
 import json
@@ -12,19 +13,19 @@ class CliAccount(object):
 		if(dic['type']=='bip32'):
 			ctick=dic['chain'].lower()
 			coin=coins.fromticker(ctick)
-			wa=wallet.Bip32Account(coin,**dic)
+			wa=account.Bip32Account(coin,**dic)
 			wa.type='bip32'
 			return wa
 
 	@staticmethod
-	def to_dict(account):
-		if(account.type=='bip32'):
-			return {'chain':account.coin.ticker,
-				'root':account.internal[0].root,
-				'authref':account.authref,
-				'internal_path':account.internal[0].path,
-				'external_path':account.external[0].path,
-				'xpub':str(account.internal[0].xpub),
+	def to_dict(acc):
+		if(acc.type=='bip32'):
+			return {'chain':acc.coin.ticker,
+				'root':acc.internal[0].root,
+				'authref':acc.authref,
+				'internal_path':acc.internal[0].path,
+				'external_path':acc.external[0].path,
+				'xpub':str(acc.internal[0].xpub),
 				'type':'bip32'}
 
 	@staticmethod
@@ -109,9 +110,9 @@ class CliWallet(wallet.Wallet):
 		
 	
 	@staticmethod
-	def from_archive(filename,wallet=None):
-		if(wallet is None):
-			wallet=CliWallet()
+	def from_archive(filename,wal=None):
+		if(wal is None):
+			wal=CliWallet()
 
 		arc=zipordir.ZipOrDir(filename,'r')
 		files=[x for x in arc.namelist() if x[-1] != '/']
@@ -124,23 +125,23 @@ class CliWallet(wallet.Wallet):
 			
 	
 		for fn in filesdic.get('.group',[]):					
-			wallet._add_accountgroup_file(fn,arc.open(fn))
+			wal._add_accountgroup_file(fn,arc.open(fn))
 	
 		for fn in files:
 			bn,ext=os.path.splitext(fn)
 			ext=ext[1:]
 			if(ext != 'group'):
-				wallet._add_metadata_file(bn,ext,arc.open(fn))
+				wal._add_metadata_file(bn,ext,arc.open(fn))
 	
-		return wallet
+		return wal
 
 	@staticmethod
-	def to_archive(wallet,filename):
+	def to_archive(wal,filename):
 		arc=zipordir.ZipOrDir(filename,'w')
-		for f,g in wallet.groups.items():
+		for f,g in wal.groups.items():
 			fn=(f+'.group')
-			wallet._write_accountgroup_arc(g,fn,arc)
-			wallet._write_metadata_arc(f,arc)
+			wal._write_accountgroup_arc(g,fn,arc)
+			wal._write_metadata_arc(f,arc)
 
 	@staticmethod
 	def parse_auth(s):
@@ -155,13 +156,13 @@ class CliWallet(wallet.Wallet):
 		if(s[:6]=='bip32:'):
 			s=s.split().join().split(':')[-1]
 			s=unhexlify(s)
-			return wallet.Bip32SeedAuth(seed=s)
+			return auth.Bip32SeedAuth(seed=s)
 		elif(' ' in s):
-			return wallet.Bip32SeedAuth(words=s)
+			return auth.Bip32SeedAuth(words=s)
 		elif(checkhex(x)):
-			return wallet.HexPrivKeyAuth(key=x)
+			return auth.HexPrivKeyAuth(key=x)
 		else:
-			return wallet.Bip32Auth() #TODO
+			return auth.Bip32Auth() #TODO
 	
 	#def __repr__(self):
 		#return #json.dumps(self.groups,indent=4)

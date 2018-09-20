@@ -20,12 +20,8 @@ class AccountGroup(object):
 		accounts=self.get_accounts(chainsel)
 		for a,acc in accounts.items():
 			tick.acc.coin.ticker
-			bci=acc.coin.blockchain()
 			
-			amount=0
-			for aset in acc.internal+acc.external:
-				unspents=bci.unspents(aset.addresses())
-				amount+=sum([p.amount for p in unspents])
+			amount=acc.balance()
 
 			group_balances[tick]=group_balances.get(tick,0)+amount
 		return group_balances
@@ -40,6 +36,12 @@ class AccountGroup(object):
 	def add_account_from_auth(self,coin,auth,root,authname):
 		acc=auth.toaccount(coin,root=root,authref=authname)
 		self.accounts[acc.id()]=acc
+
+	def get_addresses(self,chainsel=[]):
+		group_addresses={}
+		for a,acc in self.get_accounts(chainsel).items():
+			group_addresses[a]={'external':acc.next_external(),'internal':acc.next_internal()}
+		return group_addresses
 	
 #AccountGroup = dict
 class Wallet(object):
@@ -61,7 +63,6 @@ class Wallet(object):
 	def sync(self,groupsel=[],chainsel=[],retries=10):
 		for groupname,group in self.get_groups(groupsel).items():
 			group.sync(chainsel,retries)
-		
 		
 	def get_addresses(self,groupsel=[],chainsel=[]):
 		return {groupname:group.get_addresses(chainsel) for groupname,group in self.get_groups(groupsel).items()}

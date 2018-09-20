@@ -27,10 +27,10 @@ class DestinationType(object):
 		self.address=results['address']
 		
 def cmd_balance(w,args):
-	all_balances=w.balance(args.chain,args.group)
+	all_balances=w.balance(args.group,args.chain)
 
 def cmd_sync(w,args):
-	w.sync(w,args.chain,args.group,retries=args.retries)
+	w.sync(args.group,args.chain,retries=args.retries)
 
 def cmd_add_account_auth(w,args):
 	allauths=cliwallet.CliAuth.from_file(args.auth)
@@ -45,7 +45,7 @@ def cmd_send(w,args):
 		
 
 def cmd_get_address(w,args):
-	
+	pprint(w.get_addresses(args.group,args.chain))
 
 if __name__=='__main__':
 	parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
@@ -82,7 +82,6 @@ if __name__=='__main__':
 	send_parser.add_argument('--change_select_algorithm','-cs',help="The change selection algorithm",default='simplechange')
 	send_parser.add_argument('--output_file','-o',help="The output file to output for the unsigned transaction",type=argparse.FileType('w'),default='-')
 	send_parser.set_defaults(func=cmd_send)
-	args=parser.parse_args()
 
 	get_address_parser=subparsers.add_parser('get_address')
 	get_address_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to send from. Defaults to all",default=[])

@@ -49,16 +49,23 @@ class PrivateKey(object):
 		return hash(self.privkeydata)
 
 class Address(object):
-	def __init__(self,addrdata):
+	def __init__(self,addrdata,coin,format_args=[],format_kwargs={}):
 		self.addrdata=addrdata
+		self.coin=coin
+		self.afargs=format_args
+		self.afkwargs=format_kwargs
 
 	def __cmp__(self,other):
-		return cmp(self.addrdata,other.addrdata)
+		return cmp((self.addrdata,self.coin),(other.addrdata,other.coin))
 		
 	def __hash__(self):
-		return hash(self.addrdata)
+		return hash((self.addrdata,self.coin))
 		
-	#def __str__(self):
-	#	raise NotImplementedError("Address Objects
-	#def __repr__(self):
-	#	raise NotImplementedError
+	def __str__(self):
+		if(self.coin is None):
+			return "genericaddrdata:%s" % (hexlify(self.addrdata))
+
+		return self.coin.format_addr(self,*self.afargs,**self.afkwargs)
+
+	def __repr__(self):
+		return 'Address(%s)' % (str(self))

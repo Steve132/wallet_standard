@@ -23,12 +23,10 @@ class Coin(_bip32._Bip32):
 			self.childid=_slip44.lookups[self.ticker]
 
 	def __cmp__(self,other):
-		cv=cmp(self.ticker.lower(),other.ticker.lower())
-		if(cv==0):
-			return cmp(self.is_testnet,other.is_testnet)
-		return cv
+		return cmp(self.ticker.upper(),other.ticker.upper())
+	
 	def __hash__(self):
-		return hash(self.ticker.lower()+str(self.is_testnet))
+		return hash(self.ticker.upper())
 		
 
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
@@ -106,4 +104,3 @@ class Coin(_bip32._Bip32):
 		def default_gen(self,account=0):
 			return [_bip32.h(44),_bip32.h(self.childid),_bip32.h(account)]
 		return default_gen
-

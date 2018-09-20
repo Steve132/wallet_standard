@@ -21,6 +21,7 @@ class SegwitCoin(SatoshiCoin):
 		self.embed_in_legacy=embed_in_legacy
 		self.bech32=bech32
 	
+
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
 	def pubkeys2addr(self,pubkeys,segwit=False,):
 		#if(isinstance(pubkeys,basestring)):
@@ -50,7 +51,7 @@ class SegwitCoin(SatoshiCoin):
 	def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one
 		try:
-			return Address(parsebech32(addrstring))
+			return Address(parsebech32(addrstring),self,format_kwargs={'bech32':True})
 		except:
 			return super(SegwitCoin,self).parse_addr(addrstring)
 

@@ -41,7 +41,7 @@ class BCH(SatoshiCoin):
 		addrversions=[self.pkh_prefix,self.sh_prefix]
 		addrversion=addrversions[version_int]
 	
-		return Address(bytes(chr(addrversion))+payload)
+		return Address(bytes(chr(addrversion))+payload,self,format_kwargs={'cashaddr':True,'prefix':prefix})
 	
 	def _write_cashaddr(self,abytes,prefix=None):
 		tprefix=prefix
@@ -65,7 +65,7 @@ class BCH(SatoshiCoin):
 		if(cashaddr):
 			return self._write_cashaddr(addr.addrdata,prefix)
 		else:
-			return _base.bytes2base58c(addr.addrdata)
+			return super(BCH,self).format_addr(addr,*args,**kwargs)
 
 	def parse_addr(self,addrstring):
 		if(':' in addrstring):
@@ -74,7 +74,7 @@ class BCH(SatoshiCoin):
 			return self.parse_cashaddr(addrstring)
 		except Exception as caerr:
 			try:
-				return Address(_base.base58c2bytes(addrstring))
+				return Address(_base.base58c2bytes(addrstring),self,format_kwargs={'cashaddr':False,'prefix':None})
 			except Exception as err:
 				raise Exception("Could not parse BCH address %s: %r,%r" % (addrstring,err,caerr))
 
