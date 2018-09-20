@@ -73,7 +73,7 @@ class CliWallet(wallet.Wallet):
 	def _add_accountgroup_file(self,fn,fo):
 		groupname,ext=os.path.splitext(fn)
 		data=json.load(fo)
-		self.groups.setdefault(groupname,CliAccountGroup.from_dict(data))
+		self.add_group(groupname,CliAccountGroup.from_dict(data))
 
 	def _write_accountgroup_arc(self,g,fn,arc):
 		data=CliAccountGroup.to_dict(g)

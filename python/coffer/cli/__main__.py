@@ -5,8 +5,12 @@ import json
 from ..coins import fromticker
 from pprint import pprint
 import re
+from itertools import islice
 #this is a synced balance	
 
+"""
+	<ticker>:<path> (TODO: add OR <ticker>	
+"""
 class PathType(object):
 	_pre=re.compile(r'([\w\-]+)(?::([\w\/]+))?')
 	def __init__(self,p):
@@ -14,6 +18,7 @@ class PathType(object):
 		if(not mo):
 			raise argparse.ArgumentTypeError("'%s' is not recognized as an accountpath of the form ticker[:/path]")
 		self.ticker,self.pa=mo.group(1,2)
+
 
 class DestinationType(object):
 	_amountre=re.compile(r'^(?P<amount>[\d\.]+)(?P<lp>[\(])?(?P<ticker>[\w-]+)?(?(lp)\)):(?P<address>\S+)')
@@ -27,25 +32,37 @@ class DestinationType(object):
 		self.address=results['address']
 		
 def cmd_balance(w,args):
-	all_balances=w.balance(args.group,args.chain)
+	for gname,group in w.iter_groups(args.group):
+		for aname,acc in group.iter_accounts(args.chain):
+			acc.balance(retries=args.retries)
 
 def cmd_sync(w,args):
-	w.sync(args.group,args.chain,retries=args.retries)
+	for gname,group in w.iter_groups(args.group):
+		for aname,acc in group.iter_accounts(args.chain):
+			acc.sync(retries=args.retries)
 
 def cmd_add_account_auth(w,args):
 	allauths=cliwallet.CliAuth.from_file(args.auth)
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
-			w.add_account_from_auth(args.group,coin,subauth,p.pa,args.authname)
+				acc=auth.toaccount(coin,authref=authname,root=p) #accountnum=args.account_index)
+				w.add_account(groupname=args.group,account=acc)
 
 def cmd_send(w,args):
 	for a in args.dsts:
 		print(a.__dict__)
 		
-
 def cmd_get_address(w,args):
-	pprint(w.get_addresses(args.group,args.chain))
+	for gname,group in w.iter_groups(args.group):
+		for aid,acc in group.iter_accounts(args.chain):
+			tick=acc.coin.ticker
+			prefix="%s/%s/%s/%s" % (gname,tick,aid[:6],'external')
+			addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
+			print("%s\t%s" % (prefix,addrs))
+			prefix="%s/%s/%s/%s" % (gname,tick,aid[:6],'internal')
+			addrs=''.join([str(a) for a in acc.next_internal(count=args.count)])
+			print("%s\t%s" % (prefix,addrs))
 
 if __name__=='__main__':
 	parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
@@ -86,6 +103,7 @@ if __name__=='__main__':
 	get_address_parser=subparsers.add_parser('get_address')
 	get_address_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to send from. Defaults to all",default=[])
 	get_address_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
+	get_address_parser.add_argument('--count','-n',help="The number of addresses to get",type=int,default=1)
 	get_address_parser.set_defaults(func=cmd_get_address)
 	
 	args=parser.parse_args()

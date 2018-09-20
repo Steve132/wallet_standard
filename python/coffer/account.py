@@ -98,7 +98,7 @@ class AddressSetAccount(Account):
 			for k,v in txs.items():
 				m[k]=v
 
-	def balance(self):
+	def balance(self,bci=None):
 		amount=0
 		for aset in self.internal+self.external:
 			unspents=bci.unspents(aset.address_iter())
