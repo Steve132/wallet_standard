@@ -42,33 +42,12 @@ class CliAccount(object):
 class CliAuth(object):
 	def __init__(self):
 		self.subauths=[]
-
-	@staticmethod
-	def parse_auth(s):
-		def checkhex(x):
-			try:
-				a=int(x,16)
-				return True
-			except ValueError:
-				return False
-
-		s.strip()
-		if(s[:6]=='bip32:'):
-			s=s.split().join().split(':')[-1]
-			s=unhexlify(s)
-			return wallet.Bip32SeedAuth(seed=s)
-		elif(' ' in s):
-			return wallet.Bip32SeedAuth(words=s)
-		elif(checkhex(x)):
-			return wallet.HexPrivKeyAuth(key=x)
-		else:
-			return wallet.Bip32Auth() #TODO
-		
+	
 	@staticmethod
 	def from_file(fo):
-		ca=CliAuth()		
+		ca=[]		
 		for al in fo:
-			ca.subauths.append(CliAuth.parse_auth(al))
+			ca.append(CliAuth.parse_auth(al))
 		return ca
 
 
@@ -76,13 +55,13 @@ class CliAccountGroup(object):
 	@staticmethod
 	def from_dict(da):
 		if('type' not in da):
-			return {k:CliAccount.from_dict(p) for k,p in da.items()}
+			return wallet.AccountGroup({k:CliAccount.from_dict(p) for k,p in da.items()})
 		return {}
 
 	@staticmethod
-	def to_dict(wg):
-		if(isinstance(wg,dict)):
-			return {k:CliAccount.to_dict(p) for k,p in wg.items()}
+	def to_dict(ag):
+		if(isinstance(ag,wallet.AccountGroup)):
+			return {k:CliAccount.to_dict(p) for k,p in ag.accounts.items()}
 		return {}
 
 
@@ -104,8 +83,8 @@ class CliWallet(wallet.Wallet):
 		if(gn in self.groups):
 			g=self.groups[gn]
 			for ak,accd in data.items():
-				if(ak in g):
-					am=g[ak].meta.setdefault(ext,{})
+				if(ak in g.accounts):
+					am=g.accounts[ak].meta.setdefault(ext,{})
 					nm=CliAccount.meta_from_dict(ext,accd)
 					for k,v in nm.items():
 						am[k]=v
@@ -117,7 +96,7 @@ class CliWallet(wallet.Wallet):
 			dataout={}
 			
 			g=self.groups[gn]
-			for ak,acc in g.items():
+			for ak,acc in g.accounts.items():
 				for ext,edata in acc.meta.items():
 					ga=dataout.setdefault(ext,{})
 					ga[ak]=CliAccount.meta_to_dict(ext,edata)
@@ -162,22 +141,35 @@ class CliWallet(wallet.Wallet):
 			fn=(f+'.group')
 			wallet._write_accountgroup_arc(g,fn,arc)
 			wallet._write_metadata_arc(f,arc)
+
+	@staticmethod
+	def parse_auth(s):
+		def checkhex(x):
+			try:
+				a=int(x,16)
+				return True
+			except ValueError:
+				return False
+
+		s.strip()
+		if(s[:6]=='bip32:'):
+			s=s.split().join().split(':')[-1]
+			s=unhexlify(s)
+			return wallet.Bip32SeedAuth(seed=s)
+		elif(' ' in s):
+			return wallet.Bip32SeedAuth(words=s)
+		elif(checkhex(x)):
+			return wallet.HexPrivKeyAuth(key=x)
+		else:
+			return wallet.Bip32Auth() #TODO
 	
 	#def __repr__(self):
 		#return #json.dumps(self.groups,indent=4)
 
-	def get_filtered_accounts(self,selgroups=[],selchains=[]):
-		selgroups=set([x.lower() for x in selgroups])
-		selchains=set([x.lower() for x in selchains])
-		outgroups={}
-		for gname,g in self.groups.items():
-			if(len(selgroups)==0 or gname in selgroups):
-				outgroup={}
-				for a,acc in g.items():
-					if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
-						outgroup[a]=acc
-				yield gname,outgroup
 
+
+
+	
 		
 
 
