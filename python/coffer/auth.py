@@ -1,4 +1,7 @@
 import mnemonic
+from _bip32 import h
+import account
+
 class Auth(object):
 	def __init__(self):
 		pass
@@ -24,7 +27,7 @@ class Bip32SeedAuth(Auth):
 		if(root is None):
 			root="44h/%dh/%dh" % (coin.childid-h(0),accountnum)
 		xpriv=coin.descend(master,root)
-		return Bip32Account(coin,xpriv,root=root,authref=authref)
+		return account.Bip32Account(coin,xpriv,root=root,authref=authref)
 	
 	#def childauth(self,account):
 	#masterxpriv=account.coin.seed2master(self.seed)

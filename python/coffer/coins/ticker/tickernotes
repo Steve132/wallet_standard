@@ -1,0 +1,27 @@
+
+#https://docs.python.org/2/library/anydbm.html#module-anydbm
+#this should return the ratio of the 'asset_ticker' price in terms of 'currency_ticker' price.
+#timestamp is the closest price to the current price.  If timestamp=None, get the current price from the remote
+#for example, if get_price('BTC','USD',None) should return something like 6754.0 (dollars per bitcoin)
+
+def get_price(asset_ticker,currency_ticker,timestamp=None):
+	pass
+
+#the above is the only interface.
+#if possible, fallback to other data source if data timestamp is before known time points.  Resync if data timestamp is after known time points
+
+#if the price is between two known data points, lerp between them.
+#for performance, it should minimize internet traffic with a cache if possible.   
+##it should store a temporary entry for each of the full historical coin prices as it fetches them.
+
+#For example, with the coincap.io implementation  when a coin not in the cache is asked for download the whole thing for that coin but save it..
+
+#another coincap problem: since coincap only provides USD prices, if currency_ticker is NOT usd, then you'll have to return get_price(asset_ticker,'USD')/get_price(currency_ticker,'USD')
+
+#no numpy allowed.
+#here are some other sources
+https://www.worldcoinindex.com/apiservice
+https://cryptowat.ch/docs/api
+https://github.com/CoinCapDev/CoinCap.io
+https://www.cryptocompare.com/api/
+https://coinlib.io/api/docs

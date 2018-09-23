@@ -89,20 +89,20 @@ class AddressSetAccount(Account):
 	def id(self):
 		return self._id
 	
-	def sync(self,bci=None):
-		if(bci is None):
-			bci=self.coin.blockchain()
+	def sync(self,retries=10,unspents_only=False): #TODO: sync unspents_only goes here...bci.unspents(aset.address_iter())
+		bci=self.coin.blockchain()
+		bci.retries=retries
 		for v in self.internal+self.external:
 			m=self.meta.setdefault("txs",{})
 			txs=bci.transactions(v.address_iter())
 			for k,v in txs.items():
 				m[k]=v
 
-	def balance(self,bci=None):
+	def balance(self):
 		amount=0
 		for aset in self.internal+self.external:
-			unspents=bci.unspents(aset.address_iter())
-			amount+=sum([p.amount for p in unspents])
+			#unspents=
+			amount+=sum([p.amount for uid,p in unspents.items()])
 		return amount
 
 	def _referenced_addr(self):

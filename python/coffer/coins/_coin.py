@@ -80,7 +80,6 @@ class Coin(_bip32._Bip32):
 	def denomination_whole2float(self,x):
 		raise NotImplementedError
 
-
 	def txpreimage(self,tx):
 		raise NotImplementedError
 
@@ -89,17 +88,7 @@ class Coin(_bip32._Bip32):
 
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
-
-	def filter_unspents(self,txs,addrused,*args,**kwargs):
-		utxos={}
-
-		for tx in txs:
-			for p in tx.dsts:
-				if(not p.spentpid and (p.address in addrused)):
-					utxos[p.previd]=p
-		return utxos
-
-			
+	
 	def hdpath_generator(self):
 		def default_gen(self,account=0):
 			return [_bip32.h(44),_bip32.h(self.childid),_bip32.h(account)]

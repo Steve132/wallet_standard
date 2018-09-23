@@ -1,6 +1,8 @@
 import coffer.wallet as wallet
 import coffer.account as account
 import coffer.coins as coins
+import coffer.auth as auth
+
 from coffer.transaction import *
 import json
 import zipordir
@@ -43,6 +45,27 @@ class CliAccount(object):
 class CliAuth(object):
 	def __init__(self):
 		self.subauths=[]
+
+	@staticmethod
+	def parse_auth(s):
+		def checkhex(x):
+			try:
+				a=int(x,16)
+				return True
+			except ValueError:
+				return False
+
+		s.strip()
+		if(s[:6]=='bip32:'):
+			s=s.split().join().split(':')[-1]
+			s=unhexlify(s)
+			return auth.Bip32SeedAuth(seed=s)
+		elif(' ' in s):
+			return auth.Bip32SeedAuth(words=s)
+		elif(checkhex(x)):
+			return auth.HexPrivKeyAuth(key=x)
+		else:
+			return auth.Bip32Auth() #TODO
 	
 	@staticmethod
 	def from_file(fo):
@@ -143,27 +166,6 @@ class CliWallet(wallet.Wallet):
 			wal._write_accountgroup_arc(g,fn,arc)
 			wal._write_metadata_arc(f,arc)
 
-	@staticmethod
-	def parse_auth(s):
-		def checkhex(x):
-			try:
-				a=int(x,16)
-				return True
-			except ValueError:
-				return False
-
-		s.strip()
-		if(s[:6]=='bip32:'):
-			s=s.split().join().split(':')[-1]
-			s=unhexlify(s)
-			return auth.Bip32SeedAuth(seed=s)
-		elif(' ' in s):
-			return auth.Bip32SeedAuth(words=s)
-		elif(checkhex(x)):
-			return auth.HexPrivKeyAuth(key=x)
-		else:
-			return auth.Bip32Auth() #TODO
-	
 	#def __repr__(self):
 		#return #json.dumps(self.groups,indent=4)
 

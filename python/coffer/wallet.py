@@ -43,13 +43,13 @@ class Wallet(object):
 			if(len(selgroups)==0 or gname.lower() in selgroups):
 				yield gname,g
 
-	def add_account(self,groupname,acc):
+	def add_account(self,groupname,account):
 		aid=account.id()
 		if(aid in self.accountmapping):
 			raise Exception("Error, account %r is already in group %s" % (account,self.accountmapping[aid]))
 		g=self.groups.setdefault(groupname,AccountGroup())
 		self.accountmapping[aid]=groupname
-		g[aid]=account
+		g.accounts[aid]=account
 
 	def add_group(self,groupname,group):
 		if(groupname in self.groups):

@@ -3,17 +3,7 @@ import logging
 import random
 import time
 import itertools
-
-try:
-	from urllib.request import urlopen,Request
-	from urllib.error import URLError
-	from urllib.parse import urlencode
-except:
-	from urllib2 import urlopen,Request,URLError
-	from urllib import urlencode
-
-
-
+from coffer.lib.make_request import make_json_request as mjr
 
 def break_into_blocks(iterat,gap):
 	lst=[]
@@ -61,7 +51,7 @@ class BlockchainInterface(object):
 		txos=self.transactions(iter1,*args,**kwargs)
 		#addressset={k,i; for i,k in enumerate(addressiter
 		usedaddr={}
-		for tx in txos:
+		for txid,tx in txos.items():
 			paddr=[o.address for o in tx.prevs]
 			daddr=[o.address for o in tx.dsts]
 			for addr in paddr+daddr:
@@ -76,10 +66,18 @@ class BlockchainInterface(object):
 		txso,used=self._transactions_used(addressiter,*args,**kwargs)
 		return used
 
-	def unspents(self,addressiter,*args,**kwargs): #there should be an xpub version here
-		txso,used=self._transactions_used(addressiter,*args,**kwargs)
-		used=dict(used)
-		return self.coin.filter_unspents(txso,set([k for k,v in used.items() if v]))
+#	def unspents(self,addressiter,*args,**kwargs): #there should be an xpub version here
+#		txso,used=self._transactions_used(addressiter,*args,**kwargs)
+#		used=dict(used)
+#		return self.coin.filter_unspents(txso,set([k for k,v in used.items() if v]))
+"""	def filter_unspents(self,txs,addrused,*args,**kwargs):
+		utxos={}
+
+		for txid,tx in txs.items():
+			for p in tx.dsts:
+				if(not p.spentpid and (p.address in addrused)):
+					utxos[p.previd]=p
+		return utxos"""
 
 	
 _exempt_members=['subchains','coin'] #'unspents','_addrfunc','transactions']
@@ -166,32 +164,7 @@ class HttpBlockchainInterface(BlockchainInterface):
 
 	#https://stackoverflow.com/questions/19396696/415-unsupported-media-type-post-json-to-odata-service-in-lightswitch-2012
 	def make_json_request(self,request_type,call,callargs=None,retry_counter=10,delay=0.25,*args,**kwargs):
-		encodeargs=None		
-		if(callargs):
-			encodeargs=urlencode(callargs)
-		
-		
-		ep=self.get_endpoint()
-		headers={'User-Agent': 'Mozilla/5.0%d'%(random.randrange(1000000))}
-	
-		if(request_type is 'GET'):
-			url=ep+call+(('?'+encodeargs) if encodeargs else '')
-			data=None
-			headers.update({'Accept':'application/json'})
-		elif(request_type is 'POST'):
-			url=ep+call
-			data=encodeargs
-			headers.update({'Accept':'application/json', 'Content-Length': str(len(data)),'Content-Type': 'application/x-www-form-urlencoded'})
-		else:
-			raise Exception("Unhandled request type")
-
-		req=Request(url,data,headers)
-		
-		time.sleep(delay)
-		logging.debug("Request(%r,%r,%r)" % (url,data,headers))
-		response=urlopen(req,*args,**kwargs)
-		response=response.read().strip()
-		return json.loads(response)
+		return mjr(request_type,self.get_endpoint(),call,callargs,retry_counter,delay,*args,**kwargs)
 
 	#def make_json_request(self,request_type,call,callargs=None,retry_counter=0,*args,**kwargs):
 		

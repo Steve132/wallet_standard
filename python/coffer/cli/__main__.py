@@ -6,6 +6,9 @@ from ..coins import fromticker
 from pprint import pprint
 import re
 from itertools import islice
+from lib import appdirs
+import os.path
+
 #this is a synced balance	
 
 """
@@ -31,14 +34,22 @@ class DestinationType(object):
 		self.ticker=results['ticker']
 		self.address=results['address']
 		
+
+def _build_prefix(gname,aid,acc):
+	tick=acc.coin.ticker
+	prefix="%s/%s/%s" % (gname,tick,aid[:8])
+	return prefix
+				
 def cmd_balance(w,args):
 	for gname,group in w.iter_groups(args.group):
-		for aname,acc in group.iter_accounts(args.chain):
-			acc.balance(retries=args.retries)
+		for aid,acc in group.iter_accounts(args.chain):
+			amount=acc.balance()
+			prefix=prefix=_build_prefix(gname,aid,acc)
+			print("%s\t%f" % (prefix,amount))
 
 def cmd_sync(w,args):
 	for gname,group in w.iter_groups(args.group):
-		for aname,acc in group.iter_accounts(args.chain):
+		for aid,acc in group.iter_accounts(args.chain):
 			acc.sync(retries=args.retries)
 
 def cmd_add_account_auth(w,args):
@@ -46,7 +57,7 @@ def cmd_add_account_auth(w,args):
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
-				acc=auth.toaccount(coin,authref=authname,root=p) #accountnum=args.account_index)
+				acc=subauth.toaccount(coin,authref=args.authname,root=p.pa) #accountnum=args.account_index)
 				w.add_account(groupname=args.group,account=acc)
 
 def cmd_send(w,args):
@@ -56,24 +67,23 @@ def cmd_send(w,args):
 def cmd_get_address(w,args):
 	for gname,group in w.iter_groups(args.group):
 		for aid,acc in group.iter_accounts(args.chain):
-			tick=acc.coin.ticker
-			prefix="%s/%s/%s/%s" % (gname,tick,aid[:6],'external')
-			addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
-			print("%s\t%s" % (prefix,addrs))
-			prefix="%s/%s/%s/%s" % (gname,tick,aid[:6],'internal')
-			addrs=''.join([str(a) for a in acc.next_internal(count=args.count)])
-			print("%s\t%s" % (prefix,addrs))
+			prefix=_build_prefix(gname,aid,acc)
+			for extint in ['external','internal']:
+				addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
+				print("%s/%s\t%s" % (prefix,extint,addrs))
 
 if __name__=='__main__':
+	default_wallet_dir=os.path.join(appdirs.user_data_dir("CofferCli","Coffer"),'default_wallet.zip')
+
 	parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
-	parser.add_argument('walletfile',type=str,help="The wallet file you are going to read")
-	parser.add_argument('--outwallet','-o',type=str,help="The wallet file you are going to write to (defaults to read)")
+	parser.add_argument('--wallet','-w',type=str,help="The wallet file or directory you are going to read. (defaults to '%(default)s')",default=default_wallet_dir)
+	parser.add_argument('--wallet_out','-wo',type=str,help="The wallet file you are going to write to (defaults to the input wallet)")
 	subparsers=parser.add_subparsers()
 
 	balance_parser=subparsers.add_parser('balance')
 	balance_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
 	balance_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to lookup.  Can be entered multiple times.  Defaults to all.",default=[])
-	balance_parser.add_argument('--totals','-t',action='store_true',help="Only print the totals")
+	balance_parser.add_argument('--totals_only','-t',action='store_true',help="Only print the totals")
 	balance_parser.set_defaults(func=cmd_balance)
 
 	sync_parser=subparsers.add_parser('sync')
@@ -93,7 +103,7 @@ if __name__=='__main__':
 
 	send_parser=subparsers.add_parser('send')
 	send_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to send from. Defaults to all",default=[])
-	send_parser.add_argument('--chain','-c',required=True,help="The chain to operate on.",type=str)
+	send_parser.add_argument('chain',help="The chain to operate on.",type=str)
 	send_parser.add_argument('dsts',nargs='+',help="A series of amounts in the form <amount>[CURRENCY]:<address>",type=DestinationType)
 	send_parser.add_argument('--input_select_algorithm','-is',help="The input selection algorithm",default='mintax')
 	send_parser.add_argument('--change_select_algorithm','-cs',help="The change selection algorithm",default='simplechange')
@@ -108,14 +118,14 @@ if __name__=='__main__':
 	
 	args=parser.parse_args()
 
-	if(args.outwallet is None):
-		args.outwallet=args.walletfile
+	if(args.wallet_out is None):
+		args.wallet_out=args.wallet
 
-	w=cliwallet.CliWallet.from_archive(args.walletfile)
+	w=cliwallet.CliWallet.from_archive(args.wallet)
 
 	args.func(w,args)
 
-	cliwallet.CliWallet.to_archive(w,args.walletfile)
+	cliwallet.CliWallet.to_archive(w,args.wallet_out)
 
 	
 

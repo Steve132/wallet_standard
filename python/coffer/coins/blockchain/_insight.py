@@ -37,6 +37,7 @@ def _jsonunspent2utxo(coin,ju):
 def _json2tx(coin,jtx):
 	sigs={}
 	txid=jtx['txid']
+	print(jtx)
 	inputs=[None]*len(jtx['vin'])
 	for jsin in jtx['vin']:
 		paddr=jsin['addr']
