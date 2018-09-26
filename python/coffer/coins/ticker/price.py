@@ -24,8 +24,8 @@ class CoinCapCache(object):
 			historydict.update(hist["price"])
 		data=sorted(historydict.items(),key=lambda x:x[0])
 		self.history_timestamps,self.history_prices=zip(*data)
-		print self.history_timestamps
-		print self.history_prices
+		#print self.history_timestamps
+		#print self.history_prices
 
 	def lookup_current(self):
 		current_price=get_current_price(self.ticker,'USD')
@@ -36,7 +36,7 @@ class CoinCapCache(object):
 
 	def lookup(self,timestamp):
 		timestamp=float(timestamp)
-		if(self.history_timestamps is None or self.history_prices is None or timestamp > (self.time_of_last_sync+300)): #300 seconds is the expiration date on the cache 
+		if(self.history_timestamps is None or self.history_prices is None or timestamp > (self.time_of_last_sync+300)): #300 seconds is the expiration date on the cache
 			self.fetch()
 
 		if(timestamp < self.history_timestamps[0]):
@@ -44,8 +44,7 @@ class CoinCapCache(object):
 
 		self.time_of_last_sync=self.history_timestamps[-1]
 		timestamp_index = bisect.bisect_left(self.history_timestamps, timestamp)
-		
-		
+
 		if(timestamp_index == len(self.history_timestamps)):
 			left_x,left_y=self.history_timestamps[-1],self.history_prices[-1]
 			current_price,current_ts=self.lookup_current()
@@ -58,8 +57,7 @@ class CoinCapCache(object):
 			right_x,right_y=self.history_timestamps[timestamp_index+1],self.history_prices[timestamp_index+1]
 
 		left_x,right_x=float(left_x),float(right_x)
-
-		t=(right_x-left_x)/(timestamp-left_x)
+		t=(timestamp-left_x)/(right_x-left_x)
 		return left_y+(right_y-left_y)*t
 		
 		
