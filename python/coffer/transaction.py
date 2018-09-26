@@ -64,6 +64,12 @@ class Previous(Output):
 	def id(self):
 		return Previous.make_id(self.coin.ticker,self.previd)
 
+	def __cmp__(self,other):
+		return cmp(self.pubkeydata,other.pubkeydata)
+		
+	def __hash__(self):
+		return hash(self.pubkeydata)
+
 	@staticmethod
 	def from_dict(dic):
 		out=Output.from_dict(dic)
@@ -81,6 +87,12 @@ class Previous(Output):
 		if(self.spentpid != None):
 			dic['spentpid']=self.spentpid
 		return dic
+
+	def __cmp__(self,other):
+		return cmp(self.id(),other.id())
+		
+	def __hash__(self):
+		return hash(self.id())
 		
 
 #class SubmittedPrevious(Previous):
@@ -143,5 +155,11 @@ class Transaction(object):
 
 	def id(self):
 		return Transaction.make_id(self.coin.ticker,self.txid)
+
+	def __cmp__(self,other):
+		return cmp(self.id(),other.id())
+		
+	def __hash__(self):
+		return hash(self.id())
 
 

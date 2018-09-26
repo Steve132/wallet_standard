@@ -30,7 +30,7 @@ class AccountGroup(object):
 	#	for a,acc in self.get_accounts(chainsel).items():
 	#		group_addresses[a]={'external':acc.next_external_iter(),'internal':acc.next_internal_iter()}
 	#	return group_addresses
-	
+
 #AccountGroup = dict
 class Wallet(object):
 	def __init__(self):
@@ -63,5 +63,7 @@ class Wallet(object):
 		self.groups[groupname]=group
 
 
+
+	
 
 
