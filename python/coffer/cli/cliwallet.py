@@ -8,6 +8,7 @@ import json
 import zipordir
 import os,os.path
 from binascii import hexlify,unhexlify
+from pprint import pprint
 
 class CliAccount(object):
 	@staticmethod
@@ -33,13 +34,13 @@ class CliAccount(object):
 	@staticmethod
 	def meta_from_dict(ext,mdict):
 		if(ext=="txs"):
-			return {k:Transaction.from_dict(v) for k,v in mdict.items()}
+			return {TransactionReference(k):Transaction.from_dict(v) for k,v in mdict.items()}
 		return mdict
 
 	@staticmethod
 	def meta_to_dict(ext,meta):
 		if(ext=="txs"):
-			return {k:Transaction.to_dict(v) for k,v in meta.items()}
+			return {str(k):Transaction.to_dict(v) for k,v in meta.items()}
 		return meta
 
 class CliAuth(object):
@@ -127,6 +128,7 @@ class CliWallet(wallet.Wallet):
 			for ext,data in dataout.items():
 				if(len(data) > 0):
 					fn=gn+'.'+ext
+					pprint(data)
 					arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 		else:
 			logging.warning("No account group found with groupname '%s'" % (groupname))
