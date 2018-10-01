@@ -4,8 +4,9 @@ from ..transaction import *
 import _slip44
 from .. import _bip32
 from binascii import hexlify,unhexlify
-
-class Coin(_bip32._Bip32):
+from ..lib.index import IndexBase
+#todo change this to own bip32 as an object
+class Coin(_bip32._Bip32,IndexBase):
 	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public):
 		super(Coin,self).__init__(bip32_prefix_private=bip32_prefix_private,
 					bip32_prefix_public=bip32_prefix_public) 

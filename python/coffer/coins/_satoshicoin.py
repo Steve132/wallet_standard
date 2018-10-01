@@ -238,7 +238,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		return int(x*100000000.0)
 	
 	def denomination_whole2float(self,x):
-		raise float(x)/100000000.0
+		ipart,fpart=divmod(int(x),100000000)
+		return ipart+float(fpart)*1e-8;
 
 
 	#def format_tx(self,txo):

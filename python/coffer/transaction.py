@@ -1,165 +1,87 @@
 from coins import fromticker
 from binascii import hexlify,unhexlify
 from key import Address
+from lib.index import IndexBase
+#todo:  Output should be Output. SubmittedOutput should be SubmittedOutput
+#	    Transaction should have a subclass SubmittedTransaction that includes the txhash and stuff
+#		Only SubmittedTransactions can be referenced
+#		Referenceable should be moved to the base.  Or maybe just into lib (because its special for the implementation here)
+
+
+
+class TransactionReference(IndexBase):
+	def __init__(self,ticker,refid=None,offchain_source=None): 												#source=None means the transaction was on chain. 
+		if(refid==None and offchain_source==None and isinstance(ticker,basestring)): 
+			ticker,offchain_source,refid=ticker.split(':')
+
+		self.ticker=ticker
+		self.refid=refid
+		self.offchain_source=offchain_source
+	
+	def _reftuple(self):
+		return (self.ticker,self.refid,self.offchain_source)
+
+	def __repr__(self):
+		return str(self)
+	def __str__(self):
+		return ':'.join((self.ticker,self.refid,self.offchain_source))
+
+class Transaction(object):
+	def __init__(self,coin,srcs,dsts,meta={},signatures={}):
+		self.coin=coin
+		self.srcs=srcs
+		self.dsts=dsts
+		self.meta=meta
+		self.signatures=signatures
+
+class SubmittedTransaction(Transaction,IndexBase):
+	def __init__(self,coin,srcs,dsts,refid,timestamp,confirmations,offchain_source=None,meta={},signatures={}):
+		super(SubmittedTransaction,self).__init__(coin,srcs,dsts,meta,signatures)
+		self.ref=TransactionReference(ticker=coin.ticker,refid=refid,offchain_source=offchain_source)
+		self.timestamp=timestamp
+		self.confirmations=confirmations
+
+	def _reftuple(self):
+		return self.ref._reftuple()
+
+
+class OutputReference(IndexBase):
+	def __init__(self,ownertx,index=None):
+		if(index==None and isinstance(ownertx,basestring)):	#parse parent as a serialization from a string
+			txrefstr,index=ownertx.rsplit(':',1)
+			ownertx=TransactionReference(txrefstr)
+			
+		self.ownertx=ownertx
+		self.index=index
+
+	def _reftuple(self):
+		return (self.ownertx,self.index)
+
+	def __repr__(self):
+		return str(self)
+
+	def __str__(self):
+		return str(self.ownertx)+':'+str(self.index)
 
 class Output(object):
-	@staticmethod	
-	def _amountcheck(x):
-		if(not isinstance(x, (int, long))):
-			raise Exception("Amount must be an integer not %r" % (type(x)))
-		return x
 
 	def __init__(self,coin,address,amount,meta={}):
 		self.coin=coin
 		self.address=address
-		self._amount=Output._amountcheck(amount)
+		self.amount=amount
 		self.meta=meta
 
-	@property
-	def amount(self):
-		return self._amount
+class SubmittedOutput(Output,IndexBase):
+	def __init__(self,coin,address,amount,ownertx,index,spenttx=None,spentindex=None,meta={}):
+		self.ref=OutputReference(ownertx,index)
 
-	@amount.setter
-	def amount(self,x):
-		self._amount=Output._amountcheck(amount)
+		self.spenttx=spenttx
+		self.spentindex=spentindex
+		super(SubmittedOutput,self).__init__(coin,address,amount,meta)
+	def _reftuple(self):
+		return self.ref._reftuple()
 
-	@staticmethod
-	def from_dict(dic):
-		coin=fromticker(dic['coin'])
-		amount=Output._amountcheck(int(dic['amount']))
-		address=dic['address']
-		meta=dic.get('meta',{})
-		return Output(coin,coin.parse_addr(address),amount,meta)
-
-	def to_dict(self):
-		dic={	'coin':self.coin.ticker,
-			'amount':str(self._amount),
-			'address':str(self.address),
-			'meta':self.meta
-		}
-		return dic
-
-class Previous(Output):
-	def __init__(self,coin,previd,amount,address,meta={},spentpid=None):
-		super(Previous,self).__init__(coin,address,amount,meta)
-		self.previd=previd
-		self.spentpid=spentpid
-
-	def __repr__(self):
-		fmt='%s(previd=%s,address=%s,amount=%d,meta=%r,spentpid=%s)'
-		tpl=(
-			type(self).__name__,
-			self.previd,
-			self.address,
-			self._amount,
-			self.meta,
-			self.spentpid
-			)
-		return fmt % tpl
-
-	@staticmethod
-	def make_id(ticker,previd):
-		return ticker+'::'+previd
-
-	def id(self):
-		return Previous.make_id(self.coin.ticker,self.previd)
-
-	def __cmp__(self,other):
-		return cmp(self.pubkeydata,other.pubkeydata)
-		
-	def __hash__(self):
-		return hash(self.pubkeydata)
-
-	@staticmethod
-	def from_dict(dic):
-		out=Output.from_dict(dic)
-		if('previd' not in dic):
-			return out
-		
-		previd=dic['previd']
-		spentpid=dic.get('spentpid',None)
-		return Previous(out.coin,previd,out.amount,out.address,out.meta,spentpid)
-
-	def to_dict(self):
-		dic=super(Previous,self).to_dict()
-		dic['previd']=self.previd
-			
-		if(self.spentpid != None):
-			dic['spentpid']=self.spentpid
-		return dic
-
-	def __cmp__(self,other):
-		return cmp(self.id(),other.id())
-		
-	def __hash__(self):
-		return hash(self.id())
 		
 
-#class SubmittedPrevious(Previous):
-#	def __init__(self,previd,amount,address,height,confirmations=0,meta={}):
-#		super(Previous,self).__init__(previd,amount,address,meta)
-#		self.height=height
-#		self.confirmations=confirmations
-
-class Transaction(object):
-	def __init__(self,coin,prevs,dsts,meta={},txid=None):
-		self.coin=coin
-		self.prevs=prevs
-		self.dsts=dsts
-		self.meta=meta
-		self.signatures=None
-		self.txid=txid
-		#self.confirmations=confirmations
-		#self.time=None
-
-	def __repr__(self):
-		fmt='Transaction(coin=%r,txid=%r,prevs=%r,dsts=%r,meta=%r)'
-		tpl=(
-			self.coin.ticker,
-			self.txid,
-			self.prevs,
-			self.dsts,	
-			self.meta
-			)
-		return fmt % tpl
-	
-	@staticmethod
-	def from_dict(dic):
-		coin=fromticker(dic['coin'])
-		prevs=[Previous.from_dict(d) for d in dic['prevs']]
-		dsts=[Previous.from_dict(d) for d in dic['dsts']]
-		meta=dic['meta']
-		signatures=dic.get('signatures',None)
-		txid=dic.get('txid',None) 
-		txo=Transaction(coin,prevs,dsts,meta,txid)
-		if(txo.signatures != None):
-			txo.signatures=signatures
-		return txo
-
-	def to_dict(self):
-		dic={
-			'coin':self.coin.ticker,
-			'prevs':[p.to_dict() for p in self.prevs],
-			'dsts':[d.to_dict() for d in self.dsts],
-			'meta':self.meta,
-		}
-		if(self.txid != None):
-			dic['txid']=self.txid
-		if(self.signatures != None):
-			dic['signatures']=self.signatures
-		return dic
-
-	@staticmethod
-	def make_id(ticker,txid):
-		return ticker+'::'+txid
-
-	def id(self):
-		return Transaction.make_id(self.coin.ticker,self.txid)
-
-	def __cmp__(self,other):
-		return cmp(self.id(),other.id())
 		
-	def __hash__(self):
-		return hash(self.id())
-
 

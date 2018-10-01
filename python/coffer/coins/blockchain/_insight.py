@@ -1,6 +1,6 @@
 from _interface import *
 from binascii import hexlify,unhexlify
-from ...transaction import Transaction,Previous
+from ...transaction import *
 
 from pprint import pprint
 
@@ -20,10 +20,10 @@ def _break_into_stringsize(items,size=1800):
 	if(len(curstring)):
 		yield curstring
 		
-
+"""
 def _jsonunspent2utxo(coin,ju):
 	if('satoshis' in ju):
-		amount=int(ju['satoshis'])
+		amount=coin.denomination_whole2float(int(ju['satoshis']))
 	address=ju['address']#todo: normalize
 	meta={'scriptPubKey':ju['scriptPubKey']}
 	if('confirmations' in ju):
@@ -32,58 +32,103 @@ def _jsonunspent2utxo(coin,ju):
 		meta['height']=int(ju['height'])
 	previd=_mkpid(ju['txid'],ju['vout'])
 	
-	return Previous(coin=coin,previd=previd,address=address,amount=amount,meta=meta,spentpid=None)
+	return SubmittedOutput(coin=coin,previd=previd,address=address,amount=amount,meta=meta,spentpid=None)"""
+
+
+def _lazygetval(coin,vs):
+	amountv=vs.get('value',None)
+	amountvS=vs.get('valueSat',None)
+	if(amountvS is not None):
+		return coin.denomination_whole2float(int(amountvS))
+	elif(amountv is not None):
+		return amountv
+	else:
+		logging.warning("Detected a transaction input or output without a value!")
+		return None
 
 def _json2tx(coin,jtx):
 	sigs={}
 	txid=jtx['txid']
-	print(jtx)
 	inputs=[None]*len(jtx['vin'])
 	for jsin in jtx['vin']:
-		paddr=jsin['addr']
-		pamount=jsin.get('valueSat',coin.denomination_float2whole(float(jsin['value'])))
-		previd=_mkpid(jsin['txid'],jsin['vout'])
+		spenttx=TransactionReference(coin.ticker,txid)
+		addr=coin.parse_addr(jsin['addr'])
+		
+		
+		amount=_lazygetval(coin,jsin)
+		ownerindex=int(jsin['vout'])
+		ownertx=TransactionReference(coin.ticker,jsin['txid'])
+		
 		sig=jsin['scriptSig']['hex']
-		sigs[previd]=sig
-		pmeta={'scriptSig':sig,'sequence':jsin['sequence']}
-		prev=Previous(coin=coin,previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta)
-		inputs[jsin['n']]=prev
+		pmeta={'scriptSig':sig,'sequence':jsin['sequence'],'doubleSpentTxID':jsin.get('doubleSpentTxID',None)}
+		spentindex=int(jsin['n'])
+		prev=SubmittedOutput(coin=coin,
+			ownertx=ownertx,
+			index=ownerindex,
+			address=addr,
+			amount=amount,
+			spenttx=spenttx,
+			spentindex=spentindex,
+			meta=pmeta)
+		sigs[prev.ref]=sig
+		inputs[spentindex]=prev
 
 	outputs=[None]*len(jtx['vout'])
 	for jsout in jtx['vout']:
 		#https://bitcoin.stackexchange.com/questions/30442/multiple-addresses-in-one-utxo
 		detectaddr=jsout['scriptPubKey']['addresses']
-		paddr=detectaddr[0] if len(detectaddr) > 0 else None
-		
-		pamount=jsout.get('valueSat',coin.denomination_float2whole(float(jsout['value'])))
-		previd=_mkpid(txid,jsout['n'])
-		pubkey=jsout['scriptPubKey']['hex']
-		pmeta={'scriptPubKey':pubkey,
-			'spentHeight':jsout.get('spentHeight',None),
-            		'spentIndex':jsout.get('spentIndex',None),
-			'spentTxId':jsout.get('spentTxId',None),
-			'humanAddr':paddr
-		}
+		pmeta={}
 		if(len(detectaddr) > 1):
 			pmeta['legacy_multisig']=True
 			logging.warning("Detected a legacy multisig payment!")
 		if(len(detectaddr) < 1):
 			pmeta['no_addr']=True
 			logging.warning("Could not detect an address for a tx")
-			
-		pspent=None
-		if(pmeta['spentTxId']):
-			pspent=_mkpid(pmeta['spentTxId'],pmeta['spentIndex'])
+		haddr=detectaddr[0] if len(detectaddr) > 0 else None
 		
-		prev=Previous(coin=coin,previd=previd,address=coin.parse_addr(paddr),amount=int(pamount),meta=pmeta,spentpid=pspent)
-		outputs[jsout['n']]=prev
+		addr=None if haddr is None else coin.parse_addr(haddr)
+		pubkey=jsout['scriptPubKey']['hex']
+		pprint(jsout)
+		amount=_lazygetval(coin,jsout)
+		if(jsout.get('spentTxId',None) is not None):
+			spenttx=TransactionReference(coin.ticker,jsout['spentTxId'])
+			spentindex=int(jsout['spentIndex'])
+		else:
+			spenttx,spentindex=None,None
 
-	tmeta={k:jtx[k] for k in ['blockhash','blockheight','confirmations','locktime','time','version']}
-
-
-	tx=Transaction(coin,inputs,outputs,tmeta,txid=txid)
-	tx.signatures=sigs
+		ownertx=TransactionReference(coin.ticker,txid)
+		ownerindex=int(jsout['n'])
 		
+		pmeta.update({'scriptPubKey':pubkey,
+			'spentHeight':jsout.get('spentHeight',None),
+			'humanAddr':haddr,
+			'legacy_addresses':detectaddr
+		})
+		
+		dst=SubmittedOutput(coin=coin,
+			ownertx=ownertx,
+			index=ownerindex,
+			address=addr,
+			amount=amount,
+			spenttx=spenttx,
+			spentindex=spentindex,
+			meta=pmeta)
+		outputs[ownerindex]=dst
+
+	tmeta={k:jtx[k] for k in ['blockhash','blockheight','locktime','version']}
+
+	timestamp=int(jtx['time'])
+	confirmations=int(jtx['confirmations'])
+	
+	tx=SubmittedTransaction(coin=coin,
+		srcs=inputs,
+		dsts=outputs,
+		refid=txid,
+		timestamp=timestamp,
+		confirmations=confirmations,
+		signatures=sigs,		
+		meta=tmeta)
+
 	return tx
 	
 default_gap=20
@@ -133,7 +178,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 				done=False
 				txo=_json2tx(self.coin,sp)
 				#print(txo)
-				txs[txo.id()]=txo
+				txs[txo.ref]=txo
 
 			if(done):
 				break

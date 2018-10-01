@@ -105,6 +105,7 @@ class AddressSetAccount(Account):
 			amount+=sum([p.amount for uid,p in unspents.items()])
 		return amount
 
+
 	def _referenced_addr(self):
 		for k,v in self.meta.get('txs',{}).items():
 			for dst in v.dsts:
