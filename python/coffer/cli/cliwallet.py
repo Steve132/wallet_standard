@@ -33,15 +33,26 @@ class CliAccount(object):
 
 	@staticmethod
 	def meta_from_dict(ext,mdict):
-		if(ext=="txs"):
-			return {TransactionReference(k):Transaction.from_dict(v) for k,v in mdict.items()}
 		return mdict
 
 	@staticmethod
 	def meta_to_dict(ext,meta):
-		if(ext=="txs"):
-			return {str(k):Transaction.to_dict(v) for k,v in meta.items()}
 		return meta
+
+	@staticmethod
+	def get_all_meta_as_dict(acc):
+		allmeta={}
+		allmeta.update(acc.meta)
+		txdict={str(k):Transaction.to_dict(v) for k,v in acc.transactions.items()}
+		allmeta['txs']=txdict
+		return allmeta
+
+	@staticmethod
+	def set_meta_from_dict(acc,tag,val):
+		if(tag=='txs'):
+			acc.transactions.update({TransactionReference(k):Transaction.from_dict(v) for k,v in val.items()})
+		else:
+			acc.meta[tag]=val
 
 class CliAuth(object):
 	def __init__(self):
@@ -109,10 +120,7 @@ class CliWallet(wallet.Wallet):
 			g=self.groups[gn]
 			for ak,accd in data.items():
 				if(ak in g.accounts):
-					am=g.accounts[ak].meta.setdefault(ext,{})
-					nm=CliAccount.meta_from_dict(ext,accd)
-					for k,v in nm.items():
-						am[k]=v
+					CliAccount.set_meta_from_dict(g.accounts[ak],ext,accd)
 		else:
 			logging.warning("No account group found with groupname '%s'" % groupname)
 
@@ -122,13 +130,13 @@ class CliWallet(wallet.Wallet):
 			
 			g=self.groups[gn]
 			for ak,acc in g.accounts.items():
-				for ext,edata in acc.meta.items():
+				for ext,edata in CliAccount.get_all_meta_as_dict(acc).items():
 					ga=dataout.setdefault(ext,{})
-					ga[ak]=CliAccount.meta_to_dict(ext,edata)
+					ga[ak]=edata
+
 			for ext,data in dataout.items():
 				if(len(data) > 0):
 					fn=gn+'.'+ext
-					pprint(data)
 					arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 		else:
 			logging.warning("No account group found with groupname '%s'" % (groupname))
@@ -148,14 +156,14 @@ class CliWallet(wallet.Wallet):
 			bn,ext=os.path.splitext(f)
 			filesdic.setdefault(ext,set()).add(f)
 			
-	
+		special=['group']
 		for fn in filesdic.get('.group',[]):					
 			wal._add_accountgroup_file(fn,arc.open(fn))
 	
 		for fn in files:
 			bn,ext=os.path.splitext(fn)
 			ext=ext[1:]
-			if(ext != 'group'):
+			if(ext not in special):
 				wal._add_metadata_file(bn,ext,arc.open(fn))
 	
 		return wal

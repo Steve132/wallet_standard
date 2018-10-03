@@ -1,3 +1,5 @@
+import hashlib
+
 class IndexBase(object):
 	def _reftuple(self):
 		raise NotImplementedError
@@ -10,3 +12,10 @@ class IndexBase(object):
 
 	def __repr__(self):
 		return '<'+'|'.join([repr(x) for x in self._reftuple()])+'>'
+
+
+class UuidBase(IndexBase):
+	def id(self):
+		idt=self._reftuple()
+		return hashlib.sha256(str(idt)).hexdigest()
+

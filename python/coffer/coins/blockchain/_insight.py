@@ -88,7 +88,7 @@ def _json2tx(coin,jtx):
 		
 		addr=None if haddr is None else coin.parse_addr(haddr)
 		pubkey=jsout['scriptPubKey']['hex']
-		pprint(jsout)
+		#pprint(jsout)
 		amount=_lazygetval(coin,jsout)
 		if(jsout.get('spentTxId',None) is not None):
 			spenttx=TransactionReference(coin.ticker,jsout['spentTxId'])

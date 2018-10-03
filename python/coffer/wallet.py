@@ -13,24 +13,6 @@ class AccountGroup(object):
 			if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
 				yield a,acc
 		
-	#def balance(self,chainsel=[],bci=None):
-	#	group_balances={}
-	#	for a,acc in self.iter_accounts(chainsel):
-	#		tick.acc.coin.ticker
-	#		amount=acc.balance(bci)
-	#		group_balances[tick]=group_balances.get(tick,0)+amount
-	#	return group_balances
-	
-	#def sync(self,chainsel=[],bci=None):
-	#	for a,acc in self.iter_accounts(chainsel):
-	#		acc.sync(bci)
-
-	#def iter_addresses(self,chainsel=[]):
-	#	group_addresses={}
-	#	for a,acc in self.get_accounts(chainsel).items():
-	#		group_addresses[a]={'external':acc.next_external_iter(),'internal':acc.next_internal_iter()}
-	#	return group_addresses
-
 #AccountGroup = dict
 class Wallet(object):
 	def __init__(self):

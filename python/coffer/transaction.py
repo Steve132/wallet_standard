@@ -100,7 +100,7 @@ class OutputReference(IndexBase):
 			ownertx=TransactionReference(txrefstr)
 			
 		self.ownertx=ownertx
-		self.index=index
+		self.index=int(index)
 
 	def _reftuple(self):
 		return (self.ownertx,self.index)

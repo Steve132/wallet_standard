@@ -2,18 +2,24 @@ import hashlib
 import itertools
 from _bip32 import paths
 import random
+from lib.index import UuidBase
 
 try:
 	from itertools import izip_longest as zlong
 except:
 	from itertools import zip_longest as zlong
-	
 
-class AddressSet(object):
+try:
+	from collections import Iterable
+except:
+	from collections.abc import Iterable
+
+
+class AddressSet(Iterable):
 	def __init__(self,coin):
 		self.coin=coin
 
-	def address_iter(self):
+	def __iter__(self):
 		not ImplementedError
 
 class SetAddressSet(AddressSet):
@@ -21,7 +27,7 @@ class SetAddressSet(AddressSet):
 		super(SingleAddress,self).__init__(coin)
 		self.addrset=addrset
 
-	def address_iter(self):
+	def __iter__(self):
 		return itertools.cycle(self.addrset)
 
 class XPubAddressSet(AddressSet):
@@ -37,18 +43,19 @@ class XPubAddressSet(AddressSet):
 		for p in paths(self.path):
 			yield self.coin.descend(self.xpub,p)
 
-	def address_iter(self):
+	def __iter__(self):
 		for vpub in self.path_iter():
 			yield self.coin.pubkeys2addr([vpub.key()],*self.pkargs,**self.pkkwargs)
 
-class Account(object):
+class Account(UuidBase):
 	def __init__(self,coin,authref=None):
 		self.coin=coin
 		self.authref=authref
 		self.meta={}
+		self.transactions={}
 
-	def id(self):
-		raise NotImplementedError
+	def _reftuple(self):
+		return 
 
 	def next_internal_iter(self):
 		raise NotImplementedError
@@ -65,67 +72,102 @@ class Account(object):
 	def used_external(self):
 		raise NotImplementedError
 
-	def balance(self):
-		raise NotImplementedError
 	def sync(self):
 		raise NotImplementedError
-	
 
-class AddressSetAccount(Account):
-	def __init__(self,external,internal=[],authref=None):
+	def destinations_iter(self):
+		for tref,txo in self.transactions.items():
+			for subout in txo.dsts:
+				yield subout
+
+	def intowallet_iter(self):
+		used=frozenset(self.used_internal() | self.used_external())
+	
+		for dst in self.destinations_iter():
+			if(dst.address in used):
+				yield dst
+
+	def unspent_iter(self):
+		for dst in self.intowallet_iter():
+			if(dst.spenttx is None):
+				yield dst
+
+	def balance(self):
+		amount=0.0
+		for o in self.unspent_iter():
+			amount+=o.amount
+		return amount
+
+#stop if you fail the predicate gap times in a row
+def gaptakewhile(it,predicate,gap):
+	for x in it:
+		if(predicate(x)):
+			yield x
+		else:
+			gap-=1
+			if(gap <= 0):
+				break
+
+class OnChainAddressSetAccount(Account):
+	def __init__(self,external,internal=[],authref=None,gap=20):
 		coincmps=set([x.coin for x in internal+external])
 		if(len(coincmps) != 1):
 			raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
 
-		super(AddressSetAccount,self).__init__(external[0].coin,authref)
+		super(OnChainAddressSetAccount,self).__init__(external[0].coin,authref)
 		
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
 
-		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
+		self.gap=gap
 		
-		self._id=hashlib.sha256(str(idt)).hexdigest()
-
-	def id(self):
-		return self._id
+	def _reftuple(self):
+		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
+		return idt
 	
-	def sync(self,retries=10,unspents_only=False): #TODO: sync unspents_only goes here...bci.unspents(aset.address_iter())
+	def sync(self,retries=10,unspents_only=False): #TODO: sync unspents_only goes here...bci.unspents(iter(aset))
 		bci=self.coin.blockchain()
 		bci.retries=retries
 		for v in self.internal+self.external:
-			m=self.meta.setdefault("txs",{})
-			txs=bci.transactions(v.address_iter())
+			m=self.transactions
+			txs=bci.transactions(iter(v),gap=self.gap)
 			for k,v in txs.items():
 				m[k]=v
 
-	def balance(self):
-		amount=0
-		for aset in self.internal+self.external:
-			#unspents=
-			amount+=sum([p.amount for uid,p in unspents.items()])
-		return amount
-
-
 	def _referenced_addr(self):
-		for k,v in self.meta.get('txs',{}).items():
+		for k,v in self.transactions.items():
 			for dst in v.dsts:
 				yield dst.address
 
-	def _next_addr(self,lst):
+	def _used_addr_iter(self,lst):
 		referenced=frozenset(self._referenced_addr())
-		iters=[addrset.address_iter() for addrset in lst]
-		for addr in zlong(*iters):
-			if(addr is not None and addr[0] not in referenced):
-				yield addr[0]
+		def pred(addr):
+			return addr is not None and addr in referenced 
+
+		iters=[gaptakewhile(iter(addrset),pred,gap=self.gap) for addrset in lst]
+		return itertools.chain.from_iterable(zlong(*iters))
+
+	def _next_addr_iter(self,lst):
+		referenced=frozenset(self._referenced_addr())
+		def pred(addr):
+			return addr is None or addr in referenced
+
+		iters=[itertools.dropwhile(pred,iter(addrset)) for addrset in lst]
+		for addrtup in itertools.chain.from_iterable(zlong(*iters)):
+				yield addr
 
 	def next_internal_iter(self):
 		return self._next_addr(self.internal)
 	def next_external_iter(self):
 		return self._next_addr(self.external)
+	def used_internal(self):
+		return frozenset(self._used_addr_iter(self.internal))
+	def used_external(self):
+		return frozenset(self._used_addr_iter(self.external))
 
 	
 
-class Bip32Account(AddressSetAccount):
+class Bip32Account(OnChainAddressSetAccount):
 	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,**kwargs):
 		self.xpub=coin.xpriv2xpub(xpub)
 		if(root == None):

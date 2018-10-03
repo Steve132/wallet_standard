@@ -8,6 +8,7 @@ import re
 from itertools import islice
 from lib import appdirs
 import os.path
+import coffer.operations
 
 #this is a synced balance	
 
@@ -44,7 +45,7 @@ def cmd_balance(w,args):
 	for gname,group in w.iter_groups(args.group):
 		for aid,acc in group.iter_accounts(args.chain):
 			amount=acc.balance()
-			prefix=prefix=_build_prefix(gname,aid,acc)
+			prefix=_build_prefix(gname,aid,acc)
 			print("%s\t%f" % (prefix,amount))
 
 def cmd_sync(w,args):
