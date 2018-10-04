@@ -112,10 +112,13 @@ class OutputReference(IndexBase):
 		return str(self.ownertx)+':'+str(self.index)
 
 class Output(object):
-	def __init__(self,coin,address,amount,meta={}):
+	def __init__(self,coin,address,amount,meta={},iamount=None):
 		self.coin=coin
 		self.address=address
-		self.amount=amount
+		if(iamount is not None):
+			self.iamount=iamount
+		else:
+			self.iamount=coin.denomination_float2whole(float(amount))
 		self.meta=meta
 
 	@staticmethod
@@ -127,17 +130,25 @@ class Output(object):
 		address=dct.get('address',None)
 		if(address is not None):
 			address=coin.parse_addr(address)
-		amount=dct.get('amount',None)
-		if(amount is not None):
-			amount=float(amount)
+		iamount=dct.get('iamount',None)
+		if(iamount is not None):
+			iamount=int(iamount)
 		meta=dct.get('meta',{})
-		return Output(coin,address,amount,meta)
+		return Output(coin,address,amount=None,meta=meta,iamount=iamount)
 
 	def to_dict(self):
 		return {'coin':self.coin.ticker,
 				'address':str(self.address),
-				'amount':float(self.amount),
+				'iamount':str(int(self.iamount)),
 				'meta':self.meta}
+	@property
+	def amount(self):
+		return self.coin.denomination_whole2float(self.iamount)
+
+	@amount.setter
+	def amount(self,v):
+		self.iamount=self.coin.denomination_float2whole(float(v))
+
 
 class SubmittedOutput(Output,IndexBase):
 	def __init__(self,coin,address,amount,ownertx,index,spenttx=None,spentindex=None,meta={}):

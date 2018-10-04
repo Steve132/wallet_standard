@@ -1,7 +1,7 @@
 from collections import namedtuple
 from copy import deepcopy
 
-BasisEntry=namedtuple('BasisEntry','timestamp','currency','price','amount','orefs')
+BasisEntry=namedtuple('BasisEntry',['timestamp','currency','price','amount','orefs'])
 def BasisEstimate(object):
 	def __init__(self,transactions,wallet_dsts,unknown_incoming_callback,algorithm="fifo",basis_inits={}):
 		self.known_basis={}			#basis_inits is a mapping from oref to a list of known basis entries
