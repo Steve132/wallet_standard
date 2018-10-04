@@ -1,6 +1,6 @@
 import hashlib
 import itertools
-from _bip32 import paths
+from bip32 import paths
 import random
 from lib.index import UuidBase
 
@@ -171,7 +171,7 @@ class Bip32Account(OnChainAddressSetAccount):
 	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,**kwargs):
 		self.xpub=coin.xpriv2xpub(xpub)
 		if(root == None):
-			root=[h(44),h(coin.childid),h(self.xpub.child)]
+			root=[h(44),h(coin.bip44_id),h(self.xpub.child)]
 		self.type='bip32'
 		pkargs=[]
 		pkkwargs={}

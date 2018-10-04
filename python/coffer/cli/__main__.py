@@ -99,6 +99,7 @@ if __name__=='__main__':
 	add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]",type=PathType)
 	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
 	add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
+
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
 	add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
 

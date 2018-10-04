@@ -1,5 +1,5 @@
 import mnemonic
-from _bip32 import h
+from bip32 import h
 import account
 
 class Auth(object):
@@ -25,7 +25,7 @@ class Bip32SeedAuth(Auth):
 	def toaccount(self,coin,authref=None,root=None,accountnum=0,*args,**kwargs):
 		master=coin.seed2master(self.seed)
 		if(root is None):
-			root="44h/%dh/%dh" % (coin.childid-h(0),accountnum)
+			root="44h/%dh/%dh" % (coin.bip44_id-h(0),accountnum)
 		xpriv=coin.descend(master,root)
 		return account.Bip32Account(coin,xpriv,root=root,authref=authref)
 	

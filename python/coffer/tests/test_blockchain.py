@@ -2,7 +2,7 @@ from ..coins.btc import BTC
 from ..coins.blockchain._insight import InsightBlockchainInterface
 from pprint import pprint
 from ..coins.blockchain.chains import getbci
-from .._bip32 import paths
+from ..bip32 import paths
 btc1=BTC()
 
 bc=getbci(btc1)

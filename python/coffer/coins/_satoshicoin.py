@@ -161,19 +161,15 @@ class STransaction(object):
 		return STransaction(version=version,ins=ins,outs=outs,locktime=lt)
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
-	def __init__(self,ticker,is_testnet,bip32_prefix_private,bip32_prefix_public,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
+	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 		super(SatoshiCoin,self).__init__(
 			ticker=ticker,
-			is_testnet=is_testnet,
-			bip32_prefix_private=bip32_prefix_private,
-			bip32_prefix_public=bip32_prefix_public)
+			is_testnet=is_testnet)
 
 		self.wif_prefix=wif_prefix
 		self.pkh_prefix=pkh_prefix
 		self.sh_prefix=sh_prefix
 		self.sig_prefix=sig_prefix
-		if(is_testnet):
-			self.childid=0x80000001 #bip44 testnet for BTC
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):

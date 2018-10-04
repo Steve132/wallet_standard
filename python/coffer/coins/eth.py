@@ -5,21 +5,24 @@
 from ..key import *
 from .. import _base
 from ..transaction import *
-import _slip44
-from .. import _bip32
+import _coin
+from .. import bip32
 from binascii import hexlify,unhexlify
 import _keccak
 
-class ETH(_bip32._Bip32):
+
+class ETH(_coin.Coin):
 	def __init__(self,ticker,is_testnet=False):
-		if(not is_testnet):
+		super(ETH,self).__init__(ticker=ticker,is_testnet=is_testnet) 
+
+	def bip32(self,*args,**kwargs):
+		if(not self.is_testnet):
 			bip32_prefix_private=0x0488ADE4
 			bip32_prefix_public=0x0488B21E
 		else:
 			bip32_prefix_private=0x04358394
 			bip32_prefix_public=0x043587CF
-		super(ETH,self).__init__(bip32_prefix_private=bip32_prefix_private,
-					bip32_prefix_public=bip32_prefix_public) 
+		return bip32.Bip32(self,bip32_prefix_private,bip32_prefix_public)
 			
 		
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
@@ -71,6 +74,6 @@ class ETH(_bip32._Bip32):
 			
 	def hdpath_generator(self):
 		def default_gen(self,account=0):
-			return [_bip32.h(44),_bip32.h(self.childid),_bip32.h(account)]
+			return [bip32.h(44),bip32.h(self.bip44_id),bip32.h(account)]
 		return default_gen
 

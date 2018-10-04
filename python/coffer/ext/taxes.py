@@ -1,8 +1,11 @@
 from collections import namedtuple
 from copy import deepcopy
 
+
+#todo adapt this to correct filtering
+
 BasisEntry=namedtuple('BasisEntry',['timestamp','currency','price','amount','orefs'])
-def BasisEstimate(object):
+class BasisEstimate(object):	#only over a full wallet.
 	def __init__(self,transactions,wallet_dsts,unknown_incoming_callback,algorithm="fifo",basis_inits={}):
 		self.known_basis={}			#basis_inits is a mapping from oref to a list of known basis entries
 
@@ -11,7 +14,7 @@ def BasisEstimate(object):
 		self.wallet_dsts=wallet_dsts
 		self.algorithm=algorithm
 
-	def partition(self,txo,inputs):
+	def _partition(self,txo,inputs):
 		#assign entries to outputs	
 		if(self.algorithm=="star"):#fifo or star.  If star send one entry from each source recursively down.  if fifo-time just aggregate based on time, fifo-order just aggregate based on order.
 			pass
@@ -50,7 +53,7 @@ def BasisEstimate(object):
 
 		inputs=[self.get(src.ref) for src in txo.srcs]
 		
-		partitions=self.partition(txo,inputs)
+		partitions=self._partition(txo,inputs)
 		
 		for oref,obasislist in partition.items():
 			self.known_basis[oref]=obasislist
@@ -59,7 +62,7 @@ def BasisEstimate(object):
 		if(oref in self.known_basis):
 			return self.known_basis[oref]
 
-		if(oref in self.wallet_dsts): #then this is a spend from the wallet and the tx src is a spend
+		if(oref in self.wallet_dsts and oref.ownertx in self.transactions): #then this is a spend from the wallet and the tx src is a spend
 			self._compute_tx(oref.ownertx)	#this has, as a side effect, sets the child oref basis data.
 		else:
 			self.known_basis[oref]=self.unknown_incoming_callback(oref)

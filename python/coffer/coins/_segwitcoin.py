@@ -7,20 +7,32 @@ def parsebech32(addrstring):
 #TODO switch all properties to true property implementations.
 class SegwitCoin(SatoshiCoin):
 	def __init__(self,ticker,is_testnet,
-		bip32_prefix_private,bip32_prefix_public,wif_prefix,pkh_prefix,sh_prefix,sig_prefix,
-		segwit,embed_in_legacy,bech32):
+		wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 
 		super(SegwitCoin,self).__init__(ticker=ticker,is_testnet=is_testnet,
-			bip32_prefix_private=bip32_prefix_private,
-			bip32_prefix_public=bip32_prefix_public,
 			wif_prefix=wif_prefix,
 			pkh_prefix=pkh_prefix,
 			sh_prefix=sh_prefix,
 			sig_prefix=sig_prefix)
+		
+		"""self.segwit=segwit
+		self.embed_in_legacy=embed_in_legacy
+		self.bech32=bech32
+		bip32_prefix_private=bip32_prefix_private,
+		bip32_prefix_public=bip32_prefix_public,
 		self.segwit=segwit
 		self.embed_in_legacy=embed_in_legacy
 		self.bech32=bech32
-	
+		bip32_prefix_private=bip32_prefix_private,
+			bip32_prefix_public=bip32_prefix_public,"""
+
+	#def bip32(self,*args,**kwargs):
+	#	"""TODO: self.segwit=segwit
+	#	self.embed_in_legacy=embed_in_legacy
+	#	self.bech32=bech32
+	#	bip32_prefix_private=bip32_prefix_private,
+	#	bip32_prefix_public=bip32_prefix_public,"""
+	#	return bip32(
 
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
 	def pubkeys2addr(self,pubkeys,segwit=False,):
@@ -28,7 +40,7 @@ class SegwitCoin(SatoshiCoin):
 		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		#pubkeys=[PublicKey(pub) for pub in pubkeys]
 		multisig=len(pubkeys) > 1
-		if(not self.segwit):
+		if(not segwit):
 			return super(SegwitCoin,self).pubkeys2addr(pubkeys) 
 		else:
 			raise NotImplementedError

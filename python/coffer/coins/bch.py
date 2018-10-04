@@ -5,7 +5,7 @@ from .. import _base
 import _cashaddr
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
-
+from ..bip32 import Bip32
 
 class BCH(SatoshiCoin):
 	def __init__(self,is_testnet=False,cashaddr=False):
@@ -25,15 +25,20 @@ class BCH(SatoshiCoin):
 
 		sig_prefix=b'\x18Bitcoin Signed Message:\n'
 		
-		super(BCH,self).__init__('BCH',is_testnet=is_testnet,
-			bip32_prefix_private=bip32_prefix_private,
-			bip32_prefix_public=bip32_prefix_public,
+		super(BCH,self).__init__('BCH',is_testnet=is_testnet
 			pkh_prefix=pkh_prefix,
 			sh_prefix=sh_prefix,
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix)
 
-	
+	def bip32(self):
+		if(not is_testnet):
+			bip32_prefix_private=0x0488ADE4
+			bip32_prefix_public=0x0488B21E
+		else:
+			bip32_prefix_private=0x04358394
+			bip32_prefix_public=0x043587CF
+		return Bip32(bip32_prefix_private,bip32_prefix_public)
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):

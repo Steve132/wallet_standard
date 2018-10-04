@@ -3,6 +3,7 @@ from binascii import hexlify,unhexlify
 import struct
 import _crypto
 import _base
+from coins._slip44 import lookups as slip44table
 
 from key import *
 
@@ -71,11 +72,17 @@ class ExtendedKey(object):
 	def __repr__(self):
 		return str(self)
 
-class _Bip32(object):
-	def __init__(self,bip32_prefix_private,bip32_prefix_public):
+class Bip32(object):
+	def __init__(self,coin,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt=b'Bitcoin seed'):
 		self.bip32_prefix_private=bip32_prefix_private
 		self.bip32_prefix_public=bip32_prefix_public
-		self.bip32_seed_salt=b'Bitcoin seed' #Mandatory for bip32
+		self.bip32_seed_salt=bip32_seed_salt #Mandatory for bip32
+
+		if(coin.is_testnet):
+			self.bip44_id=0x80000001
+		else:
+			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+			self.bip44_id=slip44table[coin.ticker]
 
 	def seed2master(self,seed):
 		seed=_hparse(seed)
@@ -147,6 +154,12 @@ class _Bip32(object):
 			xpriv=ExtendedKey(xpriv)
 
 		return xpriv._xpub(version)
+
+	def hdpath_generator(self):
+		bid=self.bip44_id
+		def default_gen(account=0):
+			return [h(44),h(bid),h(account)]
+		return default_gen
 
 
 
