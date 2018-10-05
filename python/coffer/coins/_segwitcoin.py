@@ -35,7 +35,7 @@ class SegwitCoin(SatoshiCoin):
 	#	return bip32(
 
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
-	def pubkeys2addr(self,pubkeys,segwit=False,):
+	"""def pubkeys2addr(self,pubkeys,segwit=False):
 		#if(isinstance(pubkeys,basestring)):
 		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
 		#pubkeys=[PublicKey(pub) for pub in pubkeys]
@@ -54,11 +54,11 @@ class SegwitCoin(SatoshiCoin):
 				if(multisig): #P2WSH
 					pass #TODO IMPLEMENT THIS
 				else:#P2WPKH
-					pass #TODO IMPLEMENT THIS
-	def pubkeys2addr(self,pubkeys):
-		if(self.bech32):
-			raise NotImplementedError
-		return super(SegwitCoin,self).pubkeys2addr(pubkeys)
+					pass #TODO IMPLEMENT THIS"""
+	#def pubkeys2addr(self,pubkeys,*args,**kwargs):
+	#	if(bech32):
+	#		raise NotImplementedError
+	#	return super(SegwitCoin,self).pubkeys2addr(pubkeys,*args,**kwargs)
 
 	def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one

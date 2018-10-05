@@ -31,13 +31,14 @@ class SetAddressSet(AddressSet):
 		return itertools.cycle(self.addrset)
 
 class XPubAddressSet(AddressSet):
-	def __init__(self,coin,xpub,path="0/*",root=None,pkargs=[],pkkwargs={}): #change is "1/*"
+	def __init__(self,coin,xpub,path="0/*",root=None,*args,**kwargs): #change is "1/*"
 		super(XPubAddressSet,self).__init__(coin)
-		self.xpub=coin.xpriv2xpub(xpub)
+		
+		self.xpub=self.coin.xpriv2xpub(xpub)
+		self.coin=coin
 		self.path=path
 		self.root=root
-		self.pkargs=pkargs
-		self.pkkwargs=pkkwargs
+		self.settings=self.coin._load_bip32_settings(prefix_public=self.xpub.version,prefix_private=None,*args,**kwargs)
 
 	def path_iter(self):
 		for p in paths(self.path):
@@ -45,7 +46,7 @@ class XPubAddressSet(AddressSet):
 
 	def __iter__(self):
 		for vpub in self.path_iter():
-			yield self.coin.pubkeys2addr([vpub.key()],*self.pkargs,**self.pkkwargs)
+			yield self.coin.pubkeys2addr([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
 
 class Account(UuidBase):
 	def __init__(self,coin,authref=None):
@@ -168,13 +169,12 @@ class OnChainAddressSetAccount(Account):
 	
 
 class Bip32Account(OnChainAddressSetAccount):
-	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,**kwargs):
-		self.xpub=coin.xpriv2xpub(xpub)
+	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,*args,**kwargs):
+		self.coin=coin
+		self.xpub=self.coin.xpriv2xpub(xpub)
 		if(root == None):
-			root=[h(44),h(coin.bip44_id),h(self.xpub.child)]
+			root=[h(44),h(self.coin.bip44_id),h(self.xpub.child)]
 		self.type='bip32'
-		pkargs=[]
-		pkkwargs={}
-		internal=XPubAddressSet(coin,xpub=xpub,path=internal_path,root=root,pkargs=pkargs,pkkwargs=pkkwargs)
-		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root,pkargs=pkargs,pkkwargs=pkkwargs)
+		internal=XPubAddressSet(coin,xpub=xpub,path=internal_path,root=root,*args,**kwargs)
+		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root,*args,**kwargs)
 		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)

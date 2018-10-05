@@ -16,6 +16,8 @@ class CliAccount(object):
 		if(dic['type']=='bip32'):
 			ctick=dic['chain'].lower()
 			coin=coins.fromticker(ctick)
+			del dic['type']
+			del dic['chain']
 			wa=account.Bip32Account(coin,**dic)
 			wa.type='bip32'
 			return wa

@@ -6,25 +6,13 @@ from ..key import *
 from .. import _base
 from ..transaction import *
 import _coin
-from .. import bip32
 from binascii import hexlify,unhexlify
 import _keccak
-
 
 class ETH(_coin.Coin):
 	def __init__(self,ticker,is_testnet=False):
 		super(ETH,self).__init__(ticker=ticker,is_testnet=is_testnet) 
-
-	def bip32(self,*args,**kwargs):
-		if(not self.is_testnet):
-			bip32_prefix_private=0x0488ADE4
-			bip32_prefix_public=0x0488B21E
-		else:
-			bip32_prefix_private=0x04358394
-			bip32_prefix_public=0x043587CF
-		return bip32.Bip32(self,bip32_prefix_private,bip32_prefix_public)
-			
-		
+	
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		if(len(pubkeys) > 1):
 			raise NotImplementedError("TODO: ETH implementation doesn't support multiple pubkeys")
@@ -50,7 +38,6 @@ class ETH(_coin.Coin):
 	def format_privkey(self,privkey):
 		raise NotImplementedError
 
-
 	def parse_tx(self,txstring):
 		raise NotImplementedError
 
@@ -71,9 +58,4 @@ class ETH(_coin.Coin):
 
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
-			
-	def hdpath_generator(self):
-		def default_gen(self,account=0):
-			return [bip32.h(44),bip32.h(self.bip44_id),bip32.h(account)]
-		return default_gen
-
+		

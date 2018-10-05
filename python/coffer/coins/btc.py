@@ -29,15 +29,6 @@ class BTC(SegwitCoin):
 		
 		#TODO:segwit=False,embed_in_legacy=True,bech32=False
 
-	def bip32(self):
-		if(not is_testnet):
-			bip32_prefix_private=0x0488ADE4
-			bip32_prefix_public=0x0488B21E
-		else:
-			bip32_prefix_private=0x04358394
-			bip32_prefix_public=0x043587CF
-		return Bip32(bip32_prefix_private,bip32_prefix_public)
-
 	def blockchain(self,*args,**kwargs):
 		subcoins=[]
 	

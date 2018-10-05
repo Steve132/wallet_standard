@@ -179,7 +179,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 		multisig=len(pubkeys) > 1
 		if(multisig):#P2SH multisig
-			raise NotImplementedError #TODO implement this #self.sh_version()
+			raise NotImplementedError
 		else:  #P2PKH
 			h160=_base.hash160(pubkeys[0].pubkeydata)
 			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)

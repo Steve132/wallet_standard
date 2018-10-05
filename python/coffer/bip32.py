@@ -3,7 +3,7 @@ from binascii import hexlify,unhexlify
 import struct
 import _crypto
 import _base
-from coins._slip44 import lookups as slip44table
+
 
 from key import *
 
@@ -36,7 +36,7 @@ def evalpath(components):
 			finalcomp.append(ival)
 	return finalcomp
 	
-
+#TODO: implement https://github.com/satoshilabs/slips/blob/master/slip-0032.md
 _xkeydatastruct=struct.Struct("!LBLL32s33s")
 class ExtendedKey(object):
 	def __init__(self,version,depth=None,fingerprint=None,child=None,chaincode=None,keydata=None):
@@ -72,26 +72,36 @@ class ExtendedKey(object):
 	def __repr__(self):
 		return str(self)
 
+class Bip32Settings(object):
+	def __init__(self,prefix_private,prefix_public,*args,**kwargs):
+		self.prefix_private=prefix_private
+		self.prefix_public=prefix_public
+		self.pkargs=args
+		self.pkkwargs=kwargs
+		
 class Bip32(object):
-	def __init__(self,coin,bip32_prefix_private,bip32_prefix_public,bip32_seed_salt=b'Bitcoin seed'):
-		self.bip32_prefix_private=bip32_prefix_private
-		self.bip32_prefix_public=bip32_prefix_public
-		self.bip32_seed_salt=bip32_seed_salt #Mandatory for bip32
+	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
+		raise NotImplementedError
 
-		if(coin.is_testnet):
-			self.bip44_id=0x80000001
-		else:
-			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-			self.bip44_id=slip44table[coin.ticker]
-
-	def seed2master(self,seed):
+	def seed2master(self,seed,*args,**kwargs):
+		bip32_settings=self.load_bip32_settings(*args,**kwargs)
 		seed=_hparse(seed)
-		digest=hmac.new(self.bip32_seed_salt,seed,hashlib.sha512).digest()
+		digest=hmac.new(bip32_settings.seed_salt,seed,hashlib.sha512).digest()
 		I_left,I_right=digest[:32],digest[32:]
 		Ilp=PrivateKey(I_left,is_compressed=True) #errror check
-		return ExtendedKey(self.bip32_prefix_private,0,0,0,I_right,b'\x00'+I_left)
+		return ExtendedKey(bip32_settings.prefix_private,0,0,0,I_right,b'\x00'+I_left)
 
-	def descend(self,xkey,child,ignore_tag=True):
+	def xpriv2xpub(self,xkey,bip32_settings=None):
+		xkey=self.parse_xkey(xkey)
+		if(bip32_settings==None):
+			if(xkey.is_private()):
+				bip32_settings=self._load_bip32_settings(prefix_private=xkey.version)
+			else:
+				bip32_settings=self._load_bip32_settings(prefix_public=xkey.version)
+
+		return xkey._xpub(bip32_settings.prefix_public)
+
+	def descend(self,xkey,child,ignore_tag=False):	#todo add settings load here to re-establish public private validity check
 		def _descend_extend(xkeyparent,isprivate,data,childindex):
 			data+=unhexlify("%08X" % (childindex))
 			digest=hmac.new(xkey.chaincode,data,hashlib.sha512).digest()
@@ -110,8 +120,7 @@ class Bip32(object):
 			fg=int(hexlify(_base.hash160(parent_pubkey)[:4]),16)
 			return ExtendedKey(xkey.version,xkey.depth+1,fg,childindex,child_chain,child_key)
 
-		if(isinstance(xkey,basestring)):
-			xkey=ExtendedKey(xkey)
+		xkey=self.parse_xkey(xkey)
 
 		if(isinstance(child,basestring)):
 			components=splitpath(child)	
@@ -132,34 +141,27 @@ class Bip32(object):
 		
 		private=xkey.is_private()
 		
-		if(private and (ignore_tag or xkey.version==self.bip32_prefix_private)):
+		if(private):
 			if(isHardened):
 				data=xkey.keydata
 			else:
 				data=PrivateKey(xkey.keydata,is_compressed=True).pub().pubkeydata
 			return _descend_extend(xkey,True,data,child)
-		elif(ignore_tag or xkey.version==self.bip32_prefix_public):
+		else:
 			if(isHardened):
-				raise Exception("Cannot find the child of hardened key %s" % (xkey))
+				raise Exception("Cannot find the child of hardened public key %s" % (xkey))
 			else:
 				data=xkey.keydata
 				return _descend_extend(xkey,False,data,child)
-		else:
-			raise Exception("The key type disagrees with the tag type")
 
-	def xpriv2xpub(self,xpriv,version=None):
-		if(version is None):
-			version=self.bip32_prefix_public
-		if(isinstance(xpriv,basestring)):
-			xpriv=ExtendedKey(xpriv)
+	def parse_xkey(self,xkey):
+		if(isinstance(xkey,basestring)):
+			xkey=ExtendedKey(xkey)
+		return xkey
 
-		return xpriv._xpub(version)
 
-	def hdpath_generator(self):
-		bid=self.bip44_id
-		def default_gen(account=0):
-			return [h(44),h(bid),h(account)]
-		return default_gen
+
+	
 
 
 

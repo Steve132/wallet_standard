@@ -9,6 +9,7 @@ from itertools import islice
 from lib import appdirs
 import os.path
 import coffer.operations
+from coffer.coins.ticker.price import get_current_price
 
 #this is a synced balance	
 
@@ -42,11 +43,14 @@ def _build_prefix(gname,aid,acc):
 	return prefix
 				
 def cmd_balance(w,args):
+	price_tickers={}
 	for gname,group in w.iter_groups(args.group):
 		for aid,acc in group.iter_accounts(args.chain):
 			amount=acc.balance()
 			prefix=_build_prefix(gname,aid,acc)
-			print("%s\t%f" % (prefix,amount))
+			if(acc.coin.ticker not in price_tickers):
+				price_tickers[acc.coin.ticker]=get_current_price(acc.coin.ticker,'USD')
+			print("%s\t%f ($%.02f)" % (prefix,amount,amount*price_tickers[acc.coin.ticker]))
 
 def cmd_sync(w,args):
 	for gname,group in w.iter_groups(args.group):

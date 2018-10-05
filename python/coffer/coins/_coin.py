@@ -4,27 +4,53 @@ from ..transaction import *
 from .. import bip32
 from binascii import hexlify,unhexlify
 from ..lib.index import IndexBase
+from _slip44 import lookups as slip44table
 #todo change this to own bip32 as an object
-class Coin(IndexBase):
+
+class Coin(bip32.Bip32,IndexBase):
 	def __init__(self,ticker,is_testnet):
 		super(Coin,self).__init__()
 
 		self.ticker=ticker.upper()
 		self.is_testnet=is_testnet
 
-	def __cmp__(self,other):
-		return cmp(self.ticker.upper(),other.ticker.upper())
-	
-	def __hash__(self):
-		return hash(self.ticker.upper())
+		if('-TEST' in self.ticker):
+			self.is_testnet=True
+		elif(self.is_testnet):
+			self.ticker+='-TEST'
 
-	def bip32(self,*args,**kwargs):
+		if(self.is_testnet):
+			self.bip44_id=0x80000001
+		else:
+			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+			self.bip44_id=slip44table[ticker]
+
+	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
+		if(not self.is_testnet):
+				bip32_prefix_private=0x0488ADE4
+				bip32_prefix_public=0x0488B21E
+		else:
+				bip32_prefix_private=0x04358394
+				bip32_prefix_public=0x043587CF
+
+		if(prefix_private is not None and prefix_private not in [bip32_prefix_private]):
+			 raise Exception("Private Prefix %X does not match expected prefix %X for coin %s" % (prefix_private,bip32_prefix_private,self.ticker))
+		if(prefix_public is not None and prefix_public not in [bip32_prefix_public]):
+			 raise Exception("Public Prefix %X does not match expected prefix %X for coin %s" % (prefix_public,bip32_prefix_public,self.ticker))
+			
+		return bip32.Bip32Settings(prefix_private=bip32_prefix_private,prefix_public=bip32_prefix_public,*args,**kwargs)
+
+	def hdpath_generator(self):	#TODO: use this literally anywhere
+		bid=self.bip44_id
+		def default_gen(account=0):
+			return [h(44),h(bid),h(account)]
+		return default_gen
+
+	def _reftuple(self):
+		return (self.ticker,self.is_testnet)
+
+	def pubkeys2addr(self,pubkeys,xpub=None,*args,**kwargs):
 		raise NotImplementedError
-		
-
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
-		raise NotImplementedError
-
 
 	def parse_addr(self,addrstring):
 		raise NotImplementedError
