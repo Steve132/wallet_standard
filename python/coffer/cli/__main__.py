@@ -58,7 +58,7 @@ def cmd_sync(w,args):
 			acc.sync(retries=args.retries)
 
 def cmd_add_account_auth(w,args):
-	allauths=cliwallet.CliAuth.from_file(args.auth)
+	allauths=cliwallet.CliAuth.from_file(args.auth,args.mnemonic_passphrase)
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
@@ -73,16 +73,20 @@ def cmd_get_address(w,args):
 	for gname,group in w.iter_groups(args.group):
 		for aid,acc in group.iter_accounts(args.chain):
 			prefix=_build_prefix(gname,aid,acc)
-			for extint in ['external','internal']:
-				addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
-				print("%s/%s\t%s" % (prefix,extint,addrs))
+			addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
+			print("%s/%s\t%s" % (prefix,'external',addrs))
+			addrs=''.join([str(a) for a in acc.next_internal(count=args.count)])
+			print("%s/%s\t%s" % (prefix,'internal',addrs))
+
 
 if __name__=='__main__':
 	default_wallet_dir=os.path.join(appdirs.user_data_dir("CofferCli","Coffer"),'default_wallet.zip')
 
 	parser=argparse.ArgumentParser(description='The Coffer standalone wallet demo')
 	parser.add_argument('--wallet','-w',type=str,help="The wallet file or directory you are going to read. (defaults to '%(default)s')",default=default_wallet_dir)
+	parser.add_argument('--pin',type=str,help="The wallet file pin for the encrypted wallet that you are going to read")
 	parser.add_argument('--wallet_out','-wo',type=str,help="The wallet file you are going to write to (defaults to the input wallet)")
+	parser.add_argument('--pin_out',type=str,help="The wallet file pin for the encrypted wallet that you are going to write (defaults to the read pin)")
 	subparsers=parser.add_subparsers()
 
 	balance_parser=subparsers.add_parser('balance')
@@ -103,6 +107,7 @@ if __name__=='__main__':
 	add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]",type=PathType)
 	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
 	add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
+	add_account_auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
 
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
 	add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
@@ -126,12 +131,15 @@ if __name__=='__main__':
 
 	if(args.wallet_out is None):
 		args.wallet_out=args.wallet
+	if(args.pin_out is None):
+		args.pin_out=args.pin
+	
 
-	w=cliwallet.CliWallet.from_archive(args.wallet)
+	w=cliwallet.CliWallet.from_archive(args.wallet,pin=args.pin)
 
 	args.func(w,args)
 
-	cliwallet.CliWallet.to_archive(w,args.wallet_out)
+	cliwallet.CliWallet.to_archive(w,args.wallet_out,pin=args.pin_out)
 
 	
 

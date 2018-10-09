@@ -12,15 +12,9 @@ class Auth(object):
 	def privkey(self,coin,account,address):
 		pass
 
-
 class Bip32SeedAuth(Auth):
-	def __init__(self,words=None,seed=None):
-		if(words):
-			self.seed=mnemonic.words_to_seed(words)
-		if(seed):
-			self.seed=seed
-		if(not self.seed):
-			raise Exception("either seed or seedwords must be given")
+	def __init__(self,seed):
+		self.seed=seed
 
 	def toaccount(self,coin,authref=None,root=None,accountnum=0,*args,**kwargs):
 		master=coin.seed2master(self.seed)
@@ -28,6 +22,11 @@ class Bip32SeedAuth(Auth):
 			root="44h/%dh/%dh" % (coin.bip44_id-h(0),accountnum)
 		xpriv=coin.descend(master,root)
 		return account.Bip32Account(coin,xpriv,root=root,authref=authref)
+
+	@staticmethod
+	def from_mnemonic(words,passphrase=None):
+		seed=mnemonic.words_to_seed(words,passphrase)
+		return Bip32SeedAuth(seed)
 	
 	#def childauth(self,account):
 	#masterxpriv=account.coin.seed2master(self.seed)

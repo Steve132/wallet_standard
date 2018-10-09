@@ -6,10 +6,13 @@ def classes():
 		from .btc import BTC
 		from .bch import BCH
 		from .ltc import LTC
+		from .eth import ETH
 
 		lclasses={'BTC':BTC,
 			 'BCH':BCH,
-			 'LTC':LTC}
+			 'LTC':LTC,
+			 'ETH':ETH			
+		}
 		_all_classes=lclasses
 
 	return _all_classes

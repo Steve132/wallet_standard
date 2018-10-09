@@ -73,9 +73,10 @@ class ExtendedKey(object):
 		return str(self)
 
 class Bip32Settings(object):
-	def __init__(self,prefix_private,prefix_public,*args,**kwargs):
+	def __init__(self,prefix_private,prefix_public,seed_salt="Bitcoin seed",*args,**kwargs):
 		self.prefix_private=prefix_private
 		self.prefix_public=prefix_public
+		self.seed_salt=seed_salt
 		self.pkargs=args
 		self.pkkwargs=kwargs
 		
@@ -84,7 +85,7 @@ class Bip32(object):
 		raise NotImplementedError
 
 	def seed2master(self,seed,*args,**kwargs):
-		bip32_settings=self.load_bip32_settings(*args,**kwargs)
+		bip32_settings=self._load_bip32_settings(*args,**kwargs)
 		seed=_hparse(seed)
 		digest=hmac.new(bip32_settings.seed_salt,seed,hashlib.sha512).digest()
 		I_left,I_right=digest[:32],digest[32:]

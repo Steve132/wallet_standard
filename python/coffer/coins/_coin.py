@@ -60,18 +60,28 @@ class Coin(bip32.Bip32,IndexBase):
 
 
 	def parse_privkey(self,pkstring):
-		raise NotImplementedError
+		pkshex=pkstring
+		if(pkshex[:2].lower()=='0x'):
+			pkshex=pkshex[2:]
+		if(len(pkshex)!=64):
+			raise Exception("'%s' is not the right size to be interpreted as a hex private key" % (pkshex))
+		byts=unhexlify(pkshex)
+		return PrivateKey(byts[:32])
 
 	def format_privkey(self,privkey):
-		raise NotImplementedError
-
+		return hexlify(privkey.privkeydata)
 
 	def parse_pubkey(self,pkstring):
-		return PublicKey(unhexlify(pkstring))
+		pkshex=pkstring
+		if(pkshex[:2].lower()=='0x'):
+			pkshex=pkshex[2:]
+		if(len(pkshex)!=66):
+			raise Exception("'%s' is not the right size to be interpreted as a hex compressed public key" % (pkshex))
+		byts=unhexlify(pkshex)	
+		return PublicKey(byts)
 
 	def format_pubkey(self,pubkey):
 		return hexlify(pubkey.pubkeydata)
-
 
 	def parse_tx(self,txstring):
 		raise NotImplementedError
@@ -93,11 +103,12 @@ class Coin(bip32.Bip32,IndexBase):
 		raise Exception("I don't know how to format %r" % (obj))
 
 
-	def denomination_float2whole(self,x):
-		raise NotImplementedError
+	def denomination_float2whole(self,x,scale):
+		return int(x*scale)
 	
-	def denomination_whole2float(self,x):
-		raise NotImplementedError
+	def denomination_whole2float(self,x,scale):
+		ipart,fpart=divmod(int(x),int(scale))
+		return ipart+float(fpart)/scale;
 
 	def txpreimage(self,tx):
 		raise NotImplementedError

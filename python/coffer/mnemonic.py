@@ -79,6 +79,8 @@ def _nwords(words):
 
 #https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md#japanese
 def words_to_seed(words,passphrase=u''):
+	if(passphrase is None):
+		passphrase=u''
 	words=_nwords(words)
 	np=unicodedata.normalize('NFKD',u' '.join(words))
 	ns=unicodedata.normalize('NFKD',u'mnemonic'+passphrase)

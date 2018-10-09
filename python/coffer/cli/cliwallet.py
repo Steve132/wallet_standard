@@ -61,7 +61,7 @@ class CliAuth(object):
 		self.subauths=[]
 
 	@staticmethod
-	def parse_auth(s):
+	def parse_auth(s,passphrase=''):
 		def checkhex(x):
 			try:
 				a=int(x,16)
@@ -75,17 +75,17 @@ class CliAuth(object):
 			s=unhexlify(s)
 			return auth.Bip32SeedAuth(seed=s)
 		elif(' ' in s):
-			return auth.Bip32SeedAuth(words=s)
+			return auth.Bip32SeedAuth.from_mnemonic(words=s,passphrase=passphrase)
 		elif(checkhex(x)):
 			return auth.HexPrivKeyAuth(key=x)
 		else:
 			return auth.Bip32Auth() #TODO
 	
 	@staticmethod
-	def from_file(fo):
+	def from_file(fo,passphrase=''):
 		ca=[]		
 		for al in fo:
-			ca.append(CliAuth.parse_auth(al))
+			ca.append(CliAuth.parse_auth(al,passphrase=passphrase))
 		return ca
 
 
@@ -145,7 +145,7 @@ class CliWallet(wallet.Wallet):
 		
 	
 	@staticmethod
-	def from_archive(filename,wal=None):
+	def from_archive(filename,wal=None,pin=None):
 		if(wal is None):
 			wal=CliWallet()
 
@@ -171,7 +171,7 @@ class CliWallet(wallet.Wallet):
 		return wal
 
 	@staticmethod
-	def to_archive(wal,filename):
+	def to_archive(wal,filename,pin=None):
 		arc=zipordir.ZipOrDir(filename,'w')
 		for f,g in wal.groups.items():
 			fn=(f+'.group')

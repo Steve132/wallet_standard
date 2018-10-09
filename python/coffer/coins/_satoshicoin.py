@@ -194,17 +194,10 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-STransaction-types/
 	def parse_privkey(self,pkstring):
 		try:
-			ak=int(pkstring,16)
-			pkshex=pkstring
-			if(pkshex[:2].lower()=='0x'):
-				pkshex=pkshex[2:]
-			if(len(pkshex)!=64 and len(pkshex)!=66):
-				raise Exception("'%s' is not the right size to be interpreted as a hex private key" % (pkshex))
-			byts=unhexlify(pkshex)
-			return PrivateKey(pkbytes[:32],is_compressed=(len(pkshex)==66))
-		except ValueError:
+			return super(SatoshiCoin,self).parse_privkey(pkstring)
+		except:
 			pass
-				
+		
 		pkbytes=_base.base58c2bytes(pkstring)
 		if(pkbytes[0] != chr(self.wif_prefix)):
 			raise Exception("WIF private key %s could not validate for coin %s.  Expected %d got %d." % (pkstring,self.ticker,ord(pkbytes[0]),self.wif_prefix))
@@ -212,9 +205,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			return PrivateKey(pkbytes[1:-1],is_compressed=True)
 		else:
 			return PrivateKey(pkbytes[1:],is_compressed=False)
-
-	def parse_pubkey(self,pkstring):
-		raise NotImplementedError
 
 	def parse_addr(self,addrstring):
 		return Address(_base.base58c2bytes(addrstring),self)
@@ -230,12 +220,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("Invalid Address Version %h for address" % (ord(version),addrstring))
 		raise NotImplementedError
 
-	def denomination_float2whole(self,x):
-		return int(x*100000000.0)
-	
-	def denomination_whole2float(self,x):
-		ipart,fpart=divmod(int(x),100000000)
-		return ipart+float(fpart)*1e-8;
+
 
 
 	#def format_tx(self,txo):
@@ -252,6 +237,12 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def txfromdict(self,dct):
 		return STransaction.fromdict(dct)
+
+	def denomination_float2whole(self,x):
+		return super(SatoshiCoin,self).denomination_float2whole(x,100000000.0)
+	
+	def denomination_whole2float(self,x):
+		return super(SatoshiCoin,self).denomination_whole2float(x,100000000.0)
 
 	"""
 

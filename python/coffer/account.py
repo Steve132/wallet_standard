@@ -154,13 +154,13 @@ class OnChainAddressSetAccount(Account):
 			return addr is None or addr in referenced
 
 		iters=[itertools.dropwhile(pred,iter(addrset)) for addrset in lst]
-		for addrtup in itertools.chain.from_iterable(zlong(*iters)):
+		for addr in itertools.chain.from_iterable(zlong(*iters)):
 				yield addr
 
 	def next_internal_iter(self):
-		return self._next_addr(self.internal)
+		return self._next_addr_iter(self.internal)
 	def next_external_iter(self):
-		return self._next_addr(self.external)
+		return self._next_addr_iter(self.external)
 	def used_internal(self):
 		return frozenset(self._used_addr_iter(self.internal))
 	def used_external(self):
