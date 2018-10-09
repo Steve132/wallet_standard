@@ -323,7 +323,7 @@ from binascii import hexlify
 def checksum_encode(addr): # Takes a 20-byte binary address as input
     o = ''
     kh=Keccak256()
-    kh.update(addr)
+    kh.update(hexlify(addr))
     v = int(kh.hexdigest(),16)
     for i, c in enumerate(hexlify(addr)):
         if c in '0123456789':
@@ -331,8 +331,6 @@ def checksum_encode(addr): # Takes a 20-byte binary address as input
         else:
             o += c.upper() if (v & (2**(255 - 4*i))) else c.lower()
     return '0x'+o
-
-
 
 if __name__ == '__main__':
     from binascii import unhexlify
