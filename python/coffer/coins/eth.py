@@ -10,8 +10,8 @@ from binascii import hexlify,unhexlify
 import _keccak
 
 class ETH(_coin.Coin):
-	def __init__(self,ticker,is_testnet=False):
-		super(ETH,self).__init__(ticker=ticker,is_testnet=is_testnet) 
+	def __init__(self,is_testnet=False):
+		super(ETH,self).__init__(ticker='ETH',is_testnet=is_testnet) 
 	
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		if(len(pubkeys) > 1):
@@ -24,7 +24,7 @@ class ETH(_coin.Coin):
 		khash.update(tv)
 		hx=khash.hexdigest()
 		addr=hx[-40:]
-		return _keccak.checksum_encode(addr)
+		return _keccak.checksum_encode(unhexlify(addr))
 
 	def parse_addr(self,addrstring):
 		raise NotImplementedError
@@ -33,10 +33,10 @@ class ETH(_coin.Coin):
 		raise NotImplementedError
 
 	def parse_privkey(self,pkstring):
-		raise NotImplementedError
+		return super(ETH,self).parse_privkey(pkstring)
 
 	def format_privkey(self,privkey):
-		raise NotImplementedError
+		return super(ETH,self).format_privkey(privkey)
 
 	def parse_tx(self,txstring):
 		raise NotImplementedError
@@ -45,10 +45,10 @@ class ETH(_coin.Coin):
 		raise NotImplementedError
 
 	def denomination_float2whole(self,x):
-		raise NotImplementedError
+		return super(self,SatoshiCoin).denomination_float2whole(x,1000000000000000000.0)
 	
 	def denomination_whole2float(self,x):
-		raise NotImplementedError
+		return super(self,SatoshiCoin).denomination_whole2float(x,1000000000000000000.0)
 
 	def txpreimage(self,tx):
 		raise NotImplementedError
