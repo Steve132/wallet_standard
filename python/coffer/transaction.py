@@ -82,7 +82,14 @@ class SubmittedTransaction(Transaction,IndexBase):
 		confirmations=None
 		if('confirmations' in dct):
 			confirmations=int(dct['confirmations'])
-		return SubmittedTransaction(coin=tx.coin,src=tx.srcs,dsts=tx.dsts,refid=txref.refid,timestamp=timestamp,confirmations=confirmations,offchain_source=txref.offchain_source,meta=meta,signatures=signatures)
+		return SubmittedTransaction(coin=tx.coin,
+				srcs=tx.srcs,
+				dsts=tx.dsts,
+				refid=txref.refid,
+				timestamp=timestamp,
+				confirmations=confirmations,
+				offchain_source=txref.offchain_source,
+				meta=tx.meta,signatures=tx.signatures)
 	
 	def to_dict(self):
 		dct=Transaction.to_dict(self)

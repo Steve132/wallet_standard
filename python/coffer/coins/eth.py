@@ -24,13 +24,24 @@ class ETH(_coin.Coin):
 		khash.update(tv)
 		hx=khash.hexdigest()
 		addr=hx[-40:]
-		return _keccak.checksum_encode(unhexlify(addr))
+		return Address(unhexlify(addr),self,format_kwargs={'checksum_case':True})
 
-	def parse_addr(self,addrstring):
-		raise NotImplementedError
+	def parse_addr(self,addrstring,ignore_checksum=False):
+		pkshex=addrstring
+		if(pkshex[:2].lower()!='0x'):
+			raise Exception("%s is not an ETH address because it does not start with 0x" % (addrstring))
+		pkshex=pkshex[2:]
+		if(len(pkshex)!=40):
+			raise Exception("'%s' is not the right size to be interpreted as an ETH address" % (addrstring))
+		byts=unhexlify(pkshex)
+		if(not ignore_checksum):
+			o='0x'+pkshex
+			if(o != _keccak.checksum_encode(byts)):
+				raise Exception("'%s' did not pass the ETH case-based checksum" % (o))
+		return Address(byts,self,format_kwargs={'checksum_case':True})
 
-	def format_addr(self,addr,*args,**kwargs):
-		raise NotImplementedError
+	def format_addr(self,addr,checksum_case=True,*args,**kwargs):
+		return _keccak.checksum_encode(addr.addrdata)
 
 	def parse_privkey(self,pkstring):
 		return super(ETH,self).parse_privkey(pkstring)

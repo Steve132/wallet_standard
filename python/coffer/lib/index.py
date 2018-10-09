@@ -5,7 +5,11 @@ class IndexBase(object):
 		raise NotImplementedError
 
 	def __cmp__(self,other):
-		return cmp(self._reftuple(),other._reftuple())
+		if(isinstance(other,IndexBase)):
+			ot=other._reftuple()
+		else:
+			ot=other
+		return cmp(self._reftuple(),ot)
 		
 	def __hash__(self):
 		return hash(self._reftuple())

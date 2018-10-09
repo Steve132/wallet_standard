@@ -45,7 +45,7 @@ class CliAccount(object):
 	def get_all_meta_as_dict(acc):
 		allmeta={}
 		allmeta.update(acc.meta)
-		txdict={str(k):Transaction.to_dict(v) for k,v in acc.transactions.items()}
+		txdict={str(k):v.to_dict() for k,v in acc.transactions.items()}
 		allmeta['txs']=txdict
 		return allmeta
 
