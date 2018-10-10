@@ -6,6 +6,11 @@ from binascii import hexlify,unhexlify
 from ..lib.index import IndexBase
 from _slip44 import lookups as slip44table
 #todo change this to own bip32 as an object
+from collections import namedtuple
+class ForkMixin(object):
+	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height'])
+	def fork_info(self):
+		raise NotImplementedError
 
 class Coin(bip32.Bip32,IndexBase):
 	def __init__(self,ticker,is_testnet):
@@ -24,6 +29,9 @@ class Coin(bip32.Bip32,IndexBase):
 		else:
 			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 			self.bip44_id=slip44table[ticker]
+
+	def __repr__(self):
+		return self.ticker
 
 	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
 		if(not self.is_testnet):
@@ -118,4 +126,5 @@ class Coin(bip32.Bip32,IndexBase):
 
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
+
 

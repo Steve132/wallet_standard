@@ -5,6 +5,18 @@ from copy import deepcopy
 #todo adapt this to correct filtering
 
 BasisEntry=namedtuple('BasisEntry',['timestamp','currency','price','amount','orefs'])
+
+class BasisEntry(object):
+	def __init__(self,coin,iamount,timestamp,priceUSD,orefs=[]):
+		self.timestamp=timestamp
+		self.priceUSD=priceUSD
+		self.coin=coin
+		self.iamount=iamount
+		self.orefs=orefs
+
+	def __repr__(self):
+		return str(self.__dict__)
+
 class BasisEstimate(object):	#only over a full wallet.
 	def __init__(self,transactions,wallet_dsts,unknown_incoming_callback,algorithm="fifo-order",basis_inits={}):
 		self.known_basis={}			#basis_inits is a mapping from oref to a list of known basis entries
@@ -22,23 +34,24 @@ class BasisEstimate(object):	#only over a full wallet.
 			pass
 		elif(self.algorithm=="fifo-order"):
 			outs={}
-			inputsleft=sum(inputs)
+			#print(inputs)
+			inputsleft=sum(inputs,[])
 			inputsleft.reverse()
 
 			for d in txo.dsts:
 				outlist=[]
-				remaining=d.amount
+				remaining=d.iamount
 				while(remaining > 0.0):
-					ia=inputs[-1].amount
+					ia=inputsleft[-1].iamount
 					if(ia <= remaining):
-						remaining-=ia.amount
-						outlist.append(inputs.pop())
+						remaining-=ia
+						outlist.append(inputsleft.pop())
 					else:
-						a=inputs[-1]
+						a=inputsleft[-1]
 						newentry=deepcopy(a)
-						newentry.amount-=remaining
+						newentry.iamount-=remaining
 						remaining=0.0
-						inputs[-1]=newentry
+						inputsleft[-1]=newentry
 						outlist.append(a)
 					
 				outs[d.ref]=outlist
@@ -68,12 +81,15 @@ class BasisEstimate(object):	#only over a full wallet.
 			for dst in txo.dsts:
 				if(dst.ref in self.wallet_dsts):
 					self.known_basis[dst.ref]=self.unknown_incoming_callback(dst,txo)
+				else:
+					self.known_basis[dst.ref]=None #Todo is htis correct?
 		else:
 			inputs=[self.get(src.ref) for src in txo.srcs if src.ref in inputs_from_wallet]
 			partitions=self._partition(txo,inputs)
 		
-			for oref,obasislist in partition.items():
+			for oref,obasislist in partitions.items():
 				self.known_basis[oref]=obasislist
+
 		self.known_basis_tx.add(txref)
 
 	def get(self,oref):

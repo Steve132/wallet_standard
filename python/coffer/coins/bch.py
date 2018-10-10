@@ -6,7 +6,7 @@ import _cashaddr
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
 
-class BCH(SatoshiCoin):
+class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False,cashaddr=False):
 		
 		if(not is_testnet):
@@ -25,6 +25,9 @@ class BCH(SatoshiCoin):
 			sh_prefix=sh_prefix,
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix)
+
+	def fork_info(self):
+		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558)
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):

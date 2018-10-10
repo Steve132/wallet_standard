@@ -8,7 +8,7 @@ import re
 from itertools import islice
 from lib import appdirs
 import os.path
-import coffer.operations
+import logging
 from coffer.coins.ticker.price import get_current_price
 
 #this is a synced balance	
@@ -35,48 +35,72 @@ class DestinationType(object):
 		self.amount=float(results['amount'])
 		self.ticker=results['ticker']
 		self.address=results['address']
-		
-
+ 
 def _build_prefix(gname,aid,acc):
 	tick=acc.coin.ticker
 	prefix="%s/%s/%s" % (gname,tick,aid[:8])
 	return prefix
+
+def subwalletitems(wallet,selchains,selgroups):
+	selgroups=frozenset([x.lower() for x in selgroups])
+	selchains=frozenset([x.lower() for x in selchains])
+	for aid,acc in wallet.items():
+		gname=wallet.account2group[aid]
+		if(len(selgroups)==0 or gname in selgroups):
+			if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
+				yield gname,aid,acc
+
 				
 def cmd_balance(w,args):
+	gwiter=subwalletitems(w,args.chain,args.group)
 	price_tickers={}
-	for gname,group in w.iter_groups(args.group):
-		for aid,acc in group.iter_accounts(args.chain):
-			amount=acc.balance()
-			prefix=_build_prefix(gname,aid,acc)
+
+	for gname,aid,acc in sorted(list(gwiter),key=lambda gw:_build_prefix(*gw)):
+		amount=acc.balance()
+		prefix=_build_prefix(gname,aid,acc)
+		if(not args.print_value_only):
 			if(acc.coin.ticker not in price_tickers):
+				logging.info("Attempting to fetch current USD price informmation for %r",acc.coin)
 				price_tickers[acc.coin.ticker]=get_current_price(acc.coin.ticker,'USD')
 			print("%s\t%f ($%.02f)" % (prefix,amount,amount*price_tickers[acc.coin.ticker]))
+		else:
+			print("%s\t%f" % (prefix,amount))
 
+def cmd_unspents(w,args):
+	gwiter=subwalletitems(w,args.chain,args.group)
+	unspents=[]
+	for gname,aid,acc in sorted(list(gwiter),key=lambda gw:_build_prefix(*gw)):
+		for dst in acc.unspent_iter():
+			unspents.append(_build_prefix(gname,aid,acc)+'$'+str(dst.ref))
+	unspents.sort()
+	for us in unspents:
+		print(us)
+	
 def cmd_sync(w,args):
-	for gname,group in w.iter_groups(args.group):
-		for aid,acc in group.iter_accounts(args.chain):
-			acc.sync(retries=args.retries)
+	gwiter=subwalletitems(w,args.chain,args.group)
+	for gname,aid,acc in gwiter:
+		logging.info("Attempting to sync account %s..." % (_build_prefix(gname,aid,acc)))
+		acc.sync(retries=args.retries)
 
 def cmd_add_account_auth(w,args):
 	allauths=cliwallet.CliAuth.from_file(args.auth,args.mnemonic_passphrase)
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
-				acc=subauth.toaccount(coin,authref=args.authname,root=p.pa) #accountnum=args.account_index)
-				w.add_account(groupname=args.group,account=acc)
+			acc=subauth.toaccount(coin,authref=args.authname,root=p.pa) #accountnum=args.account_index)
+			w.add_account(groupname=args.group,account=acc)
 
 def cmd_send(w,args):
 	for a in args.dsts:
 		print(a.__dict__)
 		
 def cmd_get_address(w,args):
-	for gname,group in w.iter_groups(args.group):
-		for aid,acc in group.iter_accounts(args.chain):
-			prefix=_build_prefix(gname,aid,acc)
-			addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
-			print("%s/%s\t%s" % (prefix,'external',addrs))
-			addrs=''.join([str(a) for a in acc.next_internal(count=args.count)])
-			print("%s/%s\t%s" % (prefix,'internal',addrs))
+	for gname,aid,acc in sorted(list(gwiter),key=lambda gw:_build_prefix(*gw)):
+		prefix=_build_prefix(gname,aid,acc)
+		addrs=''.join([str(a) for a in acc.next_external(count=args.count)])
+		print("%s/%s\t%s" % (prefix,'external',addrs))
+		addrs=''.join([str(a) for a in acc.next_internal(count=args.count)])
+		print("%s/%s\t%s" % (prefix,'internal',addrs))
 
 
 if __name__=='__main__':
@@ -92,8 +116,16 @@ if __name__=='__main__':
 	balance_parser=subparsers.add_parser('balance')
 	balance_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
 	balance_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to lookup.  Can be entered multiple times.  Defaults to all.",default=[])
-	balance_parser.add_argument('--totals_only','-t',action='store_true',help="Only print the totals")
+	balance_parser.add_argument('--print_value_only',action='store_true',help="Do not fetch or print approximate fiat value")
+	#balance_parser.add_argument('--print_totals_only','-pt',action='store_true',help="Only print the totals")
 	balance_parser.set_defaults(func=cmd_balance)
+
+	unspents_parser=subparsers.add_parser('unspents')
+	unspents_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
+	unspents_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to lookup.  Can be entered multiple times.  Defaults to all.",default=[])
+	unspents_parser.add_argument('--print_value_only',action='store_true',help="Do not fetch or print approximate fiat value")
+	#balance_parser.add_argument('--print_totals_only','-pt',action='store_true',help="Only print the totals")
+	unspents_parser.set_defaults(func=cmd_unspents)
 
 	sync_parser=subparsers.add_parser('sync')
 	sync_parser.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
@@ -108,7 +140,6 @@ if __name__=='__main__':
 	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
 	add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
 	add_account_auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
-
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
 	add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
 

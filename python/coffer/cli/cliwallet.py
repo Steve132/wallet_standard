@@ -10,6 +10,38 @@ import os,os.path
 from binascii import hexlify,unhexlify
 from pprint import pprint
 
+try:
+	from collections.abc import Mapping
+except:
+	from collections import Mapping
+
+#Really, a wallet is a Mapping of accounts.
+#The grouping is entirely artificial and is a function of the CLI wallet features.
+class GroupedWallet(Mapping):
+	def __init__(self):
+		self._accounts={}
+		self.account2group={}
+		self.group2accounts={}
+
+	def add_account(self,groupname,account):
+		aid=account.id()
+		if(aid in self.account2group):
+			raise Exception("Error, account %r is already in group %s" % (account,self.account2group[aid]))
+		if(aid in self._accounts):
+			raise Exception("Error, account %r is already in the GroupedWallet" % (account))
+
+		self._accounts[aid]=account
+		self.account2group[aid]=groupname
+		self.group2accounts.setdefault(groupname,set()).add(aid)
+
+		
+	def __getitem__(self,aid):
+		return self._accounts[aid]
+	def __iter__(self):
+		return iter(self._accounts)
+	def __len__(self):
+		return len(self._accounts)
+
 class CliAccount(object):
 	@staticmethod
 	def from_dict(dic):
@@ -93,46 +125,46 @@ class CliAccountGroup(object):
 	@staticmethod
 	def from_dict(da):
 		if('type' not in da):
-			return wallet.AccountGroup({k:CliAccount.from_dict(p) for k,p in da.items()})
-		return {}
+			return set([CliAccount.from_dict(p) for k,p in da.items()])
+		return []
 
 	@staticmethod
-	def to_dict(ag):
-		if(isinstance(ag,wallet.AccountGroup)):
-			return {k:CliAccount.to_dict(p) for k,p in ag.accounts.items()}
-		return {}
+	def to_dict(accountset):
+		return {acc.id():CliAccount.to_dict(acc) for acc in accountset}
+		
 
-
-class CliWallet(wallet.Wallet):
+class CliWallet(GroupedWallet):
 	def __init__(self):
 		super(CliWallet,self).__init__()	
 					
 	def _add_accountgroup_file(self,fn,fo):
 		groupname,ext=os.path.splitext(fn)
 		data=json.load(fo)
-		self.add_group(groupname,CliAccountGroup.from_dict(data))
+		for acc in CliAccountGroup.from_dict(data):
+			self.add_account(groupname,acc)
 
-	def _write_accountgroup_arc(self,g,fn,arc):
+	def _write_accountgroup_arc(self,group_aids,fn,arc):
+		g=[self[ak] for ak in group_aids]
 		data=CliAccountGroup.to_dict(g)
 		arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 
 	def _add_metadata_file(self,gn,ext,fo):
 		data=json.load(fo)
-		if(gn in self.groups):
-			g=self.groups[gn]
+		if(gn in self.group2accounts):
+			group_aids=self.group2accounts[gn]
 			for ak,accd in data.items():
-				if(ak in g.accounts):
-					CliAccount.set_meta_from_dict(g.accounts[ak],ext,accd)
+				if(ak in group_aids):
+					CliAccount.set_meta_from_dict(self[ak],ext,accd)
 		else:
 			logging.warning("No account group found with groupname '%s'" % groupname)
 
 	def _write_metadata_arc(self,gn,arc):
-		if(gn in self.groups):
+		if(gn in self.group2accounts):
 			dataout={}
 			
-			g=self.groups[gn]
-			for ak,acc in g.accounts.items():
-				for ext,edata in CliAccount.get_all_meta_as_dict(acc).items():
+			group_aids=self.group2accounts[gn]
+			for ak in group_aids:
+				for ext,edata in CliAccount.get_all_meta_as_dict(self[ak]).items():
 					ga=dataout.setdefault(ext,{})
 					ga[ak]=edata
 
@@ -173,13 +205,10 @@ class CliWallet(wallet.Wallet):
 	@staticmethod
 	def to_archive(wal,filename,pin=None):
 		arc=zipordir.ZipOrDir(filename,'w')
-		for f,g in wal.groups.items():
+		for f,group_aids in wal.group2accounts.items():
 			fn=(f+'.group')
-			wal._write_accountgroup_arc(g,fn,arc)
+			wal._write_accountgroup_arc(group_aids,fn,arc)
 			wal._write_metadata_arc(f,arc)
-
-	#def __repr__(self):
-		#return #json.dumps(self.groups,indent=4)
 
 
 

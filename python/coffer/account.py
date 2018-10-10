@@ -56,7 +56,7 @@ class Account(UuidBase):
 		self.transactions={}
 
 	def _reftuple(self):
-		return 
+		raise NotImplementedError
 
 	def next_internal_iter(self):
 		raise NotImplementedError
@@ -76,6 +76,11 @@ class Account(UuidBase):
 	def sync(self):
 		raise NotImplementedError
 
+	def sources_iter(self):
+		for tref,txo in self.transactions.items():
+			for subin in txo.srcs:
+				yield subin
+
 	def destinations_iter(self):
 		for tref,txo in self.transactions.items():
 			for subout in txo.dsts:
@@ -89,8 +94,9 @@ class Account(UuidBase):
 				yield dst
 
 	def unspent_iter(self):
+		allsrcs=frozenset(self.sources_iter())
 		for dst in self.intowallet_iter():
-			if(dst.spenttx is None):
+			if(dst not in allsrcs and dst.spenttx is None):
 				yield dst
 
 	def balance(self):
