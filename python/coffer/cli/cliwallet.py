@@ -48,10 +48,17 @@ class CliAccount(object):
 		if(dic['type']=='bip32'):
 			ctick=dic['chain'].lower()
 			coin=coins.fromticker(ctick)
-			del dic['type']
-			del dic['chain']
-			wa=account.Bip32Account(coin,**dic)
+			wa=account.Bip32Account(coin,
+				root=dic['root'],
+				authref=dic['authref'],
+				internal_path=dic['internal_path'],
+				external_path=dic['external_path'],
+				xkey=dic['xpub'],
+				*dic['bip32args'],
+				**dic['bip32kwargs']
+			)
 			wa.type='bip32'
+			wa.label=dic.get('label',None)
 			return wa
 
 	@staticmethod
@@ -63,6 +70,9 @@ class CliAccount(object):
 				'internal_path':acc.internal[0].path,
 				'external_path':acc.external[0].path,
 				'xpub':str(acc.internal[0].xpub),
+				'bip32kwargs':acc.bip32kwargs,
+				'bip32args':acc.bip32args,
+				'label':acc.label,
 				'type':'bip32'}
 
 	@staticmethod
@@ -124,13 +134,11 @@ class CliAuth(object):
 class CliAccountGroup(object):
 	@staticmethod
 	def from_dict(da):
-		if('type' not in da):
-			return set([CliAccount.from_dict(p) for k,p in da.items()])
-		return []
-
+		return set([CliAccount.from_dict(p) for p in da])
+		
 	@staticmethod
 	def to_dict(accountset):
-		return {acc.id():CliAccount.to_dict(acc) for acc in accountset}
+		return [CliAccount.to_dict(acc) for acc in accountset]
 		
 
 class CliWallet(GroupedWallet):

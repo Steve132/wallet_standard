@@ -16,12 +16,11 @@ class Bip32SeedAuth(Auth):
 	def __init__(self,seed):
 		self.seed=seed
 
-	def toaccount(self,coin,authref=None,root=None,accountnum=0,*args,**kwargs):
-		master=coin.seed2master(self.seed)
-		if(root is None):
-			root="44h/%dh/%dh" % (coin.bip44_id-h(0),accountnum)
+	def toaccount(self,coin,root,authref=None,*bip32args,**bip32kwargs):
+		bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
+		master=coin.seed2master(self.seed,bip32_settings)
 		xpriv=coin.descend(master,root)
-		return account.Bip32Account(coin,xpriv,root=root,authref=authref)
+		return account.Bip32Account(coin,xpriv,root=root,authref=authref,*bip32args,**bip32kwargs)
 
 	@staticmethod
 	def from_mnemonic(words,passphrase=None):

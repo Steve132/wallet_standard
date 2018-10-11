@@ -73,33 +73,23 @@ class ExtendedKey(object):
 		return str(self)
 
 class Bip32Settings(object):
-	def __init__(self,prefix_private,prefix_public,seed_salt="Bitcoin seed",*args,**kwargs):
+	def __init__(self,prefix_private,prefix_public,seed_salt="Bitcoin seed",*pkargs,**pkkwargs):
 		self.prefix_private=prefix_private
 		self.prefix_public=prefix_public
 		self.seed_salt=seed_salt
-		self.pkargs=args
-		self.pkkwargs=kwargs
+		self.pkargs=pkargs
+		self.pkkwargs=pkkwargs
 		
 class Bip32(object):
-	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
-		raise NotImplementedError
-
-	def seed2master(self,seed,*args,**kwargs):
-		bip32_settings=self._load_bip32_settings(*args,**kwargs)
+	def seed2master(self,seed,bip32_settings):
 		seed=_hparse(seed)
 		digest=hmac.new(bip32_settings.seed_salt,seed,hashlib.sha512).digest()
 		I_left,I_right=digest[:32],digest[32:]
 		Ilp=PrivateKey(I_left,is_compressed=True) #errror check
 		return ExtendedKey(bip32_settings.prefix_private,0,0,0,I_right,b'\x00'+I_left)
 
-	def xpriv2xpub(self,xkey,bip32_settings=None):
+	def xpriv2xpub(self,xkey,bip32_settings):
 		xkey=self.parse_xkey(xkey)
-		if(bip32_settings==None):
-			if(xkey.is_private()):
-				bip32_settings=self._load_bip32_settings(prefix_private=xkey.version)
-			else:
-				bip32_settings=self._load_bip32_settings(prefix_public=xkey.version)
-
 		return xkey._xpub(bip32_settings.prefix_public)
 
 	def descend(self,xkey,child,ignore_tag=False):	#todo add settings load here to re-establish public private validity check

@@ -31,14 +31,17 @@ class SetAddressSet(AddressSet):
 		return itertools.cycle(self.addrset)
 
 class XPubAddressSet(AddressSet):
-	def __init__(self,coin,xpub,path="0/*",root=None,*args,**kwargs): #change is "1/*"
+	def __init__(self,coin,xkey,path="0/*",root=None,*bip32args,**bip32kwargs): #change is "1/*"
 		super(XPubAddressSet,self).__init__(coin)
-		
-		self.xpub=self.coin.xpriv2xpub(xpub)
+		if(xkey.is_private()):
+			bip32_settings=coin.load_bip32_settings(prefix_private=xkey.version,*bip32args,**bip32kwargs)
+		else:
+			bip32_settings=coin.load_bip32_settings(prefix_public=xkey.version,*bip32args,**bip32kwargs)
+		self.xpub=self.coin.xpriv2xpub(xkey,bip32_settings)
 		self.coin=coin
 		self.path=path
 		self.root=root
-		self.settings=self.coin._load_bip32_settings(prefix_public=self.xpub.version,prefix_private=None,*args,**kwargs)
+		self.settings=bip32_settings
 
 	def path_iter(self):
 		for p in paths(self.path):
@@ -88,12 +91,11 @@ class Account(UuidBase):
 
 	def intowallet_iter(self):
 		used=frozenset(self.used_internal() | self.used_external())
-	
 		for dst in self.destinations_iter():
 			if(dst.address in used):
 				yield dst
 
-	def unspent_iter(self):
+	def unspents_iter(self):
 		allsrcs=frozenset(self.sources_iter())
 		for dst in self.intowallet_iter():
 			if(dst not in allsrcs and dst.spenttx is None):
@@ -101,7 +103,7 @@ class Account(UuidBase):
 
 	def balance(self):
 		amount=0.0
-		for o in self.unspent_iter():
+		for o in self.unspents_iter():
 			amount+=o.amount
 		return amount
 
@@ -172,15 +174,13 @@ class OnChainAddressSetAccount(Account):
 	def used_external(self):
 		return frozenset(self._used_addr_iter(self.external))
 
-	
-
 class Bip32Account(OnChainAddressSetAccount):
-	def __init__(self,coin,xpub,internal_path="1/*",external_path="0/*",index=None,root=None,authref=None,*args,**kwargs):
+	def __init__(self,coin,xkey,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
 		self.coin=coin
-		self.xpub=self.coin.xpriv2xpub(xpub)
-		if(root == None):
-			root=[h(44),h(self.coin.bip44_id),h(self.xpub.child)]
 		self.type='bip32'
-		internal=XPubAddressSet(coin,xpub=xpub,path=internal_path,root=root,*args,**kwargs)
-		external=XPubAddressSet(coin,xpub=xpub,path=external_path,root=root,*args,**kwargs)
+		internal=XPubAddressSet(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
+		external=XPubAddressSet(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
+		self.xpub=internal.xpub
+		self.bip32args=bip32args
+		self.bip32kwargs=bip32kwargs
 		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)

@@ -10,6 +10,7 @@ from lib import appdirs
 import os.path
 import logging
 from coffer.coins.ticker.price import get_current_price
+import _stdbip32
 
 #this is a synced balance	
 
@@ -38,7 +39,7 @@ class DestinationType(object):
  
 def _build_prefix(gname,aid,acc):
 	tick=acc.coin.ticker
-	prefix="%s/%s/%s" % (gname,tick,aid[:8])
+	prefix="%s/%s(%s)/%s" % (gname,tick,aid[:8],acc.label)
 	return prefix
 
 def subwalletitems(wallet,selchains,selgroups):
@@ -87,8 +88,16 @@ def cmd_add_account_auth(w,args):
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
-			acc=subauth.toaccount(coin,authref=args.authname,root=p.pa) #accountnum=args.account_index)
-			w.add_account(groupname=args.group,account=acc)
+			if(p.pa is not None):
+				acc=subauth.toaccount(coin,authref=args.authname,root=p.pa)
+				w.add_account(groupname=args.group,account=acc)
+			else:
+				for cov in _stdbip32.coverage(coin,args):
+					print(cov)
+					label,path,internal_path,external_path,b32args,b32kwargs=cov
+					acc=subauth.toaccount(coin,authref=args.authname,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
+					acc.label=label
+					w.add_account(groupname=args.group,account=acc)
 
 def cmd_send(w,args):
 	for a in args.dsts:
@@ -137,9 +146,11 @@ if __name__=='__main__':
 	add_account_auth_parser=subparsers.add_parser('add_account_from_auth')
 	add_account_auth_parser.add_argument('--group','-g',help="The wallet group(s) to add the account to",default='main')
 	add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]",type=PathType)
-	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",default='-',type=argparse.FileType('r'))
+	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",required=True,type=argparse.FileType('r'))
 	add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
 	add_account_auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
+	add_account_auth_parser.add_argument('--coverage',help="the coverage algorithm for pathless chains",type=str,default='broad')
+	add_account_auth_parser.add_argument('--num_accounts',help="The number of accounts to check for a bip32 wallet (default1)",type=int,default=1)
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
 	add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
 

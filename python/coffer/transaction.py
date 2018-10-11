@@ -29,6 +29,10 @@ class TransactionReference(IndexBase):
 		os='' if self.offchain_source is None else self.offchain_source
 		return ':'.join((self.ticker,os,self.refid))
 
+#TODO: this should not have a coin object, it should have an 'offchain source' object only (for multiple coin transactions)
+#the output can have a coin, but really it should just have a ticker (for USD?)
+#output should have an amount object which has members famount and iamount and overloads number
+
 class Transaction(object):
 	def __init__(self,coin,srcs,dsts,meta={},signatures={}):
 		self.coin=coin

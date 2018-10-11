@@ -33,7 +33,7 @@ class Coin(bip32.Bip32,IndexBase):
 	def __repr__(self):
 		return self.ticker
 
-	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
+	def load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
 		if(not self.is_testnet):
 				bip32_prefix_private=0x0488ADE4
 				bip32_prefix_public=0x0488B21E
@@ -48,12 +48,6 @@ class Coin(bip32.Bip32,IndexBase):
 			
 		return bip32.Bip32Settings(prefix_private=bip32_prefix_private,prefix_public=bip32_prefix_public,*args,**kwargs)
 
-	def hdpath_generator(self):	#TODO: use this literally anywhere
-		bid=self.bip44_id
-		def default_gen(account=0):
-			return [h(44),h(bid),h(account)]
-		return default_gen
-
 	def _reftuple(self):
 		return (self.ticker,self.is_testnet)
 
@@ -65,7 +59,6 @@ class Coin(bip32.Bip32,IndexBase):
 
 	def format_addr(self,addr,*args,**kwargs):
 		raise NotImplementedError
-
 
 	def parse_privkey(self,pkstring):
 		pkshex=pkstring

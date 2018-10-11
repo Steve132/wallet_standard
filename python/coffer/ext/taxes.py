@@ -18,14 +18,29 @@ class BasisEntry(object):
 		return str(self.__dict__)
 
 class BasisEstimate(object):	#only over a full wallet.
-	def __init__(self,transactions,wallet_dsts,unknown_incoming_callback,algorithm="fifo-order",basis_inits={}):
+	def __init__(self,witer,unknown_incoming_callback,algorithm="fifo-order",basis_inits={}):
 		self.known_basis={}			#basis_inits is a mapping from oref to a list of known basis entries
-
-		self.transactions=transactions
 		self.unknown_incoming_callback=unknown_incoming_callback
-		self.wallet_dsts=wallet_dsts
-		self.algorithm=algorithm
 		self.known_basis_tx=set()
+		self.algorithm=algorithm
+
+		alltxs={}
+		alldsts={}
+		unspents={}
+		for ak,acc in witer:
+			for txr,txo in acc.transactions.items():
+				alltxs[txr]=txo
+			for dst in acc.intowallet_iter():
+				alldsts[dst.ref]=dst
+			for dst in acc.unspents_iter():
+				unspents[dst.ref]=dst
+		
+		self.transactions=alltxs
+		self.wallet_dsts=alldsts
+		self.unspents=unspents
+
+		for u in unspents.values():
+			self.get(u.ref)
 
 	#TODO: handle multi currency transactions
 	def _partition(self,txo,inputs):
