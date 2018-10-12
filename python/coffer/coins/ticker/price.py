@@ -25,7 +25,8 @@ _packcache={
 'ETH':'4bac35db83301d877385cb6f108e08d665ba8ff34a7c7bfcfa3a601f28b6ae1a',
 }
 
-cache_expiration=1000
+cache_expiration=1000 #TODO: until the cache is encrypted this represents a security risk
+
 class CoinCapCache(object):
 	def __init__(self,ticker):
 		self.ticker=ticker
