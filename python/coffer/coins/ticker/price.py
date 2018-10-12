@@ -84,7 +84,12 @@ class CoinCapCache(object):
 			raise Exception("Timestamp %d is earlier than the best known data" % (timestamp))
 
 		self.time_of_last_sync=self.history_timestamps[-1]
+		#print "sorted:", all(self.history_timestamps[i] <= self.history_timestamps[i+1] for i in xrange(len(self.history_timestamps)-1))
 		timestamp_index = bisect.bisect_left(self.history_timestamps, timestamp)
+
+		# bisect_left error?
+		if(self.history_timestamps[timestamp_index] > timestamp):
+			timestamp_index-=1
 
 		if(timestamp_index == len(self.history_timestamps)):
 			left_x,left_y=self.history_timestamps[-1],self.history_prices[-1]
