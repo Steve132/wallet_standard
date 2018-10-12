@@ -25,6 +25,7 @@ _packcache={
 'ETH':'4bac35db83301d877385cb6f108e08d665ba8ff34a7c7bfcfa3a601f28b6ae1a',
 }
 
+cache_expiration=1000
 class CoinCapCache(object):
 	def __init__(self,ticker):
 		self.ticker=ticker
@@ -76,7 +77,7 @@ class CoinCapCache(object):
 
 	def lookup(self,timestamp):
 		timestamp=float(timestamp)
-		if(self.history_timestamps is None or self.history_prices is None or timestamp > (self.time_of_last_sync+300)): #300 seconds is the expiration date on the cache
+		if(self.history_timestamps is None or self.history_prices is None or timestamp > (self.time_of_last_sync+cache_expiration)): #500 seconds is the expiration date on the cache
 			self.fetch()
 
 		if(timestamp < self.history_timestamps[0]):

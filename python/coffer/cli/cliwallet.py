@@ -54,8 +54,8 @@ class CliAccount(object):
 				internal_path=dic['internal_path'],
 				external_path=dic['external_path'],
 				xkey=dic['xpub'],
-				*dic['bip32args'],
-				**dic['bip32kwargs']
+				*dic.get('bip32args',[]),
+				**dic.get('bip32kwargs',{})
 			)
 			wa.type='bip32'
 			wa.label=dic.get('label',None)

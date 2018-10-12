@@ -33,6 +33,7 @@ class SetAddressSet(AddressSet):
 class XPubAddressSet(AddressSet):
 	def __init__(self,coin,xkey,path="0/*",root=None,*bip32args,**bip32kwargs): #change is "1/*"
 		super(XPubAddressSet,self).__init__(coin)
+		xkey=coin.parse_xkey(xkey)
 		if(xkey.is_private()):
 			bip32_settings=coin.load_bip32_settings(prefix_private=xkey.version,*bip32args,**bip32kwargs)
 		else:
