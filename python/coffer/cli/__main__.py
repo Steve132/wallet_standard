@@ -6,10 +6,10 @@ from ..coins import fromticker
 from pprint import pprint
 import re
 from itertools import islice
-from lib import appdirs
+from ..lib import appdirs
 import os.path
 import logging
-from coffer.coins.ticker.price import get_current_price
+from coffer.ticker import get_current_price
 import _stdbip32
 
 #this is a synced balance	

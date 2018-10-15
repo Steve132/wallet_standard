@@ -7,6 +7,7 @@ import time
 from coffer.lib.make_request import make_json_request
 import hashlib
 import os,os.path
+import coffer.lib.appdirs as appdirs
 
 #cache is needed for coins that existed prior to 2013 (coincap.io provides only data prior to 2013)
 _packcache={
@@ -25,7 +26,43 @@ _packcache={
 'ETH':'4bac35db83301d877385cb6f108e08d665ba8ff34a7c7bfcfa3a601f28b6ae1a',
 }
 
-cache_expiration=1000 #TODO: until the cache is encrypted this represents a security risk
+disk_cache_expiration=3600 #TODO: until the cache is encrypted this represents a security risk
+cache_expiration=300
+def _locate_disk_cache(ticker):
+	user_cache=appdirs.user_data_dir("CofferPrice","Coffer")
+	try:
+		os.makedirs(user_cache,0755)
+	except OSError:
+		pass
+
+	return os.path.join(appdirs.user_cache_dir("CofferPrice","Coffer"),'priceUSD_cache_%s.json' % (ticker))
+
+def _load_disk_cache(filename):
+	try:
+		if(os.path.getmtime(filename)+disk_cache_expiration < time.time()):
+			logging.info("Could not load price cache %s from disk, expired" % (filename))
+			return None
+		logging.info("Loading price cache %s" % (filename))
+		cfo=open(filename,'r')
+		jso=json.load(cfo)
+		cfo.close()
+		return jso
+	except OSError as e:
+		logging.info("Could not load price cache %s from disk, file exception: %r" % (filename,e))
+		return None
+
+def _save_disk_cache(filename,historydict):
+	try:
+		logging.info("Saving price cache %s" % (filename))
+		cfo=open(filename,'w')
+		json.dump(historydict,cfo)
+		cfo.close()
+	except Exception as e:
+		logging.info("Could not save price cache %s to disk, file exception: %r" % (filename,e))
+
+
+
+	
 
 class CoinCapCache(object):
 	def __init__(self,ticker):
@@ -50,21 +87,27 @@ class CoinCapCache(object):
 		return {}
 
 	def fetch(self):
-		current_time=None
 		#TODO: only fetch the recent history from the last update.  So if you've gone 300 seconds to 1 day since you last updated, only get the 1day endpoint.
-		historyurls=['/1day','/7day','/30day','/90day','/180day','/365day','']
-		historydict=self._initcache()
-		try:
-			for hurl in historyurls:
-				hist = make_json_request("GET", "http://coincap.io/history"+hurl+'/'+self.ticker.upper())
-				hist["price"]
-				historydict.update(hist["price"])
-		except Exception as e:
-			logging.warning("Could not download price data from coincap.io")
+		dcache_fn=_locate_disk_cache(self.ticker)
+		historydict=_load_disk_cache(dcache_fn)
+		if(historydict is None or len(historydict)==0):
+			historydict=self._initcache()
+			historyurls=['/1day','/7day','/30day','/90day','/180day','/365day','']
+			success=False
+			try:
+				for hurl in historyurls:
+					logging.info("Downloading %s price info from chart database" % (hurl))
+					hist = make_json_request("GET", "http://coincap.io/history"+hurl+'/'+self.ticker.upper())
+					hist["price"]
+					historydict.update(hist["price"])
+				_save_disk_cache(dcache_fn,historydict)
+			except Exception as e:
+				logging.warning("Could not download price data from coincap.io")
+	
 
 		if(len(historydict) == 0):
-			logging.warning("No price data found.")
-		data=sorted(historydict.items(),key=lambda x:x[0])
+			logging.warning("No price data found anywhere")
+		data=sorted(historydict.items(),key=lambda x:int(x[0]))
 		self.history_timestamps,self.history_prices=zip(*data)
 		#print self.history_timestamps
 		#print self.history_prices
@@ -74,7 +117,7 @@ class CoinCapCache(object):
 		ts=time.time()*1000.0
 		self.history_timestamps.append(ts)
 		self.history_prices.append(current_price)
-		return current_price,ts
+		return ts,current_price
 
 	def lookup(self,timestamp):
 		timestamp=float(timestamp)
@@ -82,22 +125,22 @@ class CoinCapCache(object):
 			self.fetch()
 
 		if(timestamp < self.history_timestamps[0]):
-			raise Exception("Timestamp %d is earlier than the best known data" % (timestamp))
+			raise PriceLookupPastError(timestamp,self.history_timestamps[0],self.history_prices[0])
 
 		self.time_of_last_sync=self.history_timestamps[-1]
 		#print "sorted:", all(self.history_timestamps[i] <= self.history_timestamps[i+1] for i in xrange(len(self.history_timestamps)-1))
 		timestamp_index = bisect.bisect_left(self.history_timestamps, timestamp)
 
 		# bisect_left error?
-		if(self.history_timestamps[timestamp_index] > timestamp):
-			timestamp_index-=1
+		#if(self.history_timestamps[timestamp_index] > timestamp):
+		#	timestamp_index-=1
 
 		if(timestamp_index == len(self.history_timestamps)):
 			left_x,left_y=self.history_timestamps[-1],self.history_prices[-1]
-			current_price,current_ts=self.lookup_current()
+			current_ts,current_price=self.lookup_current()
 			
-			if(timestamps > current_ts):
-				raise Exception("Timestamp %d is in the future" % (timestamp))
+			if(timestamp > current_ts):
+				raise PriceLookupHistoryError(timestamp,current_ts,current_price)
 			right_x,right_y=current_ts,current_price
 		else:
 			left_x,left_y=self.history_timestamps[timestamp_index],self.history_prices[timestamp_index]
