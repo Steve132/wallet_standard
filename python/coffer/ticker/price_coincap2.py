@@ -24,13 +24,22 @@ def _coincap_id(ticker):
 		approxtickers=[e['symbol'] for e in data['data']]
 		raise Exception("CoinCap.io does not seem to support a coin with the exact ticker %s.  This is a list of similar tickers that are supported: %r" % (ticker,approxtickers)) 
 
+currate_cache_expiration=70
+_currate_cache={}
 def _currate(cid):
+	global _currate_cache
+	if(cid in _currate_cache):
+		ts,price=_currate_cache[cid]
+		if(ts+currate_cache_expiration >= time.time()):
+			return ts,price
+
 	data=make_json_request("GET", "https://api.coincap.io/v2","/rates/"+cid)
 	if('data' not in data):
 		raise Exception("No data found for coin %s" % (cid))
 	ts=float(data['timestamp'])
 	data=data['data']
-	return float(data['rateUsd']),ts/1000.0
+	_currate_cache[cid]=(ts/1000.0,float(data['rateUsd']))
+	return _currate_cache[cid]
 
 def _fetch_closest_data(cid,timestamp,spread=20000.0):
 	timestamp=float(timestamp)
@@ -50,19 +59,19 @@ def _fetch_closest_data(cid,timestamp,spread=20000.0):
 
 _earliest_cache={}
 def bsearch_to_find_earliest(ticker,bottom=time.time(),top=1493596800): #01.05.2017
+	global _earliest_cache
 	cid=_coincap_id(ticker)
 	if(cid in _earliest_cache):
 		return _earliest_cache[cid]
 
 	while(bottom-top > (2*60)):
 		middlets=(bottom+top)/2.0
-		middledata=_fetch_closest_data(cid,middlets)
+		middledata=_fetch_closest_data(cid,middlets,spread=720.0)
 		if(len(middledata) > 0):
 			bottom=middlets
 		else:
 			top=middlets
 		logging.info("Searching coincap ts range %d-%d for earliest data point" % (top,bottom)) #this is inverted on purpose
-
 
 	_earliest_cache[cid]=min(_fetch_closest_data(cid,bottom).items(),key=lambda v: v[0])
 	return _earliest_cache[cid]
@@ -70,24 +79,27 @@ def bsearch_to_find_earliest(ticker,bottom=time.time(),top=1493596800): #01.05.2
 def backend(ticker,timestamp=None):
 	cid=_coincap_id(ticker)
 	if timestamp is None:
-		price,ts=_currate(cid)
+		ts,price=_currate(cid)
 		return price
 	else:
-		hdct=_fetch_closest_data(cid,timestamp)
+		spread=120.0
 		try:
-			if(len(hdct) > 0):
-				cach=baseprice.LerpCache(ticker,hdct)
-				print("TIMESTAMP IS",timestamp)
-				return cach.lookup(timestamp)
-			else:
-				raise Exception("No history found for that ticker at that timestamp")
-		except Exception as e:
-			v=sys.exc_info()
-			try:
-				return price_packcache.backend(ticker,timestamp)
-			except Exception as e2:
-				print("Exception in fallback price in packcache: %r" % (e2))
-				raise v[0],v[1],v[2]
+			while(spread < 20000.0):
+				hdct=_fetch_closest_data(cid,timestamp,spread=spread)
+				try:
+					if(len(hdct) > 0):
+						cach=baseprice.LerpCache(ticker,hdct)
+						return cach.lookup(timestamp)
+					else:
+						raise Exception("No history found for that ticker at that timestamp")
+				except Exception as e:
+					v=sys.exc_info()
+					spread*=2.0
+					continue
+			return price_packcache.backend(ticker,timestamp)
+		except Exception as e2:
+			print("Exception in fallback price in packcache: %r" % (e2))
+			raise v[0],v[1],v[2]
 		
 			
 			#bsearch to find earliest and cache it.  Then raise PriceLookupPastError if(timestamp < self.history_timestamps[0]):
