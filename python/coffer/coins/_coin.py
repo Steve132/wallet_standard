@@ -8,7 +8,7 @@ from _slip44 import lookups as slip44table
 #todo change this to own bip32 as an object
 from collections import namedtuple
 class ForkMixin(object):
-	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height'])
+	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD'])
 	def fork_info(self):
 		raise NotImplementedError
 

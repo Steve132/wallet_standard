@@ -27,7 +27,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			sig_prefix=sig_prefix)
 
 	def fork_info(self):
-		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558)
+		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558,forkUSD=277.0)
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):
