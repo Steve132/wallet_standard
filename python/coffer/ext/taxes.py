@@ -126,3 +126,9 @@ class BasisEstimate(object):	#only over a full wallet.
 		
 		#short term gets 'spent' first allocating transaction bases
 		
+def cmd_taxes(w,args):
+	print("TAXES!")
+
+def load_cli_subparsers(extsubparsers,parents_available):
+	taxes_parser=extsubparsers.add_parser('taxes',description="Modules and options related to taxes")
+	taxes_parser.set_defaults(func_ext=cmd_taxes)
