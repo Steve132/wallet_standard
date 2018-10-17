@@ -20,25 +20,21 @@ def pu(dst,txo):
 
 	current_timestamp=txo.timestamp
 	finfo=None
+
+	priceUSD=0.0
+
+	#todo estimate prices from preset basis or estimated prices
+	if('priceUSD_estimate' in dst.meta):
+		priceUSD=dst.meta['priceUSD_estimate']
+	if('basisUSD' in dst.meta):
+		priceUSD=dst.meta['basisUSD']
+
 	if(isinstance(dst.coin,ForkMixin)):
 		finfo=dst.coin.fork_info()
 		if(current_timestamp < finfo.timestamp):
 			current_timestamp=finfo.timestamp
-
-	print(finfo)
-	try:
-		priceUSD=get_price(dst.coin.ticker,'USD',timestamp=current_timestamp)
-	except PriceLookupPastError as plpe:
-		if(finfo is not None and current_timestamp==finfo.timestamp):
-			logging.info("Requested a forked price, using a fork basis")
-			if(use_zero_basis_for_forks):
-				priceUSD=0
-			elif(finfo.forkUSD is not None):
-				priceUSD=finfo.forkUSD
-			else:
-				nts,priceUSD=bsearch_to_find_earliest(dst.coin.ticker,bottom=finfo.timestamp+3600*20,top=finfo.timestamp)
-		else:
-			raise plpe
+		if(use_zero_basis_for_forks):
+			priceUSD=0.0
 
 	return [taxes.BasisEntry(timestamp=current_timestamp,coin=dst.coin,iamount=dst.iamount,priceUSD=priceUSD,orefs=[dst.ref])]
 

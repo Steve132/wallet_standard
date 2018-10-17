@@ -210,14 +210,16 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		return Address(_base.base58c2bytes(addrstring),self)
 
 	def address2scriptPubKey(self,addr):
-		addrbytes=addr.addrdata
+		addrbytes=addr.addrdata[1:]
 		version=addrbytes[0]
+		if(len(addrbytes) != 20):
+			raise Exception("legacy Address does not have 20 bytes")
 		if(version==self.pkh_prefix):
-			return sum([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes[1:],OP_EQUALVERIFY,OP_CHECKSIG],b'')
+			return sum([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUALVERIFY,OP_CHECKSIG],b'')
 		elif(version==self.sh_prefix):
-			return sum([OP_HASH160,chr(len(addrbytes)),addrbytes[1:],OP_EQUAL],b'')
+			return sum([OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUAL],b'')
 		else:
-			raise Exception("Invalid Address Version %h for address" % (ord(version),addrstring))
+			raise Exception("Invalid Address Version %h for address %s" % (ord(version),addr))
 		raise NotImplementedError
 
 

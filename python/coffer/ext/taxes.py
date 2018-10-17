@@ -116,6 +116,7 @@ class BasisEstimate(object):	#only over a full wallet.
 			out=self.get(oref)
 		else:
 			out=None
+
 		self.known_basis[oref]=out
 		return out
 		
@@ -125,10 +126,53 @@ class BasisEstimate(object):	#only over a full wallet.
 		
 		
 		#short term gets 'spent' first allocating transaction bases
+
+
+
+def priceUSD_estimate(dst,txo):
+	#there has to be a return value here.
+	if(txo==None):
+		print("Cannot find transaction with input %s" % (u))
+
+	current_timestamp=txo.timestamp
+	finfo=None
+	if(isinstance(dst.coin,ForkMixin)):
+		finfo=dst.coin.fork_info()
+		if(current_timestamp < finfo.timestamp):
+			current_timestamp=finfo.timestamp
+
+	try:
+		priceUSD=get_price(dst.coin.ticker,'USD',timestamp=current_timestamp)
+	except PriceLookupPastError as plpe:
+		if(finfo is not None and current_timestamp==finfo.timestamp):
+			logging.info("Requested a forked price, using price at fork time")
+			
+			if(finfo.forkUSD is not None):
+				priceUSD=finfo.forkUSD
+			else:
+				nts,priceUSD=bsearch_to_find_earliest(dst.coin.ticker,bottom=finfo.timestamp+3600*20,top=finfo.timestamp)
+		else:
+			raise plpe
+
+	return priceUSD
+	
+def sync_tx(txo):
+	if(not hasattr(txo,'timestamp')):
+		return
+	
+	for dst in txo.dsts:
+		priceUSD=priceUSD_estimate(dst,txo)
+		dst.meta['priceUSD_estimate']=priceUSD
+	
+def sync(witer,args):
+	allaccounts=dict(witer)	
+	for ak,acc in allaccounts.items():
+		for txr,tx in acc.transactions.items():
+			sync_tx(tx)
 		
 def cmd_taxes(w,args):
 	print("TAXES!")
 
 def load_cli_subparsers(extsubparsers,parents_available):
-	taxes_parser=extsubparsers.add_parser('taxes',description="Modules and options related to taxes")
+	taxes_parser=extsubparsers.add_parser('taxes',help="Modules and options related to taxes")
 	taxes_parser.set_defaults(func_ext=cmd_taxes)
