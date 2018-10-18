@@ -5,160 +5,7 @@ from cStringIO import StringIO
 from binascii import hexlify,unhexlify
 from _satoshiscript import *
 from .. import _base
-
-
-	#https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
-	#https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
-
-class SVarInt(object):
-	@staticmethod
-	def _sc_serialize(vi):
-		vi=abs(vi)
-		if(vi <= 252):
-			return chr(vi)
-		elif(vi <= 0xFFFF):
-			return '\xfd'+struct.pack('<H',vi)
-		elif(vi <= 0xFFFFFFFF):
-			return '\xfe'+struct.pack('<L',vi)
-		elif(vi <= 0xFFFFFFFFFFFFFFFF):
-			return '\xff'+struct.pack('<Q',vi)
-		raise Exception("Integer too large to store in a SVarInt")
-
-	@staticmethod
-	def _sc_deserialize(sio):
-		first=sio.read(1)
-		if(first == '\xff'):
-			return struct.unpack('<Q',sio.read(8))[0]
-		elif(first == '\xfe'):
-			return struct.unpack('<L',sio.read(4))[0]
-		elif(first == '\xfd'):
-			return struct.unpack('<H',sio.read(2))[0]
-		else:
-			return ord(first)
-
-#txid needs to be serialized backwards for strange reasons
-class SOutpoint(object):
-	def __init__(self,txid,index):
-		self.txid=txid
-		self.index=index
-
-	@staticmethod
-	def _sc_serialize(op):
-		return struct.pack('<32sL',op.txid[::-1],op.index)
-	@staticmethod
-	def _sc_deserialize(sio):
-		tid,dex=struct.unpack('<32sL',sio.read(36))
-		tid=tid[::-1]
-		return SOutpoint(tid,dex)
-
-	def todict(self):
-		return {"txid":hexlify(self.txid),"index":self.index}
-	@staticmethod
-	def fromdict(self,dct):
-		return SOutpoint(unhexlify(dct["txid"]),dct["index"])
-
-
-class SInput(object):
-	def __init__(self,SOutpoint,scriptSig,sequence=0xFFFFFFFF):
-		self.SOutpoint=SOutpoint
-		self.scriptSig=scriptSig
-		self.sequence=sequence
-
-	@staticmethod
-	def _sc_serialize(txin):
-		out=b''
-		out+=SOutpoint._sc_serialize(txin.SOutpoint)
-		out+=SVarInt._sc_serialize(len(txin.scriptSig))
-		out+=txin.scriptSig
-		out+=struct.pack('<L',txin.sequence)
-		return out
-
-	@staticmethod
-	def _sc_deserialize(sio):
-		SOutpoint=SOutpoint._sc_deserialize(sio)
-		scriptSig_size=SVarInt._sc_deserialize(sio)
-		sSig=sio.read(scriptSig_size)
-		seq=struct.unpack('<L',sio.read(4))[0]
-		return SInput(SOutpoint,sSig,seq)
-
-	def todict(self):
-		return {"SOutpoint":self.SOutpoint.todict(),"scriptSig":hexlify(self.scriptSig),"sequence":self.sequence}
-	@staticmethod
-	def fromdict(self,dct):
-		return SInput(SOutpoint.fromdct(dct["SOutpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
-			
-class SOutput(object):
-	def __init__(self,value,scriptPubKey):
-		self.value=value
-		self.scriptPubKey=scriptPubKey
-
-	@staticmethod
-	def _sc_serialize(outp):
-		out=b''
-		out+=struct.pack('<Q',outp.value)
-		out+=SVarInt._sc_serialize(len(outp.scriptPubKey))
-		out+=outp.scriptPubKey
-	
-	@staticmethod
-	def _sc_deserialize(sio):
-		v=struct.unpack('<Q',sio.read(8))[0]
-		scriptPubKey_size=SVarInt._sc_deserialize(sio)
-		scriptPubKey=sio.read(scriptPubKey_size)
-		return SOutput(v,scriptPubKey)
-
-	def todict(self):
-		return {"value":self.value,"scriptPubKey":hexlify(self.scriptPubKey)}
-	@staticmethod
-	def fromdict(self,dct):
-		return SOutput(dct["value"],unhexlify(dct["scriptPubKey"]))
-
-#TODO: this really only applies to a satoshicoin.				
-class STransaction(object):
-	def __init__(self,version,ins,outs,locktime):
-		self.version=version
-		self.ins=ins
-		self.outs=outs
-		self.locktime=locktime
-
-	@staticmethod
-	def _sc_serialize(txo):
-		out=b''
-		out+=struct.pack('<L',txo.version)
-		out+=SVarInt._sc_serialize(len(txo.ins))
-		for inv in txo.ins:
-			out+=SInput._sc_serialize(inv)
-		out+=SVarInt._sc_serialize(len(txo.outs))
-		for ot in txo.outs:
-			out+=SOutput._sc_serialize(ot)
-		out+=struct.pack('<L',txo.locktime)
-		return out
-
-	@staticmethod
-	def _sc_deserialize(sio):
-		version=struct.unpack('<L',sio.read(4))[0]
-		num_ins=SVarInt._sc_deserialize(sio)
-		ins=[SInput._sc_deserialize(sio) for k in range(num_ins)]
-		num_outs=SVarInt._sc_deserialize(sio)
-		outs=[SOutput._sc_deserialize(sio) for k in range(num_outs)]
-		locktime=struct.unpack('<L',sio.read(4))[0]
-
-		return STransaction(version,ins,outs,locktime)
-
-	def todict(self):
-		ins=[t.todict() for t in self.ins]
-		outs=[t.todict() for t in self.outs]
-		return {"version":self.version,"ins":ins,"outs":outs,"locktime":self.locktime}
-
-	@staticmethod
-	def fromdict(self,dct):
-		lt=dct.get("locktime",0)
-		v=dct.get("version",1)
-		ins=dct.get("ins",[])
-		outs=dct.get("outs",[])
-
-		ins=[SInput.fromdict(t) for t in ins]
-		outs=[SOutput.fromdict(t) for t in outs]
-		return STransaction(version=version,ins=ins,outs=outs,locktime=lt)
+from ..transaction import *
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
@@ -210,16 +57,16 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		return Address(_base.base58c2bytes(addrstring),self)
 
 	def address2scriptPubKey(self,addr):
+		version=ord(addr.addrdata[0])
 		addrbytes=addr.addrdata[1:]
-		version=addrbytes[0]
 		if(len(addrbytes) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
 		if(version==self.pkh_prefix):
-			return sum([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUALVERIFY,OP_CHECKSIG],b'')
+			return b''.join([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
-			return sum([OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUAL],b'')
+			return b''.join([OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUAL])
 		else:
-			raise Exception("Invalid Address Version %h for address %s" % (ord(version),addr))
+			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
 
@@ -229,16 +76,16 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	#	stxo=STransaction.fromtxo(txo)
 	#	return STransaction._sc_serialize(stxo)
 
-	#def deserializetx(self,sio):
-	#	if(isinstance(sio,basestring)):
-	#		sio=StringIO(sio)
-	#	return STransaction._sc_deserialize(sio)
+	def deserializetx(self,sio):
+		if(isinstance(sio,basestring)):
+			sio=StringIO(sio)
+		return STransaction._sc_deserialize(sio)
 
-	def txtodict(self,tx):
-		return tx.todict()
+	def txto_dict(self,tx):
+		return tx.to_dict()
 
-	def txfromdict(self,dct):
-		return STransaction.fromdict(dct)
+	def txfrom_dict(self,dct):
+		return STransaction.from_dict(dct)
 
 	def denomination_float2whole(self,x):
 		return super(SatoshiCoin,self).denomination_float2whole(x,100000000.0)
@@ -246,16 +93,41 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def denomination_whole2float(self,x):
 		return super(SatoshiCoin,self).denomination_whole2float(x,100000000.0)
 
-	"""
+	def signtx(self,tx,keys):
+		satoshitxo=STransaction.from_txo(tx)
+		print(hexlify(STransaction._sc_serialize(satoshitxo)))
+		print(satoshitxo.to_dict())
 
-	
-	#todo: obviously broken
+
+
 	"""
+	#todo: obviously broken
+    def serialize_preimage(self, i):
+        nVersion = int_to_hex(self.version, 4)
+        nHashType = int_to_hex(1, 4)
+        nLocktime = int_to_hex(self.locktime, 4)
+        inputs = self.inputs()
+        outputs = self.outputs()
+        txin = inputs[i]
+        # TODO: py3 hex
+        if self.is_segwit_input(txin):
+            hashPrevouts = bh2u(Hash(bfh(''.join(self.serialize_outpoint(txin) for txin in inputs))))
+            hashSequence = bh2u(Hash(bfh(''.join(int_to_hex(txin.get('sequence', 0xffffffff - 1), 4) for txin in inputs))))
+            hashOutputs = bh2u(Hash(bfh(''.join(self.serialize_output(o) for o in outputs))))
+            outpoint = self.serialize_outpoint(txin)
+            preimage_script = self.get_preimage_script(txin)
+            scriptCode = var_int(len(preimage_script) // 2) + preimage_script
+            amount = int_to_hex(txin['value'], 8)
+            nSequence = int_to_hex(txin.get('sequence', 0xffffffff - 1), 4)
+            preimage = nVersion + hashPrevouts + hashSequence + outpoint + scriptCode + amount + nSequence + hashOutputs + nLocktime + nHashType
+        else:
+            txins = var_int(len(inputs)) + ''.join(self.serialize_input(txin, self.get_preimage_script(txin) if i==k else '') for k, txin in enumerate(inputs))
+            txouts = var_int(len(outputs)) + ''.join(self.serialize_output(o) for o in outputs)
+            preimage = nVersion + txins + txouts + nLocktime + nHashType
+        return preimage
 
 	#note: this method is from update_signatures.  Could also need to use sign() from electrum
 	def _signtxsatoshi(self,stx,privkeys):
-		"""Add new signatures to a transaction"""
-
 		for i, txin in enumerate(self.inputs()):
 			pubkeys, x_pubkeys = self.get_sorted_pubkeys(txin)
 			sigs1 = txin.get('signatures')
@@ -279,4 +151,4 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 					print_error("adding sig", i, j, pubkey, sig)
 					self._inputs[i]['signatures'][j] = sig
 
-		        	break
+		        	break"""

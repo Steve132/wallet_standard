@@ -135,7 +135,7 @@ class OnChainAddressSetAccount(Account):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
 		return idt
 	
-	def sync_transactions(self,retries=10,unspents_only=False): #TODO: sync unspents_only goes here...bci.unspents(iter(aset))
+	def sync(self,retries=10,targets=[]): #TODO: sync unspents_only goes here...bci.unspents(iter(aset))
 		bci=self.coin.blockchain()
 		bci.retries=retries
 		for v in self.internal+self.external:

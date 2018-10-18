@@ -34,7 +34,6 @@ class GroupedWallet(Mapping):
 		self.account2group[aid]=groupname
 		self.group2accounts.setdefault(groupname,set()).add(aid)
 
-		
 	def __getitem__(self,aid):
 		return self._accounts[aid]
 	def __iter__(self):

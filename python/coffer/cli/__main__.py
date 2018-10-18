@@ -68,8 +68,9 @@ def cmd_balance(w,args):
 				print("%s\t%f ($%.02f)" % (prefix,amount,amount*price_tickers[acc.coin.ticker]))
 			else:
 				print("%s\t%f" % (prefix,amount))
-		totals.setdefault(acc.coin.ticker,0.0)+=amount
-	print("\nTOTALS:):
+		totals.setdefault(acc.coin.ticker,0.0)
+		totals[acc.coin.ticker]+=amount
+	print("\nTOTALS:")
 	for ticker,total in sorted(list(totals.items()),key=lambda x: x[0]):
 		if(not args.print_value_only):
 			print("%s\t%f ($%.02f)" % (ticker,total,total*price_tickers[ticker]))

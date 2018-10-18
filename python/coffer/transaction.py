@@ -7,8 +7,6 @@ from lib.index import IndexBase
 #		Only SubmittedTransactions can be referenced
 #		Referenceable should be moved to the base.  Or maybe just into lib (because its special for the implementation here)
 
-
-
 class TransactionReference(IndexBase):
 	def __init__(self,ticker,refid=None,offchain_source=None): 												#source=None means the transaction was on chain. 
 		if(refid==None and offchain_source==None and isinstance(ticker,basestring)): 
@@ -125,6 +123,8 @@ class OutputReference(IndexBase):
 class Output(object):
 	def __init__(self,coin,address,amount,meta={},iamount=None):
 		self.coin=coin
+		if(not isinstance(address,Address)):
+			address=coin.parse_addr(address)
 		self.address=address
 		if(iamount is not None):
 			self.iamount=iamount
