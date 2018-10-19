@@ -6,6 +6,7 @@ from binascii import hexlify,unhexlify
 from _satoshiscript import *
 from .. import _base
 from ..transaction import *
+from _satoshitx import STransaction
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):

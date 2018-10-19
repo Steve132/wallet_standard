@@ -1,6 +1,8 @@
 import struct
 from binascii import hexlify,unhexlify
 from cStringIO import StringIO
+import _satoshiscript
+from .._base import dblsha256
 #https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
 #https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
 
@@ -58,10 +60,11 @@ class SOutpoint(object):
 		return SOutpoint(txid=txid,index=index)
 
 class SInput(object):
-	def __init__(self,outpoint,scriptSig,sequence=0xFFFFFFFF):
+	def __init__(self,outpoint,scriptSig,sequence=0xFFFFFFFF,prevout=None):
 		self.outpoint=outpoint
 		self.scriptSig=scriptSig
 		self.sequence=sequence
+		self.prevout=prevout
 
 	@staticmethod
 	def _sc_serialize(txin):
@@ -92,8 +95,11 @@ class SInput(object):
 			sig=''
 		sequence=src.meta.get('sequence',0xffffffff)
 		scriptSig=src.meta.get('scriptSig',sig)
-		return SInput(SOutpoint.from_outref(src.ref),scriptSig,sequence)
-			
+		prevout=SOutput.from_dst(src)
+		return SInput(SOutpoint.from_outref(src.ref),scriptSig,sequence,prevout)
+		
+
+	
 class SOutput(object):
 	def __init__(self,value,scriptPubKey):
 		self.value=value
@@ -191,6 +197,9 @@ class STransaction(object):
 	#	outs=[SOutput.from_dst(o) for o in txo.dsts]
 	#	return STransaction(version,ins,outs,locktime)
 
+	def txid_hash(self):
+		pass
+
 
 #https://bitcoincore.org/en/segwit_wallet_dev/
 class SWitnessTransaction(STransaction):
@@ -252,4 +261,245 @@ class SWitnessTransaction(STransaction):
 		locktime=struct.unpack('<L',sio.read(4))[0]
 
 		return SWitnessTransaction(version,flag,ins,outs,witness,locktime)
+	
+	def wtxid_hash(self):
+		pass
+	
+
+SIGHASH_ANYONECANPAY=0x00000080
+SIGHASH_ALL=0x00000001
+SIGHASH_NONE=0x00000002
+SIGHASH_SINGLE=0x00000003
+SIGHASH_FORKID=0x00000040
+
+sighash_null_value=0xFFFFFFFFFFFFFFFF
+
+class SigHashOptions(object):
+	def __init__(self,nHashTypeInt):
+		nHashTypeInt=int(nHashTypeInt)
+		self.mode=(nHashTypeInt & 0x1f)
+		self.anyonecanpay=(nHashTypeInt & SIGHASH_ANYONECANPAY) > 0
+		self.forkid=(nHashTypeInt & SIGHASH_FORKID) > 0
+	def to_byte(self):
+		byt=int(self.mode)
+		byt|=SIGHASH_ANYONECANPAY if self.anyonecanpay else 0
+		byt|=SIGHASH_FORKID if self.forkid else 0
+		return chr(byt)
+
+def legacy_preimage_scriptcode(stxo,script,input_index,sho):
+	newscript=b''.join([x for x in script if ord(x) is not _satoshiscript.OP_CODESEPARATOR])
+	out=b''
+	out+=SVarInt._sc_serialize(len(newscript))
+	out+=newscript
+	return out
+
+"""
+    /** Serialize the passed scriptCode, skipping OP_CODESEPARATORs */
+    template<typename S>
+    void SerializeScriptCode(S &s) const {
+        CScript::const_iterator it = scriptCode.begin();
+        CScript::const_iterator itBegin = it;
+        opcodetype opcode;
+        unsigned int nCodeSeparators = 0;
+        while (scriptCode.GetOp(it, opcode)) {
+            if (opcode == OP_CODESEPARATOR)
+                nCodeSeparators++;
+        }
+        ::WriteCompactSize(s, scriptCode.size() - nCodeSeparators);
+        it = itBegin;
+        while (scriptCode.GetOp(it, opcode)) {
+            if (opcode == OP_CODESEPARATOR) {
+                s.write((char*)&itBegin[0], it-itBegin-1);
+                itBegin = it;
+            }
+        }
+        if (itBegin != scriptCode.end())
+            s.write((char*)&itBegin[0], it-itBegin);
+    }"""
+
+
+
+def legacy_preimage_input(stxo,script,index,input_index,sho):
+	if(sho.anyonecanpay):
+		index=input_index
+	out=b''
+	out+=SOutpoint._sc_serialize(stxo.ins[index].outpoint)
+	if(index != input_index):
+		out+=SVarInt._sc_serialize(0)
+	else:
+		out+=legacy_preimage_scriptcode(stxo,script,input_index,sho)
+	
+	if(index != input_index and (sho.mode==SIGHASH_NONE or sho.mode == SIGHASH_SINGLE)):
+		out+=struct.pack('<L',0)
+	else:
+		out+=struct.pack('<L',stxo.ins[index].sequence)
+	return out
+	
+"""/** Serialize an input of txTo */
+    template<typename S>
+    void SerializeInput(S &s, unsigned int nInput) const {
+        // In case of SIGHASH_ANYONECANPAY, only the input being signed is serialized
+        if (fAnyoneCanPay)
+            nInput = nIn;
+        // Serialize the prevout
+        ::Serialize(s, txTo.vin[nInput].prevout);
+        // Serialize the script
+        if (nInput != nIn)
+            // Blank out other inputs' signatures
+            ::Serialize(s, CScript());
+        else
+            SerializeScriptCode(s);
+        // Serialize the nSequence
+        if (nInput != nIn && (fHashSingle || fHashNone))
+            // let the others update at will
+            ::Serialize(s, (int)0);
+        else
+            ::Serialize(s, txTo.vin[nInput].nSequence);
+    }
+"""
+
+
+def legacy_preimage_output(stxo,script,index,input_index,sho):
+	out=b''	
+	if(sho.mode==SIGHASH_SINGLE and index != input_index):
+		out+=SOutput._sc_serialize(SOutput(value=sighash_null_value,scriptPubKey=b''))
+	else:
+		out+=SOutput._sc_serialize(stxo.outs[index])
+	return out
+
+"""
+    /** Serialize an output of txTo */
+    template<typename S>
+    void SerializeOutput(S &s, unsigned int nOutput) const {
+        if (fHashSingle && nOutput != nIn)
+            // Do not lock-in the txout payee at other indices as txin
+            ::Serialize(s, CTxOut());
+        else
+            ::Serialize(s, txTo.vout[nOutput]);
+    }"""
+
+def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):		
+	sho=SigHashOptions(nhashtype)
+	out=b''
+	out+=struct.pack('<L',stxo.version)
+	nInputs = 1 if sho.anyonecanpay else len(stxo.ins)
+	out+=SVarInt._sc_serialize(nInputs)
+	for nInput in range(nInputs):
+		out+=legacy_preimage_input(stxo,script,nInput,input_index,sho)
+
+	if(sho.mode == SIGHASH_NONE):
+		nOutputs = 0
+	elif(sho.mode == SIGHASH_SINGLE):
+		nOutputs = input_index+1
+	else:
+		nOutputs = len(stxo.outs)
+	out+=SVarInt._sc_serialize(nOutputs)
+	for nOutput in range(nOutputs):
+		out+=legacy_preimage_output(stxo,script,nOutput,input_index,sho)
+	out+=struct.pack('<L',stxo.locktime)
+	out+=struct.pack('<L',int(nhashtype))
+	return out
+"""
+    /** Serialize txTo */
+    template<typename S>
+    void Serialize(S &s) const {
+        // Serialize nVersion
+        ::Serialize(s, txTo.nVersion);
+        // Serialize vin
+        unsigned int nInputs = fAnyoneCanPay ? 1 : txTo.vin.size();
+        ::WriteCompactSize(s, nInputs);
+        for (unsigned int nInput = 0; nInput < nInputs; nInput++)
+             SerializeInput(s, nInput);
+        // Serialize vout
+        unsigned int nOutputs = fHashNone ? 0 : (fHashSingle ? nIn+1 : txTo.vout.size());
+        ::WriteCompactSize(s, nOutputs);
+        for (unsigned int nOutput = 0; nOutput < nOutputs; nOutput++)
+             SerializeOutput(s, nOutput);
+        // Serialize nLockTime
+        ::Serialize(s, txTo.nLockTime);
+    }
+"""
+
+def legacy_sighash(stxo,script,input_index,nhashtype,amount=None):
+	preimage=legacy_preimage(stxo,script,input_index,nhashtype,amount)
+	return dblsha256(preimage)
+	
+def segwit_preimage(stxo,script,input_index,sho,amount=None):
+	hashPrevouts=b'\x00'*32
+	hashSequence=b'\x00'*32
+	hashOutputs=b'\x00'*32
+
+	"""if (sigversion == SigVersion::WITNESS_V0) {
+		    uint256 hashPrevouts;
+		    uint256 hashSequence;
+		    uint256 hashOutputs;
+		    const bool cacheready = cache && cache->ready;
+
+		    if (!(nHashType & SIGHASH_ANYONECANPAY)) {
+		        hashPrevouts = cacheready ? cache->hashPrevouts : GetPrevoutHash(txTo);
+		    }
+
+		    if (!(nHashType & SIGHASH_ANYONECANPAY) && (nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {
+		        hashSequence = cacheready ? cache->hashSequence : GetSequenceHash(txTo);
+		    }
+
+
+		    if ((nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {
+		        hashOutputs = cacheready ? cache->hashOutputs : GetOutputsHash(txTo);
+		    } else if ((nHashType & 0x1f) == SIGHASH_SINGLE && nIn < txTo.vout.size()) {
+		        CHashWriter ss(SER_GETHASH, 0);
+		        ss << txTo.vout[nIn];
+		        hashOutputs = ss.GetHash();
+		    }"""
+	
+	if(not sho.anyonecanpay):
+		hashPrevouts=segwit_get_prevouthash(stxo)
+		
+	if(not sho.anyonecanpay and sho.mode != SIGHASH_NONE and sho.mode != SIGHASH_SINGLE):
+		hashSequence=segwit_get_sequencehash(stxo)
+
+	if(sho.mode != SIGHASH_SINGLE and sho.mode != SIGHASH_NONE):
+		hashOutputs=segwit_get_outputshash(stxo)
+	elif(sho.mode == SIGHASH_SINGLE and input_index < len(stxo.ins)):
+		hashOutputs=dblsha256(SOutput._sc_serialize(stxo.outs[input_index]))
+	
+	
+	"""
+        CHashWriter ss(SER_GETHASH, 0);
+        // Version
+        ss << txTo.nVersion;
+        // Input prevouts/nSequence (none/all, depending on flags)
+        ss << hashPrevouts;
+        ss << hashSequence;
+        // The input being signed (replacing the scriptSig with scriptCode + amount)
+        // The prevout may already be contained in hashPrevout, and the nSequence
+        // may already be contain in hashSequence.
+        ss << txTo.vin[nIn].prevout;
+        ss << scriptCode;
+        ss << amount;
+        ss << txTo.vin[nIn].nSequence;
+        // Outputs (none/one/all, depending on flags)
+        ss << hashOutputs;
+        // Locktime
+        ss << txTo.nLockTime;
+        // Sighash type
+        ss << nHashType;
+
+        return ss.GetHash();"""
+	out=b''
+	out+=struct.pack('<L',stxo.version)
+	out+=hashPrevouts
+	out+=hashSequence
+	out+=SOutput._sc_serialize(stxo.ins[input_index].prevout)
+	out+=script
+	if(amount is None):
+		a=stxo.ins[input_index].prevout.iamount
+	else:
+		a=int(amount)
+	out+=struct.pack('<Q',a)
+	out+=struct.pack('<L',stxo.ins[input_index].sequence)
+	out+=hashOutputs;
+	out+=struct.pack('<L',stxo.locktime)
+	out+=sho.to_byte()
+	return out
 	
