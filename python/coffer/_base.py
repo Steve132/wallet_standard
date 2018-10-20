@@ -5,6 +5,7 @@ from binascii import hexlify,unhexlify
 
 def dblsha256(byts):
 	return hashlib.sha256(hashlib.sha256(byts).digest()).digest()
+
 def hash160(byts):
 	rmd=hashlib.new('ripemd160')
 	rmd.update(hashlib.sha256(byts).digest())

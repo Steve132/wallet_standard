@@ -59,6 +59,7 @@ class SOutpoint(object):
 		index=ref.index
 		return SOutpoint(txid=txid,index=index)
 
+#TODO: add segwit inputs and outputs?
 class SInput(object):
 	def __init__(self,outpoint,scriptSig,sequence=0xFFFFFFFF,prevout=None):
 		self.outpoint=outpoint
@@ -90,11 +91,12 @@ class SInput(object):
 		return SInput(SOutpoint.from_dict(dct["outpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
 
 	@staticmethod
-	def from_src(src,sig):
-		if(sig is None):
-			sig=''
+	def from_src(src,sig=None):
 		sequence=src.meta.get('sequence',0xffffffff)
-		scriptSig=src.meta.get('scriptSig',sig)
+		if(sig is None and 'scriptSig' in src.meta):
+			scriptSig=src.meta.get('scriptSig',sig)
+		else:
+			scriptSig=src.coin.signature2scriptSig(sig)
 		prevout=SOutput.from_dst(src)
 		return SInput(SOutpoint.from_outref(src.ref),scriptSig,sequence,prevout)
 		
@@ -265,7 +267,7 @@ class SWitnessTransaction(STransaction):
 	def wtxid_hash(self):
 		pass
 	
-
+	#def from_txo() generate witness data
 SIGHASH_ANYONECANPAY=0x00000080
 SIGHASH_ALL=0x00000001
 SIGHASH_NONE=0x00000002
@@ -277,14 +279,20 @@ sighash_null_value=0xFFFFFFFFFFFFFFFF
 class SigHashOptions(object):
 	def __init__(self,nHashTypeInt):
 		nHashTypeInt=int(nHashTypeInt)
+		if(nHashTypeInt < 0):
+			nHashTypeInt+=1 << 32
+		
 		self.mode=(nHashTypeInt & 0x1f)
 		self.anyonecanpay=(nHashTypeInt & SIGHASH_ANYONECANPAY) > 0
 		self.forkid=(nHashTypeInt & SIGHASH_FORKID) > 0
+		self.nhashtype=nHashTypeInt
+
 	def to_byte(self):
-		byt=int(self.mode)
+		"""byt=int(self.mode)
 		byt|=SIGHASH_ANYONECANPAY if self.anyonecanpay else 0
 		byt|=SIGHASH_FORKID if self.forkid else 0
-		return chr(byt)
+		return chr(byt)"""
+		return self.nhashtype & 0xFF
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
 	newscript=bytearray([x for x in script if x != _satoshiscript.OP_CODESEPARATOR])
@@ -328,8 +336,6 @@ def legacy_preimage_input(stxo,script,index,input_index,sho):
 		out+=SVarInt._sc_serialize(0)
 	else:
 		x=legacy_preimage_scriptcode(stxo,script,input_index,sho)
-		#print(hexlify(x))
-		#print(hexlify(out))
 		out+=x
 	
 	if(index != input_index and (sho.mode==SIGHASH_NONE or sho.mode == SIGHASH_SINGLE)):
@@ -361,7 +367,7 @@ def legacy_preimage_input(stxo,script,index,input_index,sho):
     }
 """
 
-
+#TODO: something with last executed codeseperator is required before here? And in the segwit version?  See https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#Specification
 def legacy_preimage_output(stxo,script,index,input_index,sho):
 	out=bytearray()	
 	if(sho.mode==SIGHASH_SINGLE and index != input_index):
@@ -381,10 +387,9 @@ def legacy_preimage_output(stxo,script,index,input_index,sho):
             ::Serialize(s, txTo.vout[nOutput]);
     }"""
 
+
+
 def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
-	nhashtype=int(nhashtype)
-	if(nhashtype < 0):
-		nhashtype+=1 << 32
 	sho=SigHashOptions(nhashtype)
 	script=bytearray(script)
 	out=bytearray()
@@ -404,7 +409,7 @@ def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
 	for nOutput in range(nOutputs):
 		out+=legacy_preimage_output(stxo,script,nOutput,input_index,sho)
 	out+=struct.pack('<L',stxo.locktime)
-	out+=struct.pack('<L',nhashtype)
+	out+=struct.pack('<L',sho.nhashtype)
 	return out
 """
     /** Serialize txTo */
@@ -431,7 +436,8 @@ def legacy_sighash(stxo,script,input_index,nhashtype,amount=None):
 	preimage=legacy_preimage(stxo,script,input_index,nhashtype,amount)
 	return dblsha256(preimage)
 	
-def segwit_preimage(stxo,script,input_index,sho,amount=None):
+def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
+	sho=SigHashOptions(sho)
 	hashPrevouts=b'\x00'*32
 	hashSequence=b'\x00'*32
 	hashOutputs=b'\x00'*32
@@ -472,8 +478,7 @@ def segwit_preimage(stxo,script,input_index,sho,amount=None):
 		hashOutputs=segwit_get_outputshash(stxo)
 	elif(sho.mode == SIGHASH_SINGLE and input_index < len(stxo.ins)):
 		hashOutputs=dblsha256(SOutput._sc_serialize(stxo.outs[input_index]))
-	
-	
+
 	"""
         CHashWriter ss(SER_GETHASH, 0);
         // Version
@@ -496,6 +501,7 @@ def segwit_preimage(stxo,script,input_index,sho,amount=None):
         ss << nHashType;
 
         return ss.GetHash();"""
+
 	out=bytearray()
 	out+=struct.pack('<L',stxo.version)
 	out+=hashPrevouts

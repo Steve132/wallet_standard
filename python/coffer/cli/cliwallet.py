@@ -9,6 +9,7 @@ import zipordir
 import os,os.path
 from binascii import hexlify,unhexlify
 from pprint import pprint
+import bip32
 
 try:
 	from collections.abc import Mapping
@@ -47,7 +48,7 @@ class CliAccount(object):
 		if(dic['type']=='bip32'):
 			ctick=dic['chain'].lower()
 			coin=coins.fromticker(ctick)
-			wa=account.Bip32Account(coin,
+			wa=bip32.Bip32Account(coin,
 				root=dic['root'],
 				authref=dic['authref'],
 				internal_path=dic['internal_path'],
@@ -63,7 +64,7 @@ class CliAccount(object):
 	@staticmethod
 	def to_dict(acc):
 		if(acc.type=='bip32'):
-			return {'chain':acc.coin.ticker,
+			return {'chain':acc.chainid,
 				'root':acc.internal[0].root,
 				'authref':acc.authref,
 				'internal_path':acc.internal[0].path,
@@ -114,13 +115,13 @@ class CliAuth(object):
 		if(s[:6]=='bip32:'):
 			s=s.split().join().split(':')[-1]
 			s=unhexlify(s)
-			return auth.Bip32SeedAuth(seed=s)
+			return bip32.Bip32SeedAuth(seed=s)
 		elif(' ' in s):
-			return auth.Bip32SeedAuth.from_mnemonic(words=s,passphrase=passphrase)
+			return bip32.Bip32SeedAuth.from_mnemonic(words=s,passphrase=passphrase)
 		elif(checkhex(x)):
 			return auth.HexPrivKeyAuth(key=x)
 		else:
-			return auth.Bip32Auth() #TODO
+			return bip32.Bip32Auth() #TODO
 	
 	@staticmethod
 	def from_file(fo,passphrase=''):

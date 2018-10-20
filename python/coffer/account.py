@@ -1,6 +1,5 @@
 import hashlib
 import itertools
-from bip32 import paths
 import random
 from lib.index import UuidBase
 
@@ -29,28 +28,6 @@ class SetAddressSet(AddressSet):
 
 	def __iter__(self):
 		return itertools.cycle(self.addrset)
-
-class XPubAddressSet(AddressSet):
-	def __init__(self,coin,xkey,path="0/*",root=None,*bip32args,**bip32kwargs): #change is "1/*"
-		super(XPubAddressSet,self).__init__(coin)
-		xkey=coin.parse_xkey(xkey)
-		if(xkey.is_private()):
-			bip32_settings=coin.load_bip32_settings(prefix_private=xkey.version,*bip32args,**bip32kwargs)
-		else:
-			bip32_settings=coin.load_bip32_settings(prefix_public=xkey.version,*bip32args,**bip32kwargs)
-		self.xpub=self.coin.xpriv2xpub(xkey,bip32_settings)
-		self.coin=coin
-		self.path=path
-		self.root=root
-		self.settings=bip32_settings
-
-	def path_iter(self):
-		for p in paths(self.path):
-			yield self.coin.descend(self.xpub,p)
-
-	def __iter__(self):
-		for vpub in self.path_iter():
-			yield self.coin.pubkeys2addr([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
 
 class Account(UuidBase):
 	def __init__(self,coin,authref=None):
@@ -170,18 +147,11 @@ class OnChainAddressSetAccount(Account):
 		return self._next_addr_iter(self.internal)
 	def next_external_iter(self):
 		return self._next_addr_iter(self.external)
+
 	def used_internal(self):
 		return frozenset(self._used_addr_iter(self.internal))
 	def used_external(self):
 		return frozenset(self._used_addr_iter(self.external))
 
-class Bip32Account(OnChainAddressSetAccount):
-	def __init__(self,coin,xkey,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
-		self.coin=coin
-		self.type='bip32'
-		internal=XPubAddressSet(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
-		external=XPubAddressSet(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
-		self.xpub=internal.xpub
-		self.bip32args=bip32args
-		self.bip32kwargs=bip32kwargs
-		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
+
+

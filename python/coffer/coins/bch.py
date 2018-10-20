@@ -7,7 +7,7 @@ from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
 
 class BCH(SatoshiCoin,ForkMixin):
-	def __init__(self,is_testnet=False,cashaddr=False):
+	def __init__(self,is_testnet=False):
 		
 		if(not is_testnet):
 			pkh_prefix=0x00
@@ -39,7 +39,7 @@ class BCH(SatoshiCoin,ForkMixin):
 	
 	def _write_cashaddr(self,abytes,prefix=None):
 		tprefix=prefix
-		if(prefix==None or prefix==True or prefix==False):
+		if(prefix==None or prefix==True or prefix==False or len(prefix)==0):
 			if(self.is_testnet):
 				tprefix='bchtest'
 			else:

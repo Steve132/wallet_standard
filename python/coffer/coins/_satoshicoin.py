@@ -20,15 +20,12 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.sig_prefix=sig_prefix
 		
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
-		#if(isinstance(pubkeys,basestring)):
-		#	pubkeys=[pubkeys] #assume that if it's a single argument, then it's one pubkey
-		#pubkeys=[(PublicKey(pub) if isinstance(pub,basestr) else pub) for pub in pubkeys] #if there's a string test
 
+	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		multisig=len(pubkeys) > 1
-		if(multisig):#P2SH multisig
+		if(multisig):  #P2SH multisig
 			raise NotImplementedError
-		else:  #P2PKH
+		else:
 			h160=_base.hash160(pubkeys[0].pubkeydata)
 			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
 
@@ -68,6 +65,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			return bytearray([OP_HASH160,len(addrbytes)]+addrbytes+[OP_EQUAL])
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
+		raise NotImplementedError
+
+	def signature2scriptSig(self,signature):
 		raise NotImplementedError
 
 

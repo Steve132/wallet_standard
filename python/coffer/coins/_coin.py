@@ -7,12 +7,14 @@ from ..lib.index import IndexBase
 from _slip44 import lookups as slip44table
 #todo change this to own bip32 as an object
 from collections import namedtuple
+from ..chain import Chain
+
 class ForkMixin(object):
 	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD'])
 	def fork_info(self):
 		raise NotImplementedError
 
-class Coin(bip32.Bip32,IndexBase):
+class Coin(bip32.Bip32,Chain,IndexBase):
 	def __init__(self,ticker,is_testnet):
 		super(Coin,self).__init__()
 
@@ -29,6 +31,10 @@ class Coin(bip32.Bip32,IndexBase):
 		else:
 			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 			self.bip44_id=slip44table[ticker]
+
+	@property
+	def chainid(self):
+		return self.ticker
 
 	def __repr__(self):
 		return self.ticker

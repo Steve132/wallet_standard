@@ -150,12 +150,6 @@ class Bip32(object):
 			xkey=ExtendedKey(xkey)
 		return xkey
 
-
-
-	
-
-
-
 import re,itertools,collections
 #this represents a security bug of a sort.  It has to.  Because you can pass 0-20320301h to a path.  And 0-200202321h to a path.
 #you could stop it with a warning error message but it's some kind of security problem without a threshold.  Even low thresholds would be a target for multiple paths.
@@ -268,6 +262,78 @@ def paths(pathstring,maxaddrs=1000000):
 
 
 
+class XPubAddressSet(account.AddressSet):
+	def __init__(self,coin,xkey,path="0/*",root=None,*bip32args,**bip32kwargs): #change is "1/*"
+		super(XPubAddressSet,self).__init__(coin)
+		xkey=coin.parse_xkey(xkey)
+		if(xkey.is_private()):
+			bip32_settings=coin.load_bip32_settings(prefix_private=xkey.version,*bip32args,**bip32kwargs)
+		else:
+			bip32_settings=coin.load_bip32_settings(prefix_public=xkey.version,*bip32args,**bip32kwargs)
+		self.xpub=self.coin.xpriv2xpub(xkey,bip32_settings)
+		self.coin=coin
+		self.path=path
+		self.root=root
+		self.settings=bip32_settings
+
+	def xpub_iter(self):
+		for p in paths(self.path):
+			yield self.coin.descend(self.xpub,p)
+
+	def path2addr(self,p):
+		return self.coin.pubkeys2addr([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
+
+	def __iter__(self):
+		for vpub in self.path_iter():
+			yield self.path2addr(vpub)
+
+class Bip32Account(account.OnChainAddressSetAccount):
+	def __init__(self,coin,xkey,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
+		self.coin=coin
+		self.type='bip32'
+		internal=XPubAddressSet(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
+		external=XPubAddressSet(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
+		self.xpub=internal.xpub
+		self.bip32args=bip32args
+		self.bip32kwargs=bip32kwargs
+		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
+
+class Bip32SeedAuth(Auth):
+	def __init__(self,seed):
+		self.seed=seed
+
+	def _genmaster(self,coin,*bip32args,**bip32kwargs):
+		bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
+		master=coin.seed2master(self.seed,bip32_settings)
+		master,bip32_settings
+	
+	def to_b32auth(self,coin,root,internal_path="1/*",external_path="0/*",*bip32args,**bip32kwargs):
+		#bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
+
+	@staticmethod
+	def from_mnemonic(words,passphrase=None):
+		seed=mnemonic.words_to_seed(words,passphrase)
+		return Bip32SeedAuth(seed)
+	
+	#def childauth(self,account):
+	#masterxpriv=account.coin.seed2master(self.seed)
+	#xpriv=coin.descend(account.root)
+	#return Bip32Auth(account,xpriv,account.root)
+	
+class Bip32Auth(Auth):
+	def __init__(self,xpriv,root):
+		self.coin=coin
+		self.xpriv=xpriv
+		self.root=root
+
+	def childauth(self,account):
+		return self
+		
+	def toaccount(self,coin,root,internal_path="1/*",external_path="0/*",*bip32args,**bip32kwargs):
+		#bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
+		master=coin.seed2master(self.seed,bip32_settings)
+		xpriv=coin.descend(master,root)
+		return account.Bip32Account(coin,xpriv,root=root,authref=authref,*bip32args,**bip32kwargs)
 
 
 

@@ -24,10 +24,12 @@ class LTC(SegwitCoin):
 			pkh_prefix=0x30
 			sh_prefix=0x32
 			wif_prefix=0xb0
+			bech32_prefix='ltc'
 		else:
 			pkh_prefix=111
 			sh_prefix=58
 			wif_prefix=239
+			bech32_prefix='tltc'
 		
 		sig_prefix=b'\x19Litecoin Signed Message:\n'
 
@@ -35,7 +37,8 @@ class LTC(SegwitCoin):
 			pkh_prefix=pkh_prefix,
 			sh_prefix=sh_prefix,
 			wif_prefix=wif_prefix,
-			sig_prefix=sig_prefix)
+			sig_prefix=sig_prefix,
+			bech32_prefix=bech32_prefix)
 
 	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,use_ltpub=True):
 		if(prefix_private is not None):

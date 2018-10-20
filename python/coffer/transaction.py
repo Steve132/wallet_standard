@@ -2,69 +2,66 @@ from coins import fromticker
 from binascii import hexlify,unhexlify
 from key import Address
 from lib.index import IndexBase
+from ..chain import fromchainid
 #todo:  Output should be Output. SubmittedOutput should be SubmittedOutput
 #	    Transaction should have a subclass SubmittedTransaction that includes the txhash and stuff
 #		Only SubmittedTransactions can be referenced
 #		Referenceable should be moved to the base.  Or maybe just into lib (because its special for the implementation here)
 
 class TransactionReference(IndexBase):
-	def __init__(self,ticker,refid=None,offchain_source=None): 												#source=None means the transaction was on chain. 
-		if(refid==None and offchain_source==None and isinstance(ticker,basestring)): 
-			ticker,offchain_source,refid=ticker.split(':')
+	def __init__(self,chainid,refid=None):
+		if(refid==None and isinstance(chainid,basestring)): 
+			chainid,refid=chainid.split(':') 		
 
-		self.ticker=ticker
+		self.chainid=chainid
 		self.refid=refid
-		if(offchain_source is not None and len(offchain_source)==0):
-			offchain_source=''
-		self.offchain_source=offchain_source
 	
 	def _reftuple(self):
-		return (self.ticker,self.refid,self.offchain_source)
+		return (self.chainid,self.refid)
 
 	def __repr__(self):
 		return str(self)
 	def __str__(self):
-		os='' if self.offchain_source is None else self.offchain_source
-		return ':'.join((self.ticker,os,self.refid))
+		return ':'.join((self.chainid,self.refid))
 
 #TODO: this should not have a coin object, it should have an 'offchain source' object only (for multiple coin transactions)
 #the output can have a coin, but really it should just have a ticker (for USD?)
 #output should have an amount object which has members famount and iamount and overloads number
 
 class Transaction(object):
-	def __init__(self,coin,srcs,dsts,meta={},signatures={}):
-		self.coin=coin
+	def __init__(self,chain,srcs,dsts,meta={},authorizations={}):
+		self.chain=chain
 		self.srcs=srcs
 		self.dsts=dsts
 		self.meta=meta
-		self.signatures=signatures
+		self.authorizations=authorizations
 
 	@staticmethod
 	def from_dict(dct,_force_base=False):
 		if('ref' in dct and not _force_base):
 			return SubmittedTransaction.from_dict(dct)
 
-		coin=fromticker(dct['coin'])
+		chain=fromchainid(dct['chain'])
 		srcs=[Output.from_dict(x) for x in dct['srcs']]
 		dsts=[Output.from_dict(x) for x in dct['dsts']]
 		meta=dct.get('meta',{})
-		signatures=dct.get('signatures',{})
-		return Transaction(coin=coin,srcs=srcs,dsts=dsts,meta=meta,signatures=signatures)
+		authorizations=dct.get('authorizations',{})
+		return Transaction(chain,srcs=srcs,dsts=dsts,meta=meta,authorizations=authorizations)
 
 	def to_dict(self):
-		dct={'coin':self.coin.ticker,
+		dct={'chain':self.chain.chainid,
 			'srcs':[x.to_dict() for x in self.srcs],
 			'dsts':[x.to_dict() for x in self.dsts],
 			'meta':self.meta,
-			'signatures':{str(k):v for k,v in self.signatures.items()}
+			'authorizations':{str(k):v for k,v in self.authorizations.items()}
 		}
 		return dct
 			
 
 class SubmittedTransaction(Transaction,IndexBase):
-	def __init__(self,coin,srcs,dsts,refid,timestamp,confirmations,offchain_source=None,meta={},signatures={}):
-		super(SubmittedTransaction,self).__init__(coin,srcs,dsts,meta,signatures)
-		self.ref=TransactionReference(ticker=coin.ticker,refid=refid,offchain_source=offchain_source)
+	def __init__(self,chain,srcs,dsts,refid,timestamp,confirmations,meta={},authorizations={}):
+		super(SubmittedTransaction,self).__init__(chain,srcs,dsts,meta,authorizations)
+		self.ref=TransactionReference(chainid=chain.chainid,refid=refid)
 		self.timestamp=timestamp
 		self.confirmations=confirmations
 
@@ -84,14 +81,13 @@ class SubmittedTransaction(Transaction,IndexBase):
 		confirmations=None
 		if('confirmations' in dct):
 			confirmations=int(dct['confirmations'])
-		return SubmittedTransaction(coin=tx.coin,
+		return SubmittedTransaction(chain=tx.chain,
 				srcs=tx.srcs,
 				dsts=tx.dsts,
 				refid=txref.refid,
 				timestamp=timestamp,
 				confirmations=confirmations,
-				offchain_source=txref.offchain_source,
-				meta=tx.meta,signatures=tx.signatures)
+				meta=tx.meta,authorizations=tx.authorizations)
 	
 	def to_dict(self):
 		dct=Transaction.to_dict(self)
