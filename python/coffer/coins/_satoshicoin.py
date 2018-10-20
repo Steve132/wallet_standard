@@ -63,9 +63,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		if(len(addrbytes) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
 		if(version==self.pkh_prefix):
-			return b''.join([OP_DUP,OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUALVERIFY,OP_CHECKSIG])
+			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)]+addrbytes+[OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
-			return b''.join([OP_HASH160,chr(len(addrbytes)),addrbytes,OP_EQUAL])
+			return bytearray([OP_HASH160,len(addrbytes)]+addrbytes+[OP_EQUAL])
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError

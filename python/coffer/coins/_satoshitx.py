@@ -287,7 +287,7 @@ class SigHashOptions(object):
 		return chr(byt)
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
-	newscript=bytearray([x for x in script if x != ord(_satoshiscript.OP_CODESEPARATOR)])
+	newscript=bytearray([x for x in script if x != _satoshiscript.OP_CODESEPARATOR])
 	out=bytearray()
 	out+=SVarInt._sc_serialize(len(newscript))
 	out+=newscript
@@ -435,6 +435,9 @@ def segwit_preimage(stxo,script,input_index,sho,amount=None):
 	hashPrevouts=b'\x00'*32
 	hashSequence=b'\x00'*32
 	hashOutputs=b'\x00'*32
+	nhashtype=int(nhashtype)
+	if(nhashtype < 0):
+		nhashtype+=1 << 32
 
 	"""if (sigversion == SigVersion::WITNESS_V0) {
 		    uint256 hashPrevouts;
@@ -497,7 +500,7 @@ def segwit_preimage(stxo,script,input_index,sho,amount=None):
 	out+=struct.pack('<L',stxo.version)
 	out+=hashPrevouts
 	out+=hashSequence
-	out+=SOutput._sc_serialize(stxo.ins[input_index].prevout)
+	out+=SOutpoint._sc_serialize(stxo.ins[input_index].prevout)
 	out+=script
 	if(amount is None):
 		a=stxo.ins[input_index].prevout.iamount
