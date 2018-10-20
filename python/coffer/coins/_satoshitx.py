@@ -68,7 +68,7 @@ class SInput(object):
 
 	@staticmethod
 	def _sc_serialize(txin):
-		out=b''
+		out=bytearray()
 		out+=SOutpoint._sc_serialize(txin.outpoint)
 		out+=SVarInt._sc_serialize(len(txin.scriptSig))
 		out+=txin.scriptSig
@@ -107,7 +107,7 @@ class SOutput(object):
 
 	@staticmethod
 	def _sc_serialize(outp):
-		out=b''
+		out=bytearray()
 		out+=struct.pack('<Q',outp.value)
 		out+=SVarInt._sc_serialize(len(outp.scriptPubKey))
 		out+=outp.scriptPubKey
@@ -149,7 +149,7 @@ class STransaction(object):
 	def _sc_serialize(txo):
 		if(isinstance(txo,SWitnessTransaction)):
 			return SWitnessTransaction._sc_serialize(txo)
-		out=b''
+		out=bytearray()
 		out+=struct.pack('<L',txo.version)
 		out+=SVarInt._sc_serialize(len(txo.ins))
 		for inv in txo.ins:
@@ -212,7 +212,7 @@ class SWitnessTransaction(STransaction):
 	def _sc_serialize(txo):
 		if(not isinstance(txo,SWitnessTransaction) and isinstance(txo,STransaction)):
 			return STransaction._sc_serialize(txo)
-		out=b''
+		out=bytearray()
 		out+=struct.pack('<L',txo.version)
 		out+=b'\x00'
 		out+=struct.pack('B',txo.flag)
@@ -287,8 +287,8 @@ class SigHashOptions(object):
 		return chr(byt)
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
-	newscript=b''.join([x for x in script if ord(x) is not _satoshiscript.OP_CODESEPARATOR])
-	out=b''
+	newscript=bytearray([x for x in script if x != ord(_satoshiscript.OP_CODESEPARATOR)])
+	out=bytearray()
 	out+=SVarInt._sc_serialize(len(newscript))
 	out+=newscript
 	return out
@@ -322,12 +322,15 @@ def legacy_preimage_scriptcode(stxo,script,input_index,sho):
 def legacy_preimage_input(stxo,script,index,input_index,sho):
 	if(sho.anyonecanpay):
 		index=input_index
-	out=b''
+	out=bytearray()
 	out+=SOutpoint._sc_serialize(stxo.ins[index].outpoint)
 	if(index != input_index):
 		out+=SVarInt._sc_serialize(0)
 	else:
-		out+=legacy_preimage_scriptcode(stxo,script,input_index,sho)
+		x=legacy_preimage_scriptcode(stxo,script,input_index,sho)
+		#print(hexlify(x))
+		#print(hexlify(out))
+		out+=x
 	
 	if(index != input_index and (sho.mode==SIGHASH_NONE or sho.mode == SIGHASH_SINGLE)):
 		out+=struct.pack('<L',0)
@@ -360,9 +363,9 @@ def legacy_preimage_input(stxo,script,index,input_index,sho):
 
 
 def legacy_preimage_output(stxo,script,index,input_index,sho):
-	out=b''	
+	out=bytearray()	
 	if(sho.mode==SIGHASH_SINGLE and index != input_index):
-		out+=SOutput._sc_serialize(SOutput(value=sighash_null_value,scriptPubKey=b''))
+		out+=SOutput._sc_serialize(SOutput(value=sighash_null_value,scriptPubKey=bytearray()))
 	else:
 		out+=SOutput._sc_serialize(stxo.outs[index])
 	return out
@@ -378,9 +381,13 @@ def legacy_preimage_output(stxo,script,index,input_index,sho):
             ::Serialize(s, txTo.vout[nOutput]);
     }"""
 
-def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):		
+def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
+	nhashtype=int(nhashtype)
+	if(nhashtype < 0):
+		nhashtype+=1 << 32
 	sho=SigHashOptions(nhashtype)
-	out=b''
+	script=bytearray(script)
+	out=bytearray()
 	out+=struct.pack('<L',stxo.version)
 	nInputs = 1 if sho.anyonecanpay else len(stxo.ins)
 	out+=SVarInt._sc_serialize(nInputs)
@@ -397,7 +404,7 @@ def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
 	for nOutput in range(nOutputs):
 		out+=legacy_preimage_output(stxo,script,nOutput,input_index,sho)
 	out+=struct.pack('<L',stxo.locktime)
-	out+=struct.pack('<L',int(nhashtype))
+	out+=struct.pack('<L',nhashtype)
 	return out
 """
     /** Serialize txTo */
@@ -486,7 +493,7 @@ def segwit_preimage(stxo,script,input_index,sho,amount=None):
         ss << nHashType;
 
         return ss.GetHash();"""
-	out=b''
+	out=bytearray()
 	out+=struct.pack('<L',stxo.version)
 	out+=hashPrevouts
 	out+=hashSequence
