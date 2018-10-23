@@ -118,10 +118,11 @@ class CliAuth(object):
 			return bip32.Bip32SeedAuth(seed=s)
 		elif(' ' in s):
 			return bip32.Bip32SeedAuth.from_mnemonic(words=s,passphrase=passphrase)
-		elif(checkhex(x)):
-			return auth.HexPrivKeyAuth(key=x)
+		elif(checkhex(''.join(x.split()))):
+			return auth.PrivKeysAuth(keys=[unhexlify(k) for k in x.split()])
 		else:
-			return bip32.Bip32Auth() #TODO
+			raise NotImplementedError
+			return bip32.Bip32Auth()
 	
 	@staticmethod
 	def from_file(fo,passphrase=''):

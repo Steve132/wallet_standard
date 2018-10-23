@@ -55,14 +55,9 @@ class ETH(_coin.Coin):
 	def format_tx(self,txo):
 		raise NotImplementedError
 
-	def denomination_float2whole(self,x):
-		return super(self,SatoshiCoin).denomination_float2whole(x,1000000000000000000.0)
-	
-	def denomination_whole2float(self,x):
-		return super(self,SatoshiCoin).denomination_whole2float(x,1000000000000000000.0)
-
-	def txpreimage(self,tx):
-		raise NotImplementedError
+	@property
+	def denomination_scale(self):
+		return 1000000000000000000.0
 
 	def signtx(self,tx,privkeys):
 		raise NotImplementedError

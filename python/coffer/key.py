@@ -28,6 +28,11 @@ class PublicKey(object):
 
 class PrivateKey(object):
 	def __init__(self,privkeydata,is_compressed=True):
+		if(isinstance(privkeydata,PrivateKey)):
+			pko=privkeydata
+			privkeydata=pko.privkeydata
+			is_compressed=pko.is_compressed
+
 		self.privkeydata=privkeydata
 		self.is_compressed=is_compressed
 		if(not self.is_compressed):

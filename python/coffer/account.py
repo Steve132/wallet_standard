@@ -84,7 +84,7 @@ class Account(UuidBase):
 		for o in self.unspents_iter():
 			amount+=o.amount
 		return amount
-
+		
 #stop if you fail the predicate gap times in a row
 def gaptakewhile(it,predicate,gap):
 	for x in it:
@@ -107,11 +107,7 @@ class OnChainAddressSetAccount(Account):
 		self.internal=internal if len(internal) > 0 else external
 
 		self.gap=gap
-		
-	def _reftuple(self):
-		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
-		return idt
-	
+			
 	def sync(self,retries=10,targets=[]): #TODO: sync unspents_only goes here...bci.unspents(iter(aset))
 		bci=self.coin.blockchain()
 		bci.retries=retries

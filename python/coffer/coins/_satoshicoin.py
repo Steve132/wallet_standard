@@ -88,11 +88,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def txfrom_dict(self,dct):
 		return STransaction.from_dict(dct)
 
-	def denomination_float2whole(self,x):
-		return super(SatoshiCoin,self).denomination_float2whole(x,100000000.0)
-	
-	def denomination_whole2float(self,x):
-		return super(SatoshiCoin,self).denomination_whole2float(x,100000000.0)
+	@property
+	def denomination_scale(self):
+		return 100000000.0
 
 	def signtx(self,tx,keys):
 		satoshitxo=STransaction.from_txo(tx)

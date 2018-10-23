@@ -14,23 +14,46 @@ class ForkMixin(object):
 	def fork_info(self):
 		raise NotImplementedError
 
-class Coin(bip32.Bip32,Chain,IndexBase):
+class Denomination(IndexBase):
+	def __init__()
+
+	@property
+	def denomination_scale(self):
+		raise NotImplementedError
+
+	def denomination_float2whole(self,x):
+		return int(x*self.denomination_scale)
+	
+	def denomination_whole2float(self,x):
+		ipart,fpart=divmod(int(x),int(self.denomination_scale))
+		return ipart+float(fpart)/self.denomination_scale;
+	
+	@property
+	def ticker(self):
+		raise NotImplementedError
+
+class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def __init__(self,ticker,is_testnet):
 		super(Coin,self).__init__()
 
-		self.ticker=ticker.upper()
+		self._ticker=ticker
 		self.is_testnet=is_testnet
 
-		if('-TEST' in self.ticker):
+		if('-TEST' in self._ticker):
 			self.is_testnet=True
 		elif(self.is_testnet):
-			self.ticker+='-TEST'
+			self._ticker+='-TEST'
 
 		if(self.is_testnet):
 			self.bip44_id=0x80000001
 		else:
 			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 			self.bip44_id=slip44table[ticker]
+
+		
+	@property
+	def ticker(self):
+		return self._ticker
 
 	@property
 	def chainid(self):
@@ -109,17 +132,7 @@ class Coin(bip32.Bip32,Chain,IndexBase):
 			return str(obj)
 		raise Exception("I don't know how to format %r" % (obj))
 
-
-	def denomination_float2whole(self,x,scale):
-		return int(x*scale)
-	
-	def denomination_whole2float(self,x,scale):
-		ipart,fpart=divmod(int(x),int(scale))
-		return ipart+float(fpart)/scale;
-
-	def txpreimage(self,tx):
-		raise NotImplementedError
-
+	#privkeys is a mapping from an address to a list of privkeys for signing an on-chain transaction
 	def signtx(self,tx,privkeys):
 		raise NotImplementedError
 
