@@ -27,13 +27,17 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise NotImplementedError
 		else:
 			h160=_base.hash160(pubkeys[0].pubkeydata)
+			print("XXX:"+str(pubkeys[0].is_compressed))
 			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
 
 	def format_addr(self,addr,*args,**kwargs):
 		return _base.bytes2base58c(addr.addrdata)
 
 	def format_privkey(self,privkey):
-		oarray=chr(self.wif_prefix)+privkey.privkeydata+(b'\x01' if privkey.is_compressed else b'')
+		oarray=bytearray()
+		oarray+=self.wif_prefix
+		oarray+=privkey.privkeydata
+		oarray+=(b'\x01' if privkey.is_compressed else b'')
 		return _base.bytes2base58c(oarray)
 
 	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-STransaction-types/

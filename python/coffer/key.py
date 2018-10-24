@@ -9,16 +9,17 @@ class PublicKey(object):
 		self.pubkeydata=pubkeydata
 		self.P,detected_is_compressed=_crypto._decode_pub(pubkeydata)
 		
-		if(is_compressed==None):
+		if(is_compressed is None):
 			self.is_compressed=detected_is_compressed
 		else:
 			self.pubkeydata=_crypto._encode_pub(self.P,is_compressed)
+			self.is_compressed=is_compressed
 
-	def decompressed(self):
+	def decoded(self):
 		return self.P
 
 	def __add__(self,o):
-		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata,compressed=self.is_compressed),compressed=self.is_compressed)
+		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata,compressed=self.is_compressed),is_compressed=self.is_compressed)
 
 	def __cmp__(self,other):
 		return cmp(self.pubkeydata,other.pubkeydata)
@@ -42,7 +43,7 @@ class PrivateKey(object):
 
 	def pub(self):
 		pkd=_crypto.privkey_to_pubkey(self.privkeydata,compressed=self.is_compressed)
-		return PublicKey(pkd,is_compressed=True)
+		return PublicKey(pkd,is_compressed=self.is_compressed)
 
 	def __add__(self,o):
 		return PrivateKey(_crypto.privkey_add(self.privkeydata,o.privkeydata),is_compressed=self.is_compressed)

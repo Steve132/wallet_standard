@@ -117,9 +117,9 @@ def privkey_to_pubkey(privkey_int):
 	return pubkey_val
 
 def decompress_pub(prefix,x):
-		beta = pow(int(x*x*x+A*x+B), int((P+1)//4), int(P))
-		y = (P-beta) if ((beta + prefix) % 2) else beta
-		return (x, y)
+	beta = pow(int(x*x*x+A*x+B), int((P+1)//4), int(P))
+	y = (P-beta) if ((beta + prefix) % 2) else beta
+	return (x, y)
 
 def add_privkeys(p1,p2):
 	return (p1+p2) % N

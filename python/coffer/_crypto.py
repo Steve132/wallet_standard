@@ -28,9 +28,6 @@ def _decode_priv(priv):
 def _encode_priv(priv):
 	return binascii.unhexlify("%064X" % (priv))
 
-def signdigest(privkey_bytes,digest):
-	pass
-
 def privkey_verify(privkey_bytes):
 	v=_decode_priv(privkey_bytes)
 	return v < _pybitcointoolscrypto.N
@@ -50,7 +47,7 @@ def pubkey_add(pubkey_bytes1,pubkey_bytes2,compressed=True):
 def privkey_to_pubkey(privkey_bytes1,compressed=True):
 	priv=_decode_priv(privkey_bytes1)
 	pub=_pybitcointoolscrypto.privkey_to_pubkey(priv)
-	return _encode_pub(pub,is_compressed)
+	return _encode_pub(pub,compressed)
 
 
 #todo decode/encode signature

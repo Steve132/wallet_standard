@@ -18,7 +18,7 @@ class ETH(_coin.Coin):
 			raise NotImplementedError("TODO: ETH implementation doesn't support multiple pubkeys")
 		khash=_keccak.Keccak256()
 		key=pubkeys[0]
-		pki=key.decompressed()
+		pki=key.decoded()
 		tv="%064X%064X" % (pki[0],pki[1])
 		tv=unhexlify(tv)
 		khash.update(tv)
