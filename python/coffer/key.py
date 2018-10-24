@@ -7,16 +7,18 @@ import _base
 class PublicKey(object):
 	def __init__(self,pubkeydata,is_compressed=None):
 		self.pubkeydata=pubkeydata
-		self.is_compressed=is_compressed
+		self.P,detected_is_compressed=_crypto._decode_pub(pubkeydata)
+		
 		if(is_compressed==None):
-			self.is_compressed = len(self.pubkeydata) <= 33
-		if(not self.is_compressed):
-			raise Exception("Uncompressed public keys not implemented!")
+			self.is_compressed=detected_is_compressed
+		else:
+			self.pubkeydata=_crypto._encode_pub(self.P,is_compressed)
+
 	def decompressed(self):
-		return _crypto._decode_pub(self.pubkeydata)
+		return self.P
 
 	def __add__(self,o):
-		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata),is_compressed=self.is_compressed)
+		return PublicKey(_crypto.pubkey_add(self.pubkeydata,o.pubkeydata,compressed=self.is_compressed),compressed=self.is_compressed)
 
 	def __cmp__(self,other):
 		return cmp(self.pubkeydata,other.pubkeydata)
@@ -25,7 +27,7 @@ class PublicKey(object):
 		return hash(self.pubkeydata)
 
 #TODO CANNOT HANDLE UNCOMPRESSED
-
+#TODO compressed private keys are 33 bytes long
 class PrivateKey(object):
 	def __init__(self,privkeydata,is_compressed=True):
 		if(isinstance(privkeydata,PrivateKey)):
@@ -35,13 +37,11 @@ class PrivateKey(object):
 
 		self.privkeydata=privkeydata
 		self.is_compressed=is_compressed
-		if(not self.is_compressed):
-			raise Exception("Uncompressed private keys not implemented!")
 		if(not _crypto.privkey_verify(self.privkeydata)):
 			raise Exception("Invalid private key")
 
 	def pub(self):
-		pkd=_crypto.privkey_to_compressed_pubkey(self.privkeydata)
+		pkd=_crypto.privkey_to_pubkey(self.privkeydata,compressed=self.is_compressed)
 		return PublicKey(pkd,is_compressed=True)
 
 	def __add__(self,o):
@@ -52,6 +52,10 @@ class PrivateKey(object):
 		
 	def __hash__(self):
 		return hash(self.privkeydata)
+
+	def sign(self,msghash_bytes,use_der=False):
+		return _crypto.sign(msghash_bytes,self.privkeydata,compressed=self.is_compressed,use_der=use_der)
+
 
 class Address(object):
 	def __init__(self,addrdata,coin,format_args=[],format_kwargs={}):

@@ -3,7 +3,8 @@ from binascii import hexlify,unhexlify
 import struct
 import _crypto
 import _base
-
+import account
+import auth
 
 from key import *
 
@@ -326,7 +327,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
 		return idt
 
-class Bip32SeedAuth(Auth):
+class Bip32SeedAuth(auth.Auth):
 	def __init__(self,seed):
 		self.seed=seed
 
@@ -340,7 +341,7 @@ class Bip32SeedAuth(Auth):
 		seed=mnemonic.words_to_seed(words,passphrase)
 		return Bip32SeedAuth(seed)
 		
-class Bip32Auth(Auth):
+class Bip32Auth(auth.Auth):
 	def __init__(self,coin,xpriv,root=None,bip32_settings=None,*bip32args,**bip32kwargs):
 		self.coin=coin
 		self.xpriv=xpriv
@@ -351,7 +352,7 @@ class Bip32Auth(Auth):
 		self.bip32_settings=bip32_settings
 
 	def to_account(self,coin,root=None,internal_path="1/*",external_path="0/*"):
-		return account.Bip32Account(coin,xpriv,root=root,authref=authref,*self.bip32_settings.bip32args,**self.bip32_settings.bip32kwargs)
+		return Bip32Account(coin,xpriv,root=root,authref=authref,*self.bip32_settings.bip32args,**self.bip32_settings.bip32kwargs)
 
 	def descend(self,directory):
 		return Bip32Auth(coin=self.coin,xpriv=self.xpriv,root=path_join(self.root,directory),bip32_settings=self.bip32_settings)

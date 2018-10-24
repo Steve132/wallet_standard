@@ -9,5 +9,5 @@ class Chain(object):
 def fromchainid(chainid):
 	try:
 		return fromticker(chainid)
-	else:
+	except:
 		raise Exception("Unrecognized chain %s" % (chainid))

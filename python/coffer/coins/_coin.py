@@ -15,8 +15,6 @@ class ForkMixin(object):
 		raise NotImplementedError
 
 class Denomination(IndexBase):
-	def __init__()
-
 	@property
 	def denomination_scale(self):
 		raise NotImplementedError
@@ -31,6 +29,9 @@ class Denomination(IndexBase):
 	@property
 	def ticker(self):
 		raise NotImplementedError
+	
+	def _reftuple(self):
+		return (self.ticker)
 
 class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def __init__(self,ticker,is_testnet):

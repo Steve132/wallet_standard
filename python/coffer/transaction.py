@@ -2,7 +2,7 @@ from coins import fromticker
 from binascii import hexlify,unhexlify
 from key import Address
 from lib.index import IndexBase
-from ..chain import fromchainid
+from chain import fromchainid
 #todo:  Output should be Output. SubmittedOutput should be SubmittedOutput
 #	    Transaction should have a subclass SubmittedTransaction that includes the txhash and stuff
 #		Only SubmittedTransactions can be referenced

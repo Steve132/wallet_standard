@@ -6,7 +6,7 @@ from binascii import hexlify,unhexlify
 from _satoshiscript import *
 from .. import _base
 from ..transaction import *
-from _satoshitx import STransaction
+from _satoshitx import STransaction,SVarInt
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
@@ -92,39 +92,19 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def denomination_scale(self):
 		return 100000000.0
 
+	#https://github.com/bitcoin/bitcoin/blob/0a8f519a0626d7cd385114ce610d23215c051b3f/src/script/sign.cpp#L113
 	def signtx(self,tx,keys):
 		satoshitxo=STransaction.from_txo(tx)
 		print(hexlify(STransaction._sc_serialize(satoshitxo)))
 		print(satoshitxo.to_dict())
 
 
+	def signmsg(self,msg,privkey):
+		preimage=bytearray(self.sig_prefix)+SVarInt._sc_serialize(len(msg))+bytearray(msg)
+		sighash=_base.dblsha256(preimage)
+		return privkey.sign(sighash,use_der=False)
 
 	"""
-	#todo: obviously broken
-    def serialize_preimage(self, i):
-        nVersion = int_to_hex(self.version, 4)
-        nHashType = int_to_hex(1, 4)
-        nLocktime = int_to_hex(self.locktime, 4)
-        inputs = self.inputs()
-        outputs = self.outputs()
-        txin = inputs[i]
-        # TODO: py3 hex
-        if self.is_segwit_input(txin):
-            hashPrevouts = bh2u(Hash(bfh(''.join(self.serialize_outpoint(txin) for txin in inputs))))
-            hashSequence = bh2u(Hash(bfh(''.join(int_to_hex(txin.get('sequence', 0xffffffff - 1), 4) for txin in inputs))))
-            hashOutputs = bh2u(Hash(bfh(''.join(self.serialize_output(o) for o in outputs))))
-            outpoint = self.serialize_outpoint(txin)
-            preimage_script = self.get_preimage_script(txin)
-            scriptCode = var_int(len(preimage_script) // 2) + preimage_script
-            amount = int_to_hex(txin['value'], 8)
-            nSequence = int_to_hex(txin.get('sequence', 0xffffffff - 1), 4)
-            preimage = nVersion + hashPrevouts + hashSequence + outpoint + scriptCode + amount + nSequence + hashOutputs + nLocktime + nHashType
-        else:
-            txins = var_int(len(inputs)) + ''.join(self.serialize_input(txin, self.get_preimage_script(txin) if i==k else '') for k, txin in enumerate(inputs))
-            txouts = var_int(len(outputs)) + ''.join(self.serialize_output(o) for o in outputs)
-            preimage = nVersion + txins + txouts + nLocktime + nHashType
-        return preimage
-
 	#note: this method is from update_signatures.  Could also need to use sign() from electrum
 	def _signtxsatoshi(self,stx,privkeys):
 		for i, txin in enumerate(self.inputs()):
