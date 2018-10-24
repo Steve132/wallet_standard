@@ -31,7 +31,7 @@ class LTC(SegwitCoin):
 			wif_prefix=239
 			bech32_prefix='tltc'
 		
-		sig_prefix=b'\x19Litecoin Signed Message:\n'
+		sig_prefix=b'Litecoin Signed Message:\n'
 
 		super(LTC,self).__init__('LTC',is_testnet=is_testnet,
 			pkh_prefix=pkh_prefix,

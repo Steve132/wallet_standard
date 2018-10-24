@@ -98,9 +98,10 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		print(hexlify(STransaction._sc_serialize(satoshitxo)))
 		print(satoshitxo.to_dict())
 
-
 	def signmsg(self,msg,privkey):
-		preimage=bytearray(self.sig_prefix)+SVarInt._sc_serialize(len(msg))+bytearray(msg)
+		preimage=bytearray()
+		preimage+=SVarInt._sc_serialize(len(self.sig_prefix))+self.sig_prefix
+		preimage+=SVarInt._sc_serialize(len(msg))+bytearray(msg)
 		sighash=_base.dblsha256(preimage)
 		return privkey.sign(sighash,use_der=False)
 
