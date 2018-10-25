@@ -2,9 +2,39 @@ import struct
 from binascii import hexlify,unhexlify
 from cStringIO import StringIO
 import _satoshiscript
+import coffer._crypto
 from .._base import dblsha256
 #https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
 #https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
+
+#https://bitcoin.stackexchange.com/questions/3374/how-to-redeem-a-basic-tx
+#https://medium.com/coinmonks/how-to-create-a-raw-bitcoin-transaction-step-by-step-239b888e87f2
+
+
+SIGHASH_ANYONECANPAY=0x00000080
+SIGHASH_ALL=0x00000001
+SIGHASH_NONE=0x00000002
+SIGHASH_SINGLE=0x00000003
+SIGHASH_FORKID=0x00000040
+
+sighash_null_value=0xFFFFFFFFFFFFFFFF
+class SigHashOptions(object):
+	def __init__(self,nHashTypeInt):
+		nHashTypeInt=int(nHashTypeInt)
+		if(nHashTypeInt < 0):
+			nHashTypeInt+=1 << 32
+		
+		self.mode=(nHashTypeInt & 0x1f)
+		self.anyonecanpay=(nHashTypeInt & SIGHASH_ANYONECANPAY) > 0
+		self.forkid=(nHashTypeInt & SIGHASH_FORKID) > 0
+		self.nhashtype=nHashTypeInt
+
+	def to_byte(self):
+		"""byt=int(self.mode)
+		byt|=SIGHASH_ANYONECANPAY if self.anyonecanpay else 0
+		byt|=SIGHASH_FORKID if self.forkid else 0
+		return chr(byt)"""
+		return self.nhashtype & 0xFF
 
 class SVarInt(object):
 	@staticmethod
@@ -91,14 +121,13 @@ class SInput(object):
 		return SInput(SOutpoint.from_dict(dct["outpoint"]),unhexlify(dct["scriptSig"]),dct["sequence"])
 
 	@staticmethod
-	def from_src(src,sig=None):
+	def from_src(src,scriptSig):
 		sequence=src.meta.get('sequence',0xffffffff)
-		if(sig is None and 'scriptSig' in src.meta):
-			scriptSig=src.meta.get('scriptSig',sig)
-		else:
-			scriptSig=src.coin.signature2scriptSig(sig)
 		prevout=SOutput.from_dst(src)
 		return SInput(SOutpoint.from_outref(src.ref),scriptSig,sequence,prevout)
+
+	def has_scriptSig():
+		return len(self.scriptSig) > 0
 		
 
 	
@@ -146,6 +175,7 @@ class STransaction(object):
 		self.ins=ins
 		self.outs=outs
 		self.locktime=locktime
+		self.enforce_deterministic_ordering(False)
 
 	@staticmethod
 	def _sc_serialize(txo):
@@ -191,17 +221,57 @@ class STransaction(object):
 		outs=[SOutput.from_dict(t) for t in outs]
 		return STransaction(version=version,ins=ins,outs=outs,locktime=lt)
 
-	#@staticmethod
-	#def from_txo(txo):
-	#	version=txo.meta.get('version',1)
-	#	locktime=txo.meta.get('locktime',0xffffffff)
-	#	ins=[SInput.from_src(o,txo.signatures.get(o.ref,None)) for o in txo.srcs]
-	#	outs=[SOutput.from_dst(o) for o in txo.dsts]
-	#	return STransaction(version,ins,outs,locktime)
+	#TODO if any of the inputs are segwit addresses, load this as a segwit transaction
+	@staticmethod
+	def from_txo(txo):
+		version=txo.meta.get('version',1)
+		locktime=txo.meta.get('locktime',0xffffffff)
+		ins=[]
+		for src in txo.srcs:
+			a=txo.authorizations.get(o.ref,None)
+			if(a is None):
+				scriptSig=src.meta.get('scriptSig',bytearray())
+			else:
+				scriptSig=src.coin.authorization2scriptSig(a,src)
+			ins.append(SInput.from_src(src,scriptSig))
+	
+		outs=[SOutput.from_dst(o) for o in txo.dsts]
+		return STransaction(version,ins,outs,locktime)
+
+	#make a to_txo that parses authorizations from sigscript.
+
+
+	#TODO: does the txid have to be compared backwards here?
+	def enforce_deterministic_ordering(self,doexception=True):
+		if(any([src.has_scriptSig() for src in self.ins])):
+			if(doexception):
+				raise Exception("Some of these inputs are already signed, permuting the transaction ordering could invalidate their signatures.")
+			return
+		
+		def inp_key(inp):
+			return (inp.outpoint.txid,inp.outpoint.index)
+		def outp_key(outp):
+			return (outp.value,outp.scriptPubKey)
+		self.ins.sort(key=inp_key)
+		self.outs.sort(key=outp_key)
 
 	def txid_hash(self):
 		pass
-
+	
+	def signature_authorization(self,index,klist,nhashtype=SIGHASH_ALL): #TODO get from coin of inputs.
+		sho=SigHashOptions(nhashtype)
+		siglist=[]
+		pklist=[]
+		for key in klist:
+			sighash=legacy_sighash(self,index,nhashtype)
+			signature=key.sign(sighash,use_der=True)
+			signature.append(int(nhashtype) & 0xFF)
+			signature=hexlify(signature)
+			pubkey=hexlify(key.pub().pubkeydata)
+			siglist.append(signature)
+			pklist.append(pubkey)
+		authorization={'sigs':siglist,'pubs':pklist}
+	
 
 #https://bitcoincore.org/en/segwit_wallet_dev/
 class SWitnessTransaction(STransaction):
@@ -263,36 +333,9 @@ class SWitnessTransaction(STransaction):
 		locktime=struct.unpack('<L',sio.read(4))[0]
 
 		return SWitnessTransaction(version,flag,ins,outs,witness,locktime)
-	
+	#TODO: from txo that calls coin.signature
 	def wtxid_hash(self):
 		pass
-	
-	#def from_txo() generate witness data
-SIGHASH_ANYONECANPAY=0x00000080
-SIGHASH_ALL=0x00000001
-SIGHASH_NONE=0x00000002
-SIGHASH_SINGLE=0x00000003
-SIGHASH_FORKID=0x00000040
-
-sighash_null_value=0xFFFFFFFFFFFFFFFF
-
-class SigHashOptions(object):
-	def __init__(self,nHashTypeInt):
-		nHashTypeInt=int(nHashTypeInt)
-		if(nHashTypeInt < 0):
-			nHashTypeInt+=1 << 32
-		
-		self.mode=(nHashTypeInt & 0x1f)
-		self.anyonecanpay=(nHashTypeInt & SIGHASH_ANYONECANPAY) > 0
-		self.forkid=(nHashTypeInt & SIGHASH_FORKID) > 0
-		self.nhashtype=nHashTypeInt
-
-	def to_byte(self):
-		"""byt=int(self.mode)
-		byt|=SIGHASH_ANYONECANPAY if self.anyonecanpay else 0
-		byt|=SIGHASH_FORKID if self.forkid else 0
-		return chr(byt)"""
-		return self.nhashtype & 0xFF
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
 	newscript=bytearray([x for x in script if x != _satoshiscript.OP_CODESEPARATOR])
@@ -389,7 +432,7 @@ def legacy_preimage_output(stxo,script,index,input_index,sho):
 
 
 
-def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
+def legacy_preimage(stxo,script,input_index,nhashtype,amount):
 	sho=SigHashOptions(nhashtype)
 	script=bytearray(script)
 	out=bytearray()
@@ -432,10 +475,14 @@ def legacy_preimage(stxo,script,input_index,nhashtype,amount=None):
     }
 """
 
-def legacy_sighash(stxo,script,input_index,nhashtype,amount=None):
+def legacy_sighash(stxo,input_index,nhashtype,script=None,amount=None):
+	if(script is None):
+		script=stxo.ins[input_index].prevout.scriptPubKey
 	preimage=legacy_preimage(stxo,script,input_index,nhashtype,amount)
 	return dblsha256(preimage)
 	
+#TODO: segwit needs the right thing provided in script (redeemscript for p2sh or witness script or scriptPubKey for p2pkh)
+#https://bitcoin.stackexchange.com/questions/57994/what-is-scriptcode
 def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
 	sho=SigHashOptions(sho)
 	hashPrevouts=b'\x00'*32
@@ -506,10 +553,10 @@ def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
 	out+=struct.pack('<L',stxo.version)
 	out+=hashPrevouts
 	out+=hashSequence
-	out+=SOutpoint._sc_serialize(stxo.ins[input_index].prevout)
+	out+=SOutpoint._sc_serialize(stxo.ins[input_index].outpoint)
 	out+=script
 	if(amount is None):
-		a=stxo.ins[input_index].prevout.iamount
+		a=stxo.ins[input_index].prevout.value
 	else:
 		a=int(amount)
 	out+=struct.pack('<Q',a)

@@ -18,17 +18,13 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.pkh_prefix=pkh_prefix
 		self.sh_prefix=sh_prefix
 		self.sig_prefix=sig_prefix
-		
-	#https://en.bitcoin.it/wiki/List_of_address_prefixes
 
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
-		multisig=len(pubkeys) > 1
-		if(multisig):  #P2SH multisig
-			raise NotImplementedError
-		else:
-			h160=_base.hash160(pubkeys[0].pubkeydata)
-			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
+	######INHERITED METHODS
+	@property
+	def denomination_scale(self):
+		return 100000000.0
 
+	######PARSING AND FORMATTING
 	def format_addr(self,addr,*args,**kwargs):
 		return _base.bytes2base58c(addr.addrdata)
 
@@ -57,8 +53,30 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def parse_addr(self,addrstring):
 		return Address(_base.base58c2bytes(addrstring),self)
 
+
+	def parse_tx(self,sio):
+		if(isinstance(sio,basestring)):
+			sio=StringIO(unhexlify(sio))
+		return STransaction._sc_deserialize(hexlify(sio))
+
+	def format_tx(self,txo):
+		stxo=STransaction.from_txo(txo)
+		return STransaction._sc_serialize(stxo)
+
+
+	#########PUBKEYS, ADDRESSES, and SIGNING
+
+	#https://en.bitcoin.it/wiki/List_of_address_prefixes
+	def pubkeys2addr(self,pubkeys,*args,**kwargs):
+		multisig=len(pubkeys) > 1
+		if(multisig):  #P2SH multisig
+			raise NotImplementedError
+		else:
+			h160=_base.hash160(pubkeys[0].pubkeydata)
+			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
+
 	def address2scriptPubKey(self,addr):
-		version=ord(addr.addrdata[0])
+		version=addr.addrdata[0]
 		addrbytes=addr.addrdata[1:]
 		if(len(addrbytes) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
@@ -70,37 +88,49 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
-	def signature2scriptSig(self,signature):
-		raise NotImplementedError
-
-
-
-
-	#def format_tx(self,txo):
-	#	stxo=STransaction.fromtxo(txo)
-	#	return STransaction._sc_serialize(stxo)
-
-	def deserializetx(self,sio):
-		if(isinstance(sio,basestring)):
-			sio=StringIO(sio)
-		return STransaction._sc_deserialize(sio)
-
-	def txto_dict(self,tx):
-		return tx.to_dict()
-
-	def txfrom_dict(self,dct):
-		return STransaction.from_dict(dct)
-
-	@property
-	def denomination_scale(self):
-		return 100000000.0
-
-	#https://github.com/bitcoin/bitcoin/blob/0a8f519a0626d7cd385114ce610d23215c051b3f/src/script/sign.cpp#L113
-	def signtx(self,tx,keys):
+	def authorization2scriptSig(self,authorization,src):
+		pklist=authorization.get('pubs',[])
+		siglist=authorization.get('sigs',[])
+		multisig=len(pklist) > 1 or len(siglist) > 1
+		if(multisig):
+			raise NotImplementedError
+		version=src.address.addrdata[0]
+		if(version!=self.pkh_prefix):
+			raise NotImplementedError
+		sig0=unhexlify(siglist[0])
+		pk0=unhexlify(pklist[0])
+		
+		out=bytearray()
+		out+=[len(sig0)]
+		out+=sig0
+		out+=[len(pk0)]
+		out+=pk0
+		return out
+		
+	#addr2keys is a mapping from an address to a privkey or (list of privkeys for signing an on-chain transaction
+	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
+	#this is a part of a coin, NOT a chain
+	def signtx(self,tx,addr2keys):
 		satoshitxo=STransaction.from_txo(tx)
-		print(hexlify(STransaction._sc_serialize(satoshitxo)))
-		print(satoshitxo.to_dict())
+		outauthorizations={}
 
+		for addr,klist in keys:
+			naddr=addr
+			if(isinstance(naddr,basestring)):
+				naddr=self.parse_addr(naddr)
+			
+			if(isinstance(klist,basestring)):
+				klist=[self.parse_privkey(privkey)]
+			elif(isinstance(klist,PrivateKey)):
+				klist=[klist]
+
+			for index,src in enumerate(satoshitxo.srcs):
+				if(self.coin.addr2scriptPubKey(naddr)==src.prevout.scriptPubKey):
+					outauthorizations[src.ref]=satoshitxo.signature_authorization(index,klist) #TODO multiple address authorizations?  That's weird/wrong
+
+		return outauthorizations
+
+			
 	def signmsg(self,msg,privkey):
 		preimage=bytearray()
 		preimage+=SVarInt._sc_serialize(len(self.sig_prefix))+self.sig_prefix

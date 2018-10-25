@@ -33,6 +33,9 @@ class Denomination(IndexBase):
 	def _reftuple(self):
 		return (self.ticker)
 
+	def __repr__(self):
+		return self.ticker
+
 class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def __init__(self,ticker,is_testnet):
 		super(Coin,self).__init__()
@@ -51,7 +54,6 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 			#https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 			self.bip44_id=slip44table[ticker]
 
-		
 	@property
 	def ticker(self):
 		return self._ticker
@@ -60,8 +62,10 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def chainid(self):
 		return self.ticker
 
-	def __repr__(self):
-		return self.ticker
+	def _reftuple(self):
+		return (self.ticker,self.is_testnet)
+	
+	#############BIP32 PART
 
 	def load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,**kwargs):
 		if(not self.is_testnet):
@@ -78,11 +82,8 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 			
 		return bip32.Bip32Settings(prefix_private=bip32_prefix_private,prefix_public=bip32_prefix_public,*args,**kwargs)
 
-	def _reftuple(self):
-		return (self.ticker,self.is_testnet)
 
-	def pubkeys2addr(self,pubkeys,xpub=None,*args,**kwargs):
-		raise NotImplementedError
+	#######FORMATTING AND PARSING
 
 	def parse_addr(self,addrstring):
 		raise NotImplementedError
@@ -133,10 +134,20 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 			return str(obj)
 		raise Exception("I don't know how to format %r" % (obj))
 
+
+	###### BUILD AND SIGN ADDRESSES
+	def pubkeys2addr(self,pubkeys,xpub=None,*args,**kwargs):
+		raise NotImplementedError
+
+
 	#privkeys is a mapping from an address to a list of privkeys for signing an on-chain transaction
+	#returns a dictionary mapping to an authorization (can be directly stored later)
+	#this is a part of a coin, NOT a chain
 	def signtx(self,tx,privkeys):
 		raise NotImplementedError
 
+
+	##########  BLOCKCHAIN STUFF
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
 

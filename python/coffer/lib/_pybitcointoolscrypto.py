@@ -163,8 +163,15 @@ def deterministic_generate_k(msghash, priv):
 	v = hmac.new(k, v, hashlib.sha256).digest()
 	k = hmac.new(k, v+b'\x01'+priv+msghash, hashlib.sha256).digest()
 	v = hmac.new(k, v, hashlib.sha256).digest()
-	return int(hmac.new(k, v, hashlib.sha256).hexdigest(),16)
 
+	while True:
+		v = hmac.new(k, v, hashlib.sha256).digest()
+		a = int(hexlify(v),16)
+		if a >= 1 and a < N:
+			return a
+
+		k = hmac.new(k, v+b'\x00'+priv+msghash, hashlib.sha256).digest()
+		v = hmac.new(k, v, hashlib.sha256).digest()
 
 def ecdsa_raw_sign(msghash, priv,compressed=True):
 	z = int(hexlify(msghash),16)

@@ -2,23 +2,25 @@ import mnemonic
 import account
 from binascii import unhexlify,hexlify
 
+
+class IncompatibleAuthError(Exception):
+	pass
+
 class OfflineAuthMixin(object):
 	pass
 
+#TODO: Refactor this to be 'Authorizer' or 'Credentials'
 class Auth(object):
 	def __init__(self,refname):
 		self.refname=refname
-
-	def authtx(self,account,txo): 	#txo is rw, adds whatever authorizations are possible to add to the txo, if any.   Returns the number added in this way.
-		raise NotImplementedError
-		
+	
 	def to_account(self,*args,**kwargs):
 		raise NotImplementedError
 
 class OnChainAddressSetAuth(Auth,OfflineAuthMixin):
 	def __init__(self):
 		pass
-	def __iter__(privkeyiterator):
+	def __iter__(self):
 		pass
 
 class PrivateKeySetAuth(OnChainAddressSetAuth):

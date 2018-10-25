@@ -5,7 +5,7 @@ import _crypto
 import _base
 import account
 import auth
-
+import itertools
 from key import *
 
 def h(k):
@@ -50,7 +50,7 @@ class ExtendedKey(object):
 		self.fingerprint=fingerprint
 		self.child=child
 		self.chaincode=chaincode
-		self.keydata=keydata
+		self.keydata=bytes(keydata[:33])
 		
 	def __str__(self):
 		data=_xkeydatastruct.pack(self.version,self.depth,self.fingerprint,self.child,self.chaincode,self.keydata)
@@ -75,6 +75,7 @@ class ExtendedKey(object):
 
 	@staticmethod
 	def verify_root_depth(xkey,root):
+		print(path_count_elems(root))
 		if(xkey.depth!=path_count_elems(root)):
 			raise Exception("XKey expected to have depth equal to depth of given root %r, had depth %d" % (root,xkey.depth))
 			return False
@@ -163,20 +164,26 @@ import re,itertools,collections
 #you could stop it with a warning error message but it's some kind of security problem without a threshold.  Even low thresholds would be a target for multiple paths.
 #(therefore must premultiply)
 
-
-def path_count_elems(p):
-	if(not isinstance(p,basestr)):
+def path_strnormalize(p):
+	if(not isinstance(p,basestring)):
 		p='/'.join(p)
-	return len(p.strip('/').split('/'))
+	return p
+
+def path_split(p):
+	return p.lstrip('m').lstrip('M').strip('/').split('/')
+def path_count_elems(p):
+	p=path_strnormalize(p)
+	return len(path_split(p))
 
 def path_join(*pa):
 	ptotal=[]
 	for p in list(pa):
-		if(not isinstance(p,basestr)):
-			p='/'.join(p)
-		p=p.strip('/').split('/')
+		p=path_strnormalize(p)
+		p=path_split(p)
 		ptotal+=p
 	return '/'.join(ptotal)
+
+
 
 starpath=0x7FFFFFFF
 PathNum=collections.namedtuple('PathNum', ['value','is_hardened'])
@@ -304,18 +311,19 @@ class XPubAddressSet(account.AddressSet):
 		for p in paths(self.path):
 			yield self.coin.descend(self.xpub,p)
 
-	def path2addr(self,p):
+	def xpub2addr(self,vpub):
 		return self.coin.pubkeys2addr([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
 
 	def __iter__(self):
-		for vpub in self.path_iter():
-			yield self.path2addr(vpub)
+		for vpub in self.xpub_iter():
+			yield self.xpub2addr(vpub)
 
 
 class Bip32Account(account.OnChainAddressSetAccount):
 	def __init__(self,coin,xkey,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
 		self.coin=coin
 		self.type='bip32'
+		self.root=root
 		internal=XPubAddressSet(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
 		external=XPubAddressSet(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
 		self.xpub=internal.xpub
@@ -327,6 +335,44 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
 		return idt
 
+	def authtx(self,txo,authobj,max_search=100000,*args,**kwargs):
+		if(isinstance(Bip32SeedAuth)):
+			b32a=authobj.master_b32auth(self.coin,*self.bip32args,**self.bip32kwargs)
+		elif(isinstance(Bip32Auth)):
+			b32a=authobj
+		else:
+			#TODO: warning, slower
+			return super(Bip32Account,self).authtx(self,txo,authobj,*args,**kwargs)
+		
+		accpath=path_split(self.root)
+		authpath=path_split(b32a.root)
+		if(len(accpath) < len(authpath)):
+			raise Exception("Auth path is below account path.  Cannot be used.")
+		if(tuple(accpath[:len(authpath)])!=tuple(authpath)):
+			raise Exception("Auth bip32 root does not match account bip32 root!")
+
+		if(len(authpath) < len(accpath)):
+			b32a.descend(accpath[len(authpath):])
+
+		addrstolookfor=set([src.address for src in txo.srcs])
+		foundkeys={}
+		numsearched=0
+		for iep in itertools.izip(paths(self.external[0].path),paths(self.internal[0].path)):
+			if(numsearched >= max_search):
+				break
+			numsearched+=1
+			for p in iep:
+				privkey=self.coin.descend(b32a.xpriv,p).key()
+				addr=self.coin.pubkeys2addr([privkey.pub()],*self.bip32args,**self.bip32kwargs)
+				if(addr in addrstolookfor):
+					foundkeys[addr]=[privkey]
+		
+		authorizations=self.coin.signtx(txo,foundkeys)
+		for ref,a in authorizations:
+			if(a is not None):
+				txo.authorizations[ref]=a
+		
+
 class Bip32SeedAuth(auth.Auth):
 	def __init__(self,seed):
 		self.seed=seed
@@ -334,28 +380,30 @@ class Bip32SeedAuth(auth.Auth):
 	def master_b32auth(self,coin,*bip32args,**bip32kwargs):
 		bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
 		master=coin.seed2master(self.seed,bip32_settings)
-		return Bip32Auth(coin=coin,xpriv=master,root=None,bip32_settings=bip32_settings)
+		return Bip32Auth(coin=coin,xpriv=master,root=root,bip32_settings=bip32_settings)
 	
 	@staticmethod
 	def from_mnemonic(words,passphrase=None):
 		seed=mnemonic.words_to_seed(words,passphrase)
 		return Bip32SeedAuth(seed)
+
 		
 class Bip32Auth(auth.Auth):
 	def __init__(self,coin,xpriv,root=None,bip32_settings=None,*bip32args,**bip32kwargs):
 		self.coin=coin
 		self.xpriv=xpriv
-		self.root=root
+		self.root='' if root is None else root
+		
 
 		if(bip32_settings is None):
 			bip32_settings=self.coin.load_bip32_settings(prefix_private=xpriv.version,*bip32args,**bip32kwargs)
 		self.bip32_settings=bip32_settings
 
-	def to_account(self,coin,root=None,internal_path="1/*",external_path="0/*"):
-		return Bip32Account(coin,xpriv,root=root,authref=authref,*self.bip32_settings.bip32args,**self.bip32_settings.bip32kwargs)
+	def to_account(self,coin,internal_path="1/*",external_path="0/*"):
+		return Bip32Account(coin,xpriv,root=self.root,*self.bip32_settings.bip32args,**self.bip32_settings.bip32kwargs)
 
 	def descend(self,directory):
-		return Bip32Auth(coin=self.coin,xpriv=self.xpriv,root=path_join(self.root,directory),bip32_settings=self.bip32_settings)
+		return Bip32Auth(coin=self.coin,xpriv=self.coin.descend(self.xpriv,directory),root=path_join(self.root,directory),bip32_settings=self.bip32_settings)
 		
 
 

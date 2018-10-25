@@ -6,6 +6,9 @@ class Chain(object):
 	def chainid(self):
 		raise NotImplementedError
 
+	
+		
+
 def fromchainid(chainid):
 	try:
 		return fromticker(chainid)

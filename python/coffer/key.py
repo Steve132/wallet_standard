@@ -2,8 +2,8 @@ import hashlib,hmac
 from binascii import hexlify,unhexlify
 import struct
 import _crypto
-import _base
-		
+import _base		
+
 class PublicKey(object):
 	def __init__(self,pubkeydata,is_compressed=None):
 		self.pubkeydata=pubkeydata
@@ -27,8 +27,7 @@ class PublicKey(object):
 	def __hash__(self):
 		return hash(self.pubkeydata)
 
-#TODO CANNOT HANDLE UNCOMPRESSED
-#TODO compressed private keys are 33 bytes long
+#TODO compressed private keys are 32 bytes long.always
 class PrivateKey(object):
 	def __init__(self,privkeydata,is_compressed=True):
 		if(isinstance(privkeydata,PrivateKey)):

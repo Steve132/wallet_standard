@@ -2,6 +2,7 @@ import coffer.wallet as wallet
 import coffer.account as account
 import coffer.coins as coins
 import coffer.auth as auth
+import coffer.bip32 as bip32
 
 from coffer.transaction import *
 import json
@@ -9,7 +10,7 @@ import zipordir
 import os,os.path
 from binascii import hexlify,unhexlify
 from pprint import pprint
-import bip32
+
 
 try:
 	from collections.abc import Mapping

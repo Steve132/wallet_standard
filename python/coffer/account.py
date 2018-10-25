@@ -85,6 +85,9 @@ class Account(UuidBase):
 			amount+=o.amount
 		return amount
 		
+	def authtx(self,txo,auth):
+		raise NotImplementedError
+
 #stop if you fail the predicate gap times in a row
 def gaptakewhile(it,predicate,gap):
 	for x in it:
@@ -149,5 +152,5 @@ class OnChainAddressSetAccount(Account):
 	def used_external(self):
 		return frozenset(self._used_addr_iter(self.external))
 
-
-
+	def authtx(self,txo,auth,maxsearch=1000):
+		raise NotImplementedError	

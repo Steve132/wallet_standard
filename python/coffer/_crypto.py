@@ -19,9 +19,10 @@ def _decode_pub(pub):
 
 def _encode_pub(pub,compressed=True):
 	if(compressed):
-		return bytearray([(2+(pub[1] % 2))]) + binascii.unhexlify("%064X" % (pub[0]))
+		out=bytearray([(2+(pub[1] % 2))]) + binascii.unhexlify("%064X" % (pub[0]))
 	else:
-		return bytearray([4])+binascii.unhexlify("%064X" % (pub[0]))+binascii.unhexlify("%064X" % (pub[1]))
+		out=bytearray([4])+binascii.unhexlify("%064X" % (pub[0]))+binascii.unhexlify("%064X" % (pub[1]))
+	return out
 
 def _decode_priv(priv):
 	return int(binascii.hexlify(priv),16)
@@ -39,10 +40,10 @@ def privkey_add(privkey_bytes1,privkey_bytes2):
 	return _encode_priv(c)
 
 def pubkey_add(pubkey_bytes1,pubkey_bytes2,compressed=True):
-	a=_decode_pub(pubkey_bytes1)
-	b=_decode_pub(pubkey_bytes2)
+	a,is_compressed=_decode_pub(pubkey_bytes1)
+	b,is_compressed2=_decode_pub(pubkey_bytes2)
 	c=_pybitcointoolscrypto.add_pubkeys(a,b)
-	return _encode_pub(c,is_compressed)
+	return _encode_pub(c,compressed)
 
 def privkey_to_pubkey(privkey_bytes1,compressed=True):
 	priv=_decode_priv(privkey_bytes1)
