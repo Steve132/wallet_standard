@@ -103,12 +103,12 @@ def cmd_add_account_auth(w,args):
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
 			if(p.pa is not None):
-				acc=subauth.toaccount(coin,authref=args.authname,root=p.pa)
+				acc=subauth.to_account(coin,authref=args.authname,root=p.pa)
 				w.add_account(groupname=args.group,account=acc)
 			else:
 				for cov in _stdbip32.coverage(coin,args):
 					label,path,internal_path,external_path,b32args,b32kwargs=cov
-					acc=subauth.toaccount(coin,authref=args.authname,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
+					acc=subauth.to_account(coin,authref=args.authname,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
 					acc.label=label
 					w.add_account(groupname=args.group,account=acc)
 

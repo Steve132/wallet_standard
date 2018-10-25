@@ -65,7 +65,7 @@ class CliAccount(object):
 	@staticmethod
 	def to_dict(acc):
 		if(acc.type=='bip32'):
-			return {'chain':acc.chainid,
+			return {'chain':acc.coin.chainid,
 				'root':acc.internal[0].root,
 				'authref':acc.authref,
 				'internal_path':acc.internal[0].path,

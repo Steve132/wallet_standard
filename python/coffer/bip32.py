@@ -6,6 +6,7 @@ import _base
 import account
 import auth
 import itertools
+import mnemonic
 from key import *
 
 def h(k):
@@ -75,7 +76,6 @@ class ExtendedKey(object):
 
 	@staticmethod
 	def verify_root_depth(xkey,root):
-		print(path_count_elems(root))
 		if(xkey.depth!=path_count_elems(root)):
 			raise Exception("XKey expected to have depth equal to depth of given root %r, had depth %d" % (root,xkey.depth))
 			return False
@@ -380,12 +380,19 @@ class Bip32SeedAuth(auth.Auth):
 	def master_b32auth(self,coin,*bip32args,**bip32kwargs):
 		bip32_settings=coin.load_bip32_settings(*bip32args,**bip32kwargs)
 		master=coin.seed2master(self.seed,bip32_settings)
-		return Bip32Auth(coin=coin,xpriv=master,root=root,bip32_settings=bip32_settings)
+		return Bip32Auth(coin=coin,xpriv=master,root="/",bip32_settings=bip32_settings)
 	
 	@staticmethod
 	def from_mnemonic(words,passphrase=None):
 		seed=mnemonic.words_to_seed(words,passphrase)
 		return Bip32SeedAuth(seed)
+
+	def to_account(self,coin,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
+		b32a=self.master_b32auth(coin,*bip32args,**bip32kwargs)
+		b32a=b32a.descend(root)
+		return b32a.to_account(coin,internal_path=internal_path,external_path=external_path,authref=authref,*bip32args,**bip32kwargs)
+
+	
 
 		
 class Bip32Auth(auth.Auth):
@@ -394,13 +401,14 @@ class Bip32Auth(auth.Auth):
 		self.xpriv=xpriv
 		self.root='' if root is None else root
 		
-
 		if(bip32_settings is None):
 			bip32_settings=self.coin.load_bip32_settings(prefix_private=xpriv.version,*bip32args,**bip32kwargs)
 		self.bip32_settings=bip32_settings
 
-	def to_account(self,coin,internal_path="1/*",external_path="0/*"):
-		return Bip32Account(coin,xpriv,root=self.root,*self.bip32_settings.bip32args,**self.bip32_settings.bip32kwargs)
+	def to_account(self,coin,internal_path="1/*",external_path="0/*",authref=None):
+		pkargs=self.bip32_settings.pkargs
+		pkkwargs=self.bip32_settings.pkkwargs
+		return Bip32Account(coin,xkey=self.xpriv,root=self.root,authref=authref,*pkargs,**pkkwargs)
 
 	def descend(self,directory):
 		return Bip32Auth(coin=self.coin,xpriv=self.coin.descend(self.xpriv,directory),root=path_join(self.root,directory),bip32_settings=self.bip32_settings)
