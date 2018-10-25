@@ -100,9 +100,6 @@ class CliAccount(object):
 			acc.meta[tag]=val
 
 class CliAuth(object):
-	def __init__(self):
-		self.subauths=[]
-
 	@staticmethod
 	def parse_auth(s,passphrase=''):
 		def checkhex(x):

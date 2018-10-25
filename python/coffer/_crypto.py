@@ -56,7 +56,7 @@ def privkey_to_pubkey(privkey_bytes1,compressed=True):
 def sign(msghash_bytes,privkey_bytes,compressed=True,use_der=False):
 	v,r,s=_pybitcointoolscrypto.ecdsa_raw_sign(msghash_bytes, privkey_bytes,compressed=compressed)
 	if(use_der):
-		return der_encode_sig(v, r, s)
+		return binascii.unhexlify(_pybitcointoolscrypto.der_encode_sig(v, r, s))
 	else:
 		return _encode_sig((v,r,s))
 

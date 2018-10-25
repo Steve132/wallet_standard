@@ -76,14 +76,17 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
 
 	def address2scriptPubKey(self,addr):
-		version=addr.addrdata[0]
-		addrbytes=addr.addrdata[1:]
+		version=ord(addr.addrdata[0])
+		addrbytes=bytearray()
+		addrbytes+=addr.addrdata[1:]
+		
+		print(hexlify(addr.addrdata))
 		if(len(addrbytes) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
 		if(version==self.pkh_prefix):
-			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)]+addrbytes+[OP_EQUALVERIFY,OP_CHECKSIG])
+			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
-			return bytearray([OP_HASH160,len(addrbytes)]+addrbytes+[OP_EQUAL])
+			return bytearray([OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUAL])
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
@@ -114,7 +117,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		satoshitxo=STransaction.from_txo(tx)
 		outauthorizations={}
 
-		for addr,klist in keys:
+		for addr,klist in addr2keys.items():
 			naddr=addr
 			if(isinstance(naddr,basestring)):
 				naddr=self.parse_addr(naddr)
@@ -124,9 +127,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			elif(isinstance(klist,PrivateKey)):
 				klist=[klist]
 
-			for index,src in enumerate(satoshitxo.srcs):
-				if(self.coin.addr2scriptPubKey(naddr)==src.prevout.scriptPubKey):
-					outauthorizations[src.ref]=satoshitxo.signature_authorization(index,klist) #TODO multiple address authorizations?  That's weird/wrong
+			for index,inp in enumerate(satoshitxo.ins):
+				if(self.address2scriptPubKey(naddr)==inp.prevout.scriptPubKey):
+					outauthorizations[inp.outpoint.to_outref(self.chainid)]=satoshitxo.signature_authorization(index,klist) #TODO multiple address authorizations?  That's weird/wrong
 
 		return outauthorizations
 

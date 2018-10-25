@@ -170,7 +170,10 @@ def path_strnormalize(p):
 	return p
 
 def path_split(p):
-	return p.lstrip('m').lstrip('M').strip('/').split('/')
+	v=p.lstrip('m').lstrip('M').strip('/').split('/')
+	if(v[0]==''):
+		return []
+	return v
 def path_count_elems(p):
 	p=path_strnormalize(p)
 	return len(path_split(p))
@@ -335,10 +338,10 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
 		return idt
 
-	def authtx(self,txo,authobj,max_search=100000,*args,**kwargs):
-		if(isinstance(Bip32SeedAuth)):
+	def authtx(self,txo,authobj,max_search=10000,*args,**kwargs):
+		if(isinstance(authobj,Bip32SeedAuth)):
 			b32a=authobj.master_b32auth(self.coin,*self.bip32args,**self.bip32kwargs)
-		elif(isinstance(Bip32Auth)):
+		elif(isinstance(authobj,Bip32Auth)):
 			b32a=authobj
 		else:
 			#TODO: warning, slower
@@ -346,29 +349,38 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		
 		accpath=path_split(self.root)
 		authpath=path_split(b32a.root)
+		print(len(authpath))
+		print(accpath[:len(authpath)])
+		print(authpath)
 		if(len(accpath) < len(authpath)):
 			raise Exception("Auth path is below account path.  Cannot be used.")
 		if(tuple(accpath[:len(authpath)])!=tuple(authpath)):
 			raise Exception("Auth bip32 root does not match account bip32 root!")
 
 		if(len(authpath) < len(accpath)):
-			b32a.descend(accpath[len(authpath):])
+			b32a=b32a.descend(accpath[len(authpath):])
+
+		print(b32a.root)
 
 		addrstolookfor=set([src.address for src in txo.srcs])
 		foundkeys={}
 		numsearched=0
 		for iep in itertools.izip(paths(self.external[0].path),paths(self.internal[0].path)):
-			if(numsearched >= max_search):
+			if(numsearched >= max_search or len(addrstolookfor)==0):
 				break
 			numsearched+=1
 			for p in iep:
 				privkey=self.coin.descend(b32a.xpriv,p).key()
 				addr=self.coin.pubkeys2addr([privkey.pub()],*self.bip32args,**self.bip32kwargs)
+				print(addrstolookfor)
+				print(addr)
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
+					addrstolookfor.remove(addr)
 		
 		authorizations=self.coin.signtx(txo,foundkeys)
-		for ref,a in authorizations:
+		print(authorizations)
+		for ref,a in authorizations.items():
 			if(a is not None):
 				txo.authorizations[ref]=a
 		

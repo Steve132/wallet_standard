@@ -4,6 +4,8 @@ from cStringIO import StringIO
 import _satoshiscript
 import coffer._crypto
 from .._base import dblsha256
+import coffer.transaction as transaction
+
 #https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
 #https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
 
@@ -89,6 +91,10 @@ class SOutpoint(object):
 		index=ref.index
 		return SOutpoint(txid=txid,index=index)
 
+	def to_outref(self,chainid):
+		txref=transaction.TransactionReference(chainid,hexlify(self.txid[::-1]))
+		return transaction.OutputReference(txref,self.index)
+
 #TODO: add segwit inputs and outputs?
 class SInput(object):
 	def __init__(self,outpoint,scriptSig,sequence=0xFFFFFFFF,prevout=None):
@@ -126,7 +132,7 @@ class SInput(object):
 		prevout=SOutput.from_dst(src)
 		return SInput(SOutpoint.from_outref(src.ref),scriptSig,sequence,prevout)
 
-	def has_scriptSig():
+	def has_scriptSig(self):
 		return len(self.scriptSig) > 0
 		
 
@@ -228,7 +234,7 @@ class STransaction(object):
 		locktime=txo.meta.get('locktime',0xffffffff)
 		ins=[]
 		for src in txo.srcs:
-			a=txo.authorizations.get(o.ref,None)
+			a=txo.authorizations.get(src.ref,None)
 			if(a is None):
 				scriptSig=src.meta.get('scriptSig',bytearray())
 			else:
@@ -265,12 +271,13 @@ class STransaction(object):
 		for key in klist:
 			sighash=legacy_sighash(self,index,nhashtype)
 			signature=key.sign(sighash,use_der=True)
-			signature.append(int(nhashtype) & 0xFF)
+			signature+=chr(int(nhashtype) & 0xFF)
 			signature=hexlify(signature)
 			pubkey=hexlify(key.pub().pubkeydata)
 			siglist.append(signature)
 			pklist.append(pubkey)
 		authorization={'sigs':siglist,'pubs':pklist}
+		return authorization
 	
 
 #https://bitcoincore.org/en/segwit_wallet_dev/
