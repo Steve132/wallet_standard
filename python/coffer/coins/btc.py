@@ -43,7 +43,7 @@ class BTC(SegwitCoin):
 		else:
 			insighturls=[
 				"https://tbtc.blockdozer.com/insight-api",
-				"https://test-insight.bitpay.com/api"
+				#"https://test-insight.bitpay.com/api"  This is testnetv1, doesn't work
 			]
 
 		insights=[InsightBlockchainInterface(self,insighturls)]

@@ -120,13 +120,13 @@ def _json2tx(coin,jtx):
 	timestamp=int(jtx['time'])
 	confirmations=int(jtx['confirmations'])
 	
-	tx=SubmittedTransaction(coin=coin,
+	tx=SubmittedTransaction(chain=coin,
 		srcs=inputs,
 		dsts=outputs,
 		refid=txid,
 		timestamp=timestamp,
 		confirmations=confirmations,
-		signatures=sigs,		
+		authorizations={}, #signatures=sigs #URGENT TODO: parse previous signatures for verification.		
 		meta=tmeta)
 
 	return tx
