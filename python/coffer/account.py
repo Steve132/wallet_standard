@@ -79,9 +79,11 @@ class Account(UuidBase):
 			if(dst not in allsrcs and dst.spenttx is None):
 				yield dst
 
-	def balance(self):
+	def balance(self,unspents=None):
+		if(unspents is None):
+			unspents=self.unspents_iter()
 		amount=0.0
-		for o in self.unspents_iter():
+		for o in unspents:
 			amount+=o.amount
 		return amount
 		

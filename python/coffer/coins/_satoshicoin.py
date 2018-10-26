@@ -61,7 +61,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def format_tx(self,txo):
 		stxo=STransaction.from_txo(txo)
-		return STransaction._sc_serialize(stxo)
+		return hexlify(STransaction._sc_serialize(stxo))
 
 
 	#########PUBKEYS, ADDRESSES, and SIGNING
@@ -97,16 +97,16 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		multisig=len(pklist) > 1 or len(siglist) > 1
 		if(multisig):
 			raise NotImplementedError
-		version=src.address.addrdata[0]
+		version=ord(src.address.addrdata[0])
 		if(version!=self.pkh_prefix):
 			raise NotImplementedError
 		sig0=unhexlify(siglist[0])
 		pk0=unhexlify(pklist[0])
 		
 		out=bytearray()
-		out+=[len(sig0)]
+		out+=bytearray([len(sig0)])
 		out+=sig0
-		out+=[len(pk0)]
+		out+=bytearray([len(pk0)])
 		out+=pk0
 		return out
 		

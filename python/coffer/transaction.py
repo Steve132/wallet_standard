@@ -27,6 +27,7 @@ class TransactionReference(IndexBase):
 #TODO: this should not have a coin object, it should have an 'offchain source' object only (for multiple coin transactions)
 #the output can have a coin, but really it should just have a denomination (for USD?)
 #output should have an amount object which has members famount and iamount and overloads number
+#TODO: this should have a fee!
 class Transaction(object):
 	def __init__(self,chain,srcs,dsts,meta={},authorizations={}):
 		self.chain=chain
@@ -55,7 +56,7 @@ class Transaction(object):
 			'authorizations':{str(k):v for k,v in self.authorizations.items()}
 		}
 		return dct
-			
+
 
 class SubmittedTransaction(Transaction,IndexBase):
 	def __init__(self,chain,srcs,dsts,refid,timestamp,confirmations,meta={},authorizations={}):

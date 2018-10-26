@@ -115,7 +115,7 @@ def _json2tx(coin,jtx):
 			meta=pmeta)
 		outputs[ownerindex]=dst
 
-	tmeta={k:jtx[k] for k in ['blockhash','blockheight','locktime','version']}
+	tmeta={k:jtx[k] for k in ['blockhash','blockheight','locktime','version'] if k in jtx}
 
 	timestamp=int(jtx['time'])
 	confirmations=int(jtx['confirmations'])

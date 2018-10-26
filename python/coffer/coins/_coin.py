@@ -7,34 +7,12 @@ from ..lib.index import IndexBase
 from _slip44 import lookups as slip44table
 #todo change this to own bip32 as an object
 from collections import namedtuple
-from ..chain import Chain
+from ..chain import Chain,Denomination
 
 class ForkMixin(object):
 	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD'])
 	def fork_info(self):
 		raise NotImplementedError
-
-class Denomination(IndexBase):
-	@property
-	def denomination_scale(self):
-		raise NotImplementedError
-
-	def denomination_float2whole(self,x):
-		return int(x*self.denomination_scale)
-	
-	def denomination_whole2float(self,x):
-		ipart,fpart=divmod(int(x),int(self.denomination_scale))
-		return ipart+float(fpart)/self.denomination_scale;
-	
-	@property
-	def ticker(self):
-		raise NotImplementedError
-	
-	def _reftuple(self):
-		return (self.ticker)
-
-	def __repr__(self):
-		return self.ticker
 
 class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def __init__(self,ticker,is_testnet):

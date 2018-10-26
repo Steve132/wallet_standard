@@ -87,12 +87,12 @@ class SOutpoint(object):
 
 	@staticmethod
 	def from_outref(ref):
-		txid=unhexlify(ref.ownertx.refid)[::-1]
+		txid=unhexlify(ref.ownertx.refid)
 		index=ref.index
 		return SOutpoint(txid=txid,index=index)
 
 	def to_outref(self,chainid):
-		txref=transaction.TransactionReference(chainid,hexlify(self.txid[::-1]))
+		txref=transaction.TransactionReference(chainid,hexlify(self.txid))
 		return transaction.OutputReference(txref,self.index)
 
 #TODO: add segwit inputs and outputs?
@@ -278,7 +278,12 @@ class STransaction(object):
 			pklist.append(pubkey)
 		authorization={'sigs':siglist,'pubs':pklist}
 		return authorization
-	
+
+	def validate_values(self):
+		total_input=sum([inp.prevout.value for inp in self.ins])
+		total_output=sum([outp.value for outp in self.outs])
+		if(total_output > total_input):
+			raise Exception("Transaction spends more than is input")
 
 #https://bitcoincore.org/en/segwit_wallet_dev/
 class SWitnessTransaction(STransaction):
