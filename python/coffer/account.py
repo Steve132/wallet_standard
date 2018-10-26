@@ -142,7 +142,7 @@ class OnChainAddressSetAccount(Account):
 
 		iters=[itertools.dropwhile(pred,iter(addrset)) for addrset in lst]
 		for addr in itertools.chain.from_iterable(zlong(*iters)):
-				yield addr
+			yield addr
 
 	def next_internal_iter(self):
 		return self._next_addr_iter(self.internal)

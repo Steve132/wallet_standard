@@ -338,7 +338,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
 		return idt
 
-	def authtx(self,txo,authobj,max_search=10000,*args,**kwargs):
+	def auth_tx(self,txo,authobj,max_search=10000,*args,**kwargs):
 		if(isinstance(authobj,Bip32SeedAuth)):
 			b32a=authobj.master_b32auth(self.coin,*self.bip32args,**self.bip32kwargs)
 		elif(isinstance(authobj,Bip32Auth)):
@@ -357,7 +357,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		if(len(authpath) < len(accpath)):
 			b32a=b32a.descend(accpath[len(authpath):])
 
-		addrstolookfor=set([src.address for src in txo.srcs])
+		addrstolookfor=set([src.address for srcdex,src in enumerate(txo.srcs) if not src.coin.is_src_fully_authorized(txo,srcdex)])
 		foundkeys={}
 		numsearched=0
 		for iep in itertools.izip(paths(self.external[0].path),paths(self.internal[0].path)):
@@ -370,7 +370,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
 					addrstolookfor.remove(addr)
-		
+
 		authorizations=self.coin.signtx(txo,foundkeys)
 		for ref,a in authorizations.items():
 			if(a is not None):

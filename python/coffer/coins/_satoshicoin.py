@@ -184,9 +184,18 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	
 		self.verify_tx(txo)
 		return txo
-			
-			
-	
+
+	def is_src_fully_authorized(self,tx,index):   #TODO This could almost certainly be implemented better by checking the sig and pubkey to see if they verify (verify signatures)
+		src=tx.srcs[index]
+		if(src.ref not in tx.authorizations):
+			return False
+		
+		az=tx.authorizations[src.ref]
+		if('sigs' in az and 'pubs' in az and len(az['sigs']) > 0 and len(az['pubs']) > 0):
+			return True
+
+		return False
+		
 	##########################blockchain stuff
 
 	def estimate_fee(self,txo,fee_amount_per_byte,estimate_after_signatures=True):

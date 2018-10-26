@@ -7,6 +7,9 @@ class Chain(object):
 	def chainid(self):
 		raise NotImplementedError
 
+	def is_src_fully_authorized(self,tx,index):
+		raise NotImplementedError
+
 def fromchainid(chainid):
 	try:
 		return fromticker(chainid)

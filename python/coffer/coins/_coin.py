@@ -127,6 +127,8 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def build_tx(self,unspents,outputs,changeaddr,fee=None,feerate=None):
 		raise NotImplementedError
 
+	def is_src_fully_authorized(self,tx,index):
+		raise NotImplementedError
 
 	##########  BLOCKCHAIN STUFF
 	def blockchain(self,*args,**kwargs):

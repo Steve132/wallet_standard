@@ -46,6 +46,7 @@ class Transaction(object):
 		dsts=[Output.from_dict(x) for x in dct['dsts']]
 		meta=dct.get('meta',{})
 		authorizations=dct.get('authorizations',{})
+		authorizations={OutputReference(k):v for k,v in authorizations.items()}
 		return Transaction(chain,srcs=srcs,dsts=dsts,meta=meta,authorizations=authorizations)
 
 	def to_dict(self):
@@ -109,7 +110,8 @@ class SubmittedTransaction(Transaction,IndexBase):
 				refid=txref.refid,
 				timestamp=timestamp,
 				confirmations=confirmations,
-				meta=tx.meta,authorizations=tx.authorizations)
+				meta=tx.meta,
+				authorizations=tx.authorizations)
 	
 	def to_dict(self):
 		dct=Transaction.to_dict(self)

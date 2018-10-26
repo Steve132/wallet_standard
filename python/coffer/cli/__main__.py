@@ -2,18 +2,22 @@
 import argparse
 import cliwallet
 import json
-from ..coins import fromticker
 from pprint import pprint
 import re
 from itertools import islice
-from ..lib import appdirs
 import os.path
 import logging
-from coffer.ticker import get_current_price
 import _stdbip32
-import coffer.ext.cli as extm
-from coffer.transaction import Output
 import sys
+
+from coffer.chain import fromchainid
+from coffer.coins import fromticker
+from coffer.transaction import Output,Transaction
+from coffer.ticker import get_current_price
+from coffer.lib import appdirs
+import coffer.ext.cli as extm
+
+
 #this is a synced balance	
 
 """
@@ -53,7 +57,6 @@ def subwalletitems(wallet,selchains,selgroups):
 			if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
 				yield gname,aid,acc
 
-				
 def cmd_balance(w,args):
 	gwiter=subwalletitems(w,args.chain,args.group)
 	price_tickers={}
@@ -92,7 +95,6 @@ def cmd_balance(w,args):
 	
 #TODO: this needs to be refactored to not be a part of the gui
 def cmd_sync(w,args):
-	print(args)
 	gwiter=subwalletitems(w,args.chain,args.group)
 	for gname,aid,acc in gwiter:
 		logging.info("Attempting to sync account %s..." % (_build_prefix(gname,aid,acc)))
@@ -101,7 +103,7 @@ def cmd_sync(w,args):
 #TODO: this needs to be refactored to not be a part of the gui
 #URGENT TODO:Accounts need to have a way to specify the change address desired for the account beyond just the first one in the list
 def cmd_add_account_auth(w,args):
-	allauths=cliwallet.CliAuth.from_file(args.auth,args.mnemonic_passphrase)
+	allauths=cliwallet.CliAuth.from_file(args.auth_file,args.mnemonic_passphrase)
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
@@ -118,21 +120,24 @@ def cmd_add_account_auth(w,args):
 #https://miningfees.com/currency/litecoin TODO: fetch feerate?
 #TODO fold this into wallet operations.
 def cmd_build_tx(w,args):
-	print(args.input_selection)
 	chain=args.chain
 	gwiter=subwalletitems(w,[chain],args.group)
 	unspents=set()
 	changeaddr=None
 	coin=fromticker(chain)
 	selected_unspent_mapping={}
+	uref_to_aid={}
 	wlist=[]
 	#sweep input algorithm
 	if(args.input_selection == "sweep"):
 		for gname,aid,acc in gwiter:
 			wlist.append((gname,aid,acc))
 			incoming=set(acc.unspents_iter())
+			for u in incoming:
+				u.meta['aid']=aid
 			unspents.update(incoming)
 			selected_unspent_mapping.setdefault(acc,set()).update(incoming)
+				
 	else:
 		raise Exception("Error, build_tx only supports the 'sweep' input selection method at the moment") #TODO: implement the other methods. #TODO refactor this into generic interactions
 
@@ -168,12 +173,42 @@ def cmd_build_tx(w,args):
 			amount/=rate
 		addr=coin.parse_addr(dstarg.address)
 		outs.append(Output(coin,addr,amount=amount))
+
+	
 		
 	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.00000087)
 	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
-	print(tx.to_dict())
+	json.dump(tx.to_dict(),args.output_file)
+
+
+#URGENT_TODO: The only supported auth is b32auth and b32seedauth
+#URGENT_TODO: Add aid to the metadata for a search and only fall back to search for inputs that aren't authorized.
+#URGENT_TODO: Add full path (or at least address index) to the metadata so that the authorizer doesn't have to search for the id in most cases.
+def cmd_auth_tx(w,args):
+	txo=Transaction.from_dict(json.load(args.input_file))
+	cha=txo.chain
+	subauths=cliwallet.CliAuth.from_file(args.auth_file,args.mnemonic_passphrase)
+	for subauth in subauths:
+		for srcidx,src in enumerate(txo.srcs):
+			if(cha.is_src_fully_authorized(txo,srcidx)):
+				continue
+			if('aid' in src.meta and src.meta['aid'] in w):
+				w[src.meta['aid']].auth_tx(txo,subauth,max_search=100)
+			else:
+				for gname,aid,acc in subwalletitems(w,[src.chainid],[]):
+					acc.auth_tx(txo,subauth,max_search=100)
+	logging.warning(cha.format_tx(txo))
+	json.dump(txo.to_dict(),args.output_file)
 		
-		
+
+def cmd_send_tx(w,args):
+	txo=Transaction.from_dict(json.load(args.input_file))
+	cha=txo.chain
+	if(args.submit):
+		raise NotImplementedError
+	if(args.serialize and hasattr(cha,'format_tx')):
+		print(cha.format_tx(txo))
+	
 		
 def cmd_list_addresses(w,args):
 	gwiter=subwalletitems(w,args.chain,args.group)
@@ -207,6 +242,11 @@ if __name__=='__main__':
 	peraccount_group.add_argument('--chain','-c',action='append',help="The chain(s) to operate on. Can be entered multiple times.  Defaults to all.",default=[])
 	peraccount_group.add_argument('--group','-g',action='append',help="The wallet group(s) to lookup.  Can be entered multiple times.  Defaults to all.",default=[])
 
+	auth_parser=argparse.ArgumentParser(description="Account Authorization Options",add_help=False)
+	auth_parser.add_argument('--auth_file','-a',help="Auth file",required=True,type=argparse.FileType('r'))
+	auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
+	auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
+
 	parser=argparse.ArgumentParser(description='The Coffer standalone CLI wallet tool')
 	subparsers=parser.add_subparsers(title='main',description="MAIN DESCRIPTION",dest="main_command",help="MAIN HELP")
 
@@ -221,12 +261,9 @@ if __name__=='__main__':
 	#sync_parser.add_argument('--unspents_only','-u',action='store_true',help="Only sync unspents <don't sync spends>")
 	sync_parser.set_defaults(func=cmd_sync)
 
-	add_account_auth_parser=subparsers.add_parser('add_account_from_auth',help="Add an account from a private key file",parents=[wallet_parser])
+	add_account_auth_parser=subparsers.add_parser('add_account_from_auth',help="Add an account from a private key file",parents=[wallet_parser,auth_parser])
 	add_account_auth_parser.add_argument('--group','-g',help="The wallet group(s) to add the account to",default='main')
 	add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]",type=PathType)
-	add_account_auth_parser.add_argument('--auth','-a',help="Auth file",required=True,type=argparse.FileType('r'))
-	add_account_auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
-	add_account_auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
 	add_account_auth_parser.add_argument('--coverage',help="the coverage algorithm for pathless chains",type=str,default='broad')
 	add_account_auth_parser.add_argument('--num_accounts',help="The number of accounts to check for a bip32 wallet (default1)",type=int,default=1)
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
@@ -236,7 +273,7 @@ if __name__=='__main__':
 	list_addresses_parser.add_argument('--count','-n',help="The number of addresses to get",type=int,default=1)
 	list_addresses_parser.set_defaults(func=cmd_list_addresses)
 
-	crypt_parser=subparsers.add_parser('rekey',description="Decrypt, Encrypt, or Re-encrypt a wallet file (implied in all other wallet operations too",parents=[wallet_parser])
+	crypt_parser=subparsers.add_parser('rekey',description="Decrypt, Encrypt, or Re-encrypt a wallet file (this operation is implied in all other wallet operations too)",parents=[wallet_parser])
 	crypt_parser.set_defaults(func=cmd_crypt)
 
 	#TODO THIS ONLY WORKS ON-CHAIN
@@ -251,6 +288,19 @@ if __name__=='__main__':
 	build_tx_parser.add_argument('--output_file','-o',help="The output file to output for the unsigned transaction",type=argparse.FileType('w'),default=sys.stdout)
 	build_tx_parser.set_defaults(func=cmd_build_tx)
 
+	auth_tx_parser=subparsers.add_parser('auth_tx',help="authorize a transaction to be broadcast",parents=[wallet_parser,auth_parser])
+	auth_tx_parser.add_argument('--input_file','-i',help="The input unsigned transaction json utx file",type=argparse.FileType('r'),default=sys.stdin)
+	auth_tx_parser.add_argument('--output_file','-o',help="The output signed transaction json utx file",type=argparse.FileType('w'),default=sys.stdout)
+	auth_tx_parser.set_defaults(func=cmd_auth_tx)
+
+	send_tx_parser=subparsers.add_parser('send_tx',help="send or serialize a transaction to be sent on chain")
+	send_tx_parser.add_argument('--input_file','-i',help="The input authorized transaction json stx file",type=argparse.FileType('r'),default=sys.stdin)
+	send_tx_submit_group=send_tx_parser.add_mutually_exclusive_group(required=True)
+	send_tx_submit_group.add_argument('--submit',help="Submit the authorized transaction",action='store_true')
+	send_tx_submit_group.add_argument('--serialize',help="Output the formatted transaction to stdout",action='store_true')
+	send_tx_parser.set_defaults(func=cmd_send_tx)
+	send_tx_parser.set_defaults(nowallet=True)
+
 	ext_parser=subparsers.add_parser('ext',help="Run an extension plugin command",parents=[wallet_parser])
 	extsubparsers=ext_parser.add_subparsers(title='ext',description="EXT DESCRIPTION",dest="ext_command",help="EXT HELP")
 	ext_parser.set_defaults(func=cmd_ext)
@@ -258,17 +308,19 @@ if __name__=='__main__':
 
 	args=parser.parse_args()
 
-	if(args.wallet_out is None):
-		args.wallet_out=args.wallet
-	if(args.pin_out is None):
-		args.pin_out=args.pin
+	if(hasattr(args,'nowallet')):
+		args.func(None,args)
+	else:
+		if(args.wallet_out is None):
+			args.wallet_out=args.wallet
+		if(args.pin_out is None):
+			args.pin_out=args.pin
 	
+		w=cliwallet.CliWallet.from_archive(args.wallet,pin=args.pin)
 
-	w=cliwallet.CliWallet.from_archive(args.wallet,pin=args.pin)
+		args.func(w,args)
 
-	args.func(w,args)
-
-	cliwallet.CliWallet.to_archive(w,args.wallet_out,pin=args.pin_out)
+		cliwallet.CliWallet.to_archive(w,args.wallet_out,pin=args.pin_out)
 
 	
 
