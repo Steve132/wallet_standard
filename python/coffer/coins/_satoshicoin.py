@@ -149,7 +149,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		sighash=_base.dblsha256(preimage)
 		return privkey.sign(sighash,use_der=False)
 
-	def verify_tx(txo):
+	def verify_tx(self,txo):
 		setunspents=frozenset(txo.srcs)
 		if(any([x.coin != self for x in txo.srcs])):
 			raise Exception("All the sources must be an on-chain transaction for %r." % (self))
@@ -157,35 +157,32 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("All the destinations must be an on-chain transaction for %r" % (self))
 		if(len(setunspents) < len(txo.srcs)):
 			raise Exception("Duplicates detected in sources.  All sources must be unique in a transaction for this coin")
-		src_total=sum([src.iamount for unsp in txo.srcs])
-		dst_total=sum([dst.iamount for outp in txo.dsts])
+		src_total=sum([src.iamount for src in txo.srcs])
+		dst_total=sum([dst.iamount for dst in txo.dsts])
 		if(src_total < dst_total):
 			raise Exception("The total value of the sources must be more than the total value of the destinations")
 		return src_total,dst_total
 
 	def build_tx(self,sources,destinations,changeaddr,fee=None,feerate=None):
-		if(fee is not None):
-			fee=fee
-		elif(feerate is not None):
-			fee=self.denomination_whole2float(1)
-		else:
+		if(fee is None and feerate is None):
 			raise Exception("fee or feerate must be specified.  Pass fee=0.0 if you want to override this")
 		
 		if(changeaddr is None):
 			raise Exception('There is no change address specified.  Are you sure you meant this?  Add a change address or pass the string "NO_CHANGE_ADDRESS" as the changeaddr argument to override this warning')
-		
+
 		txo=Transaction(self,list(sources),list(destinations))	#important list() makes a copy for later mutability below when estimating the fees
-		if(changeaddr != 'NO_CHANGE'):
+	
+		if(str(changeaddr) != 'NO_CHANGE_ADDRESS'):
 			change_output=Output(self,changeaddr,self.denomination_whole2float(1))
 			txo.dsts.append(change_output)
 			if(fee is None or fee < 0.0):
 				fee=self.estimate_fee(txo,feerate)
-			src_total,dst_total=self.verifytx(txo)
+			src_total,dst_total=self.verify_tx(txo)
 			change_iamount=src_total-dst_total
 			change_iamount-=self.denomination_float2whole(fee)
 			txo.dsts[-1].iamount=change_iamount #set the appended change amount to the leftover minus the fee
 	
-		self.verifytx(txo)
+		self.verify_tx(txo)
 		return txo
 			
 			

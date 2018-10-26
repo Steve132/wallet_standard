@@ -12,6 +12,8 @@ import logging
 from coffer.ticker import get_current_price
 import _stdbip32
 import coffer.ext.cli as extm
+from coffer.transaction import Output
+import sys
 #this is a synced balance	
 
 """
@@ -97,6 +99,7 @@ def cmd_sync(w,args):
 		acc.sync(retries=args.retries,targets=args.sync_targets)
 
 #TODO: this needs to be refactored to not be a part of the gui
+#URGENT TODO:Accounts need to have a way to specify the change address desired for the account beyond just the first one in the list
 def cmd_add_account_auth(w,args):
 	allauths=cliwallet.CliAuth.from_file(args.auth,args.mnemonic_passphrase)
 	for p in args.paths:
@@ -112,8 +115,65 @@ def cmd_add_account_auth(w,args):
 					acc.label=label
 					w.add_account(groupname=args.group,account=acc)
 
-def cmd_send(w,args):
-	raise NotImplementedError
+#https://miningfees.com/currency/litecoin TODO: fetch feerate?
+#TODO fold this into wallet operations.
+def cmd_build_tx(w,args):
+	print(args.input_selection)
+	chain=args.chain
+	gwiter=subwalletitems(w,[chain],args.group)
+	unspents=set()
+	changeaddr=None
+	coin=fromticker(chain)
+	selected_unspent_mapping={}
+	wlist=[]
+	#sweep input algorithm
+	if(args.input_selection == "sweep"):
+		for gname,aid,acc in gwiter:
+			wlist.append((gname,aid,acc))
+			incoming=set(acc.unspents_iter())
+			unspents.update(incoming)
+			selected_unspent_mapping.setdefault(acc,set()).update(incoming)
+	else:
+		raise Exception("Error, build_tx only supports the 'sweep' input selection method at the moment") #TODO: implement the other methods. #TODO refactor this into generic interactions
+
+	if(args.change_account is not None):
+		for gname,aid,acc in wlist:
+			if(aid[:8]==args.change_account[:8]):
+				changeaddr=acc.next_internal(count=1)[0]
+				break
+		else:	
+			try:
+				changeaddr=coin.parse_addr(args.change_account)
+			except:
+				raise Exception("Could not parse %s as an address, nor could account with id %s be found" % (args.change_account,args.change_account))
+	elif(args.change_selection == "maxvalue"):
+		acc,s=max(selected_unspent_mapping.items(),key=lambda a:a[0].balance(a[1]))
+		changeaddr=acc.next_internal(count=1)[0]
+	elif(args.change_selection == "maxitems"):
+		acc,s=max(selected_unspent_mapping.items(),key=lambda a:len(a[1]))
+		changeaddr=acc.next_internal(count=1)[0]
+	elif(args.change_selection == "NO_CHANGE_ADDRESS"):
+		changeaddr="NO_CHANGE_ADDRESS"
+	else:
+		raise Exception("Could not understand an argument for a change address")
+		
+	coin=fromticker(chain)
+	outs=[]
+	for dstarg in args.dsts:
+		amount=dstarg.amount
+		if(dstarg.ticker is not None and coin.chainid != dstarg.ticker):
+			logging.warning("Warning, the ticker '%s' doesn't match %s" (coin.chainid,dstarg.ticker))
+			rate=get_current_price(coin.chainid,dstarg.ticker)
+			logging.warning("Using an exchange rate of %f %s" % (rate,coin.chainid+dstarg.ticker))
+			amount/=rate
+		addr=coin.parse_addr(dstarg.address)
+		outs.append(Output(coin,addr,amount=amount))
+		
+	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.00000087)
+	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
+	print(tx.to_dict())
+		
+		
 		
 def cmd_list_addresses(w,args):
 	gwiter=subwalletitems(w,args.chain,args.group)
@@ -179,15 +239,18 @@ if __name__=='__main__':
 	crypt_parser=subparsers.add_parser('rekey',description="Decrypt, Encrypt, or Re-encrypt a wallet file (implied in all other wallet operations too",parents=[wallet_parser])
 	crypt_parser.set_defaults(func=cmd_crypt)
 
-	"""	send_parser=subparsers.add_parser('send')
-		send_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to send from. Defaults to all",default=[])
-		send_parser.add_argument('chain',help="The chain to operate on.",type=str)
-		send_parser.add_argument('dsts',nargs='+',help="A series of amounts in the form <amount>[CURRENCY]:<address>",type=DestinationType)
-		send_parser.add_argument('--input_select_algorithm','-is',help="The input selection algorithm",default='mintax')
-		send_parser.add_argument('--change_select_algorithm','-cs',help="The change selection algorithm",default='simplechange')
-		send_parser.add_argument('--output_file','-o',help="The output file to output for the unsigned transaction",type=argparse.FileType('w'),default='-')
-		send_parser.set_defaults(func=cmd_send)
-	"""
+	#TODO THIS ONLY WORKS ON-CHAIN
+	build_tx_parser=subparsers.add_parser('build_tx',help="build a transaction to be sent on chain",parents=[wallet_parser])
+	build_tx_parser.add_argument('--group','-g',action='append',help="The wallet group(s) to send from. Defaults to all",default=[])
+	build_tx_parser.add_argument('chain',help="The chain to operate on.",type=str)
+	build_tx_parser.add_argument('dsts',nargs='+',help="A series of amounts in the form <amount>[CURRENCY]:<address>",type=DestinationType)
+	build_tx_parser.add_argument('--input_selection','-is',help="The input selection algorithm",choices=["mintax","stdin","lowestfee","sweep"],default='mintax')
+	build_tx_change_group=build_tx_parser.add_mutually_exclusive_group(required=False)
+	build_tx_change_group.add_argument('--change_selection','-cs',help="The change selection algorithm",choices=["privacy,first,maxvalue,maxinput,NO_CHANGE_ADDRESS"],default='maxvalue')
+	build_tx_change_group.add_argument('--change_account','-ca',help="Explicitly select an account id or address for the change to go to.")
+	build_tx_parser.add_argument('--output_file','-o',help="The output file to output for the unsigned transaction",type=argparse.FileType('w'),default=sys.stdout)
+	build_tx_parser.set_defaults(func=cmd_build_tx)
+
 	ext_parser=subparsers.add_parser('ext',help="Run an extension plugin command",parents=[wallet_parser])
 	extsubparsers=ext_parser.add_subparsers(title='ext',description="EXT DESCRIPTION",dest="ext_command",help="EXT HELP")
 	ext_parser.set_defaults(func=cmd_ext)

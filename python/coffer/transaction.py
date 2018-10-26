@@ -57,6 +57,28 @@ class Transaction(object):
 		}
 		return dct
 
+	@property
+	def ifee(self):
+		current_coin=None
+		total_isrc=0
+		total_idst=0
+		for src in self.srcs:
+			if(current_coin is None):
+				current_coin = src.coin
+			if(current_coin != src.coin):
+				raise Exception("Fee not defined yet for multi-denominational transactions.")
+			total_isrc+=src.iamount
+		for dst in self.dsts:
+			if(current_coin != dst.coin):
+				raise Exception("Fee not defined yet for multi-denominational transactions.")
+			total_idst+=dst.iamount
+		return total_isrc-total_idst
+
+	@property
+	def fee(self):
+		return self.dsts[0].coin.denomination_whole2float(self.ifee)
+			
+
 
 class SubmittedTransaction(Transaction,IndexBase):
 	def __init__(self,chain,srcs,dsts,refid,timestamp,confirmations,meta={},authorizations={}):
