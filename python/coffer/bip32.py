@@ -349,9 +349,6 @@ class Bip32Account(account.OnChainAddressSetAccount):
 		
 		accpath=path_split(self.root)
 		authpath=path_split(b32a.root)
-		print(len(authpath))
-		print(accpath[:len(authpath)])
-		print(authpath)
 		if(len(accpath) < len(authpath)):
 			raise Exception("Auth path is below account path.  Cannot be used.")
 		if(tuple(accpath[:len(authpath)])!=tuple(authpath)):
@@ -359,8 +356,6 @@ class Bip32Account(account.OnChainAddressSetAccount):
 
 		if(len(authpath) < len(accpath)):
 			b32a=b32a.descend(accpath[len(authpath):])
-
-		print(b32a.root)
 
 		addrstolookfor=set([src.address for src in txo.srcs])
 		foundkeys={}
@@ -372,14 +367,11 @@ class Bip32Account(account.OnChainAddressSetAccount):
 			for p in iep:
 				privkey=self.coin.descend(b32a.xpriv,p).key()
 				addr=self.coin.pubkeys2addr([privkey.pub()],*self.bip32args,**self.bip32kwargs)
-				print(addrstolookfor)
-				print(addr)
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
 					addrstolookfor.remove(addr)
 		
 		authorizations=self.coin.signtx(txo,foundkeys)
-		print(authorizations)
 		for ref,a in authorizations.items():
 			if(a is not None):
 				txo.authorizations[ref]=a

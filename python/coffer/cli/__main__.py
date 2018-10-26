@@ -61,7 +61,7 @@ def cmd_balance(w,args):
 		amount=acc.balance()
 		prefix=_build_prefix(gname,aid,acc)
 		if(not args.print_totals_only):
-			if(not args.print_value_only):
+			if(not args.print_coin_value_only):
 				if(acc.coin.ticker not in price_tickers):
 					logging.info("Attempting to fetch current USD price informmation for %r",acc.coin)
 					price_tickers[acc.coin.ticker]=get_current_price(acc.coin.ticker,'USD')
@@ -72,7 +72,7 @@ def cmd_balance(w,args):
 		totals[acc.coin.ticker]+=amount
 	print("\nTOTALS:")
 	for ticker,total in sorted(list(totals.items()),key=lambda x: x[0]):
-		if(not args.print_value_only):
+		if(not args.print_coin_value_only):
 			print("%s\t%f ($%.02f)" % (ticker,total,total*price_tickers[ticker]))
 		else:
 			print("%s\t%f" % (ticker,total))
@@ -151,7 +151,7 @@ if __name__=='__main__':
 	subparsers=parser.add_subparsers(title='main',description="MAIN DESCRIPTION",dest="main_command",help="MAIN HELP")
 
 	balance_parser=subparsers.add_parser('balance',help="Get balance for each account",parents=[wallet_parser,peraccount_parser]) #action?
-	balance_parser.add_argument('--print_value_only',action='store_true',help="Do not fetch or print approximate fiat value")
+	balance_parser.add_argument('--print_coin_value_only',action='store_true',help="Do not fetch or print approximate fiat value")
 	balance_parser.add_argument('--print_totals_only','-pt',action='store_true',help="Only print the totals")
 	balance_parser.set_defaults(func=cmd_balance)
 

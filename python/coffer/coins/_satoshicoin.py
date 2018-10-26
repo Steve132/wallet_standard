@@ -80,7 +80,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		addrbytes=bytearray()
 		addrbytes+=addr.addrdata[1:]
 		
-		print(hexlify(addr.addrdata))
 		if(len(addrbytes) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
 		if(version==self.pkh_prefix):
