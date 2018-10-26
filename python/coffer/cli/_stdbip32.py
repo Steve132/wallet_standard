@@ -21,6 +21,7 @@ def coverage(coin,args):
 
 		#TODO: if(isinstance(Coin,SegWitCoin)) default segwit bip32 settings to load prefixes
 		#TODO: if(isinstance(Coin,BCH)) default cashaddr
+		#TODO: if(isinstance(Coin,LTC)) append use_ltpub=True to the options
 		#TODOD if(isinstance(Coin,ForkMixin) and Fork.originalchain != BTC)
 			#yield coin chain accounts
 		

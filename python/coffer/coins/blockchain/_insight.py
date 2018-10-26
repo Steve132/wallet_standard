@@ -1,6 +1,7 @@
 from _interface import *
 from binascii import hexlify,unhexlify
 from ...transaction import *
+from ...key import Address
 
 from pprint import pprint
 
@@ -52,8 +53,16 @@ def _json2tx(coin,jtx):
 	inputs=[None]*len(jtx['vin'])
 	for jsin in jtx['vin']:
 		spenttx=TransactionReference(coin.ticker,txid)
-		addr=coin.parse_addr(jsin['addr'])
 		
+		
+		#TODO: fix implementation of detecting segwit addresses from insight!
+		#if addr=None hash the 
+		if('addr' not in jsin or jsin['addr'] is None):
+			logging.warning("The address is probably a segwit address which insight and coffer cannot handle at the moment.  This address is a workaround")
+			addr=coin.parse_addr("seg"+jsin['txid'][:40])
+		else:
+			addr=coin.parse_addr(jsin['addr'])  #insight doesn't support pure segwit transactions or weird transaction types sometimes the address cannot be parsed from the scriptPubKey..so insight bugs out here.
+												#really long term the solution is to rely on electrum servers for this and get rid of insight and parse the address from the raw transactions
 		
 		amount=_lazygetval(coin,jsin)
 		ownerindex=int(jsin['vout'])
@@ -76,18 +85,18 @@ def _json2tx(coin,jtx):
 	outputs=[None]*len(jtx['vout'])
 	for jsout in jtx['vout']:
 		#https://bitcoin.stackexchange.com/questions/30442/multiple-addresses-in-one-utxo
-		detectaddr=jsout['scriptPubKey']['addresses']
+		detectaddr=jsout['scriptPubKey'].get('addresses',[])
 		pmeta={}
+		pubkey=jsout['scriptPubKey']['hex']
 		if(len(detectaddr) > 1):
 			pmeta['legacy_multisig']=True
 			logging.warning("Detected a legacy multisig payment!")
 		if(len(detectaddr) < 1):
 			pmeta['no_addr']=True
-			logging.warning("Could not detect an address for a tx")
-		haddr=detectaddr[0] if len(detectaddr) > 0 else None
-		
+			logging.warning("Could not detect an address for a txout")
+			detectaddr=['p2ps_'+pubkey]
+		haddr=detectaddr[0]
 		addr=None if haddr is None else coin.parse_addr(haddr)
-		pubkey=jsout['scriptPubKey']['hex']
 		#pprint(jsout)
 		amount=_lazygetval(coin,jsout)
 		if(jsout.get('spentTxId',None) is not None):
@@ -140,8 +149,6 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 	def get_endpoint(self):
 		return random.choice(self.endpoints)
 		
-	
-	
 	@retryable
 	def _transactions_block(self,addressblock):
 		addressblock=[self.coin.format(a) for a in addressblock]

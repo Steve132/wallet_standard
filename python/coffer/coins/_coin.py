@@ -113,7 +113,7 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 		raise Exception("I don't know how to format %r" % (obj))
 
 
-	###### BUILD AND SIGN ADDRESSES
+	###### BUILD AND SIGN
 	def pubkeys2addr(self,pubkeys,xpub=None,*args,**kwargs):
 		raise NotImplementedError
 
@@ -121,13 +121,19 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	#privkeys is a mapping from an address to a list of privkeys for signing an on-chain transaction
 	#returns a dictionary mapping to an authorization (can be directly stored later)
 	#this is a part of a coin, NOT a chain
-	def signtx(self,tx,privkeys):
+	def sign_tx(self,tx,privkeys):
+		raise NotImplementedError
+
+	def build_tx(self,unspents,outputs,changeaddr,fee=None,feerate=None):
 		raise NotImplementedError
 
 
 	##########  BLOCKCHAIN STUFF
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
+
+	def estimate_fee(self,txo,fee_amount_per_byte=None):
+		raise NotImplementedError
 
 	
 

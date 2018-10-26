@@ -117,15 +117,17 @@ class OutputReference(IndexBase):
 		return str(self.ownertx)+':'+str(self.index)
 
 class Output(object):
-	def __init__(self,coin,address,amount,meta={},iamount=None):
+	def __init__(self,coin,address,amount=None,meta={},iamount=None):
 		self.coin=coin
 		if(not isinstance(address,Address)):
 			address=coin.parse_addr(address)
 		self.address=address
 		if(iamount is not None):
 			self.iamount=iamount
-		else:
+		elif(amount is not None):
 			self.iamount=coin.denomination_float2whole(float(amount))
+		else:
+			raise Exception("Building an output MUST have iamount or amount set")
 		self.meta=meta
 
 	@staticmethod
@@ -156,6 +158,10 @@ class Output(object):
 	def amount(self,v):
 		self.iamount=self.coin.denomination_float2whole(float(v))
 
+	def is_spent(self):
+		if(hasattr(self,'spenttx')):
+			return self.spenttx is not None
+		return True
 
 class SubmittedOutput(Output,IndexBase):
 	def __init__(self,coin,address,amount,ownertx,index,spenttx=None,spentindex=None,meta={}):

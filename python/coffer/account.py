@@ -76,7 +76,7 @@ class Account(UuidBase):
 	def unspents_iter(self):
 		allsrcs=frozenset(self.sources_iter())
 		for dst in self.intowallet_iter():
-			if(dst not in allsrcs and dst.spenttx is None):
+			if(dst not in allsrcs and not dst.is_spent()):
 				yield dst
 
 	def balance(self,unspents=None):

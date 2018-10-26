@@ -1,5 +1,5 @@
 from _satoshicoin import *
-
+import coffer._base as _base
 
 def parsebech32(addrstring):
 	raise NotImplementedError
@@ -51,12 +51,23 @@ class SegwitCoin(SatoshiCoin):
 	#		raise NotImplementedError
 	#	return super(SegwitCoin,self).pubkeys2addr(pubkeys,*args,**kwargs)
 
+	#############parsing and formatting
+	def format_addr(self,addr,*args,**kwargs):
+		if('seg_workaround' in kwargs):
+			return "seg"+hexlify(addr[1:])
+		return super(SegwitCoin,self).format_addr(addr,*args,**kwargs)
+
 	def parse_addr(self,addrstring):
+		if(addrstring[:3]=="seg"):
+			return Address(bytearray([78])+unhexlify(addrstring[3:43]),self,{'seg_workaround':True})
+		return super(SegwitCoin,self).parse_addr(addrstring)
+
+	"""def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one
 		try:
 			return Address(parsebech32(addrstring),self,format_kwargs={'bech32':True})
 		except:
-			return super(SegwitCoin,self).parse_addr(addrstring)
+			return super(SegwitCoin,self).parse_addr(addrstring)"""
 
 	def signature2witness(self,signature):
 		raise NotImplementedError

@@ -26,7 +26,14 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	######PARSING AND FORMATTING
 	def format_addr(self,addr,*args,**kwargs):
+		if('p2ps' in kwargs):
+			return 'p2ps_'+hexlify(addr.addrdata[1:])
 		return _base.bytes2base58c(addr.addrdata)
+
+	def parse_addr(self,addrstring):
+		if(addrstring[:5]=='p2ps_'):
+			return Address(bytearray([0xFF])+unhexlify(addrstring[5:]),self,{'p2ps':True})
+		return Address(_base.base58c2bytes(addrstring),self)
 
 	def format_privkey(self,privkey):
 		oarray=bytearray()
@@ -49,10 +56,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			return PrivateKey(pkbytes[1:-1],is_compressed=True)
 		else:
 			return PrivateKey(pkbytes[1:],is_compressed=False)
-
-	def parse_addr(self,addrstring):
-		return Address(_base.base58c2bytes(addrstring),self)
-
 
 	def parse_tx(self,sio):
 		if(isinstance(sio,basestring)):
@@ -90,6 +93,10 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
+	def scriptPubKey2address(self,addr):
+		#this is useful to determine segwit addresses and other nonstandard address type from a script_pubkey
+		raise NotImplementedError
+
 	def authorization2scriptSig(self,authorization,src):
 		pklist=authorization.get('pubs',[])
 		siglist=authorization.get('sigs',[])
@@ -108,6 +115,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		out+=bytearray([len(pk0)])
 		out+=pk0
 		return out
+
+
+	#################BUILDING AND SIGNING
 		
 	#addr2keys is a mapping from an address to a privkey or (list of privkeys for signing an on-chain transaction
 	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
@@ -132,13 +142,67 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 		return outauthorizations
 
-			
-	def signmsg(self,msg,privkey):
+	def sign_msg(self,msg,privkey):
 		preimage=bytearray()
 		preimage+=SVarInt._sc_serialize(len(self.sig_prefix))+self.sig_prefix
 		preimage+=SVarInt._sc_serialize(len(msg))+bytearray(msg)
 		sighash=_base.dblsha256(preimage)
 		return privkey.sign(sighash,use_der=False)
+
+	def verify_tx(txo):
+		setunspents=frozenset(txo.srcs)
+		if(any([x.coin != self for x in txo.srcs])):
+			raise Exception("All the sources must be an on-chain transaction for %r." % (self))
+		if(any([x.coin != self for x in txo.dsts])):
+			raise Exception("All the destinations must be an on-chain transaction for %r" % (self))
+		if(len(setunspents) < len(txo.srcs)):
+			raise Exception("Duplicates detected in sources.  All sources must be unique in a transaction for this coin")
+		src_total=sum([src.iamount for unsp in txo.srcs])
+		dst_total=sum([dst.iamount for outp in txo.dsts])
+		if(src_total < dst_total):
+			raise Exception("The total value of the sources must be more than the total value of the destinations")
+		return src_total,dst_total
+
+	def build_tx(self,sources,destinations,changeaddr,fee=None,feerate=None):
+		if(fee is not None):
+			fee=fee
+		elif(feerate is not None):
+			fee=self.denomination_whole2float(1)
+		else:
+			raise Exception("fee or feerate must be specified.  Pass fee=0.0 if you want to override this")
+		
+		if(changeaddr is None):
+			raise Exception('There is no change address specified.  Are you sure you meant this?  Add a change address or pass the string "NO_CHANGE_ADDRESS" as the changeaddr argument to override this warning')
+		
+		txo=Transaction(self,list(sources),list(destinations))	#important list() makes a copy for later mutability below when estimating the fees
+		if(changeaddr != 'NO_CHANGE'):
+			change_output=Output(self,changeaddr,self.denomination_whole2float(1))
+			txo.dsts.append(change_output)
+			if(fee is None or fee < 0.0):
+				fee=self.estimate_fee(txo,feerate)
+			src_total,dst_total=self.verifytx(txo)
+			change_iamount=src_total-dst_total
+			change_iamount-=self.denomination_float2whole(fee)
+			txo.dsts[-1].iamount=change_iamount #set the appended change amount to the leftover minus the fee
+	
+		self.verifytx(txo)
+		return txo
+			
+			
+	
+	##########################blockchain stuff
+
+	def estimate_fee(self,txo,fee_amount_per_byte,estimate_after_signatures=True):
+		satoshitxo=STransaction.from_txo(txo)
+		#TODO: do this differently for a segwit transaction
+		estimated_post_sig_bytes=0
+		if(estimate_after_signatures):
+			num_unsigned_sigs=sum([1 for inp in satoshitxo.ins if not inp.has_scriptSig()])
+			bytes_per_signature=75+33#assuming a compressed pubkey legacy p2pkh
+			estimated_post_sig_bytes=num_unsigned_sigs*bytes_per_signature
+		txbytes=len(unhexlify(self.format_tx(txo)))
+		return (txbytes+estimated_post_sig_bytes)*fee_amount_per_byte
+
 
 	"""
 	#note: this method is from update_signatures.  Could also need to use sign() from electrum
@@ -167,3 +231,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 					self._inputs[i]['signatures'][j] = sig
 
 		        	break"""
+
+
+

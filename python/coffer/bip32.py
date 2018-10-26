@@ -376,7 +376,6 @@ class Bip32Account(account.OnChainAddressSetAccount):
 			if(a is not None):
 				txo.authorizations[ref]=a
 		
-
 class Bip32SeedAuth(auth.Auth):
 	def __init__(self,seed):
 		self.seed=seed
@@ -396,9 +395,6 @@ class Bip32SeedAuth(auth.Auth):
 		b32a=b32a.descend(root)
 		return b32a.to_account(coin,internal_path=internal_path,external_path=external_path,authref=authref,*bip32args,**bip32kwargs)
 
-	
-
-		
 class Bip32Auth(auth.Auth):
 	def __init__(self,coin,xpriv,root=None,bip32_settings=None,*bip32args,**bip32kwargs):
 		self.coin=coin
@@ -417,6 +413,9 @@ class Bip32Auth(auth.Auth):
 	def descend(self,directory):
 		return Bip32Auth(coin=self.coin,xpriv=self.coin.descend(self.xpriv,directory),root=path_join(self.root,directory),bip32_settings=self.bip32_settings)
 		
-
-
+#TODO: there should be a new standard that simply does this https://github.com/satoshilabs/slips/blob/master/slip-0032.md
+#TODO: http://docs.electrum.org/en/latest/transactions.html include bip32 derivation if possible (is it possible? 2*k bytes for the root makes no sense THE CODE SAYS ITS A BUG)
+#There should be a modern version of this in two parts: the first part is slip.  The second part is a scriptSig that starts with 0x6a. (these transactions cannot be broadcast or redeemed then becaues OP_RETURN)
+#First section is everything needed for a transaction to generate a sighash and signed by a hardware wallet.  The second section is everything needed for a wallet to recover the data, with extendible wallet segments.
+#also a section that communicates from a hardware wallet the necessary information to generate the addresses without exposure.
 

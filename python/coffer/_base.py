@@ -64,8 +64,9 @@ def baseX2bytes(x,chs):
 		u*=b
 	
 	w=len(int2bytes(u-1))-1
-	
 	return int2bytes(xi,w)
+
+
 def _countleading(it,lead):
 	cnt=0
 	for k in it:
