@@ -140,6 +140,8 @@ class SInput(object):
 class SOutput(object):
 	def __init__(self,value,scriptPubKey):
 		self.value=value
+		if(self.value < 0):
+			raise Exception("This output cannot be negative")
 		self.scriptPubKey=scriptPubKey
 
 	@staticmethod

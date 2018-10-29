@@ -174,9 +174,16 @@ def cmd_build_tx(w,args):
 		addr=coin.parse_addr(dstarg.address)
 		outs.append(Output(coin,addr,amount=amount))
 
-	
+	fee=None
+	feerate=None
+	if(args.feerate is not None):
+		feerate=args.feerate
+	elif(args.fee is not None):
+		fee=args.fee
+	else:
+		#TODO: estimate fee
 		
-	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.0000087)
+	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.0087)
 	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
 	json.dump(tx.to_dict(),args.output_file)
 
@@ -287,6 +294,9 @@ if __name__=='__main__':
 	build_tx_change_group=build_tx_parser.add_mutually_exclusive_group(required=False)
 	build_tx_change_group.add_argument('--change_selection','-cs',help="The change selection algorithm",choices=["privacy,first,maxvalue,maxinput,NO_CHANGE_ADDRESS"],default='maxvalue')
 	build_tx_change_group.add_argument('--change_account','-ca',help="Explicitly select an account id or address for the change to go to.")
+	build_tx_fee_group=build_tx_parser.add_mutually_exclusive_group(required=False)
+	build_tx_fee_group.add_argument('--feerate',help="The fee per byte to use",type=float)
+	build_tx_fee_group.add_argument('--fee',help="The total fee",type=float)
 	build_tx_parser.add_argument('--output_file','-o',help="The output file to output for the unsigned transaction",type=argparse.FileType('w'),default=sys.stdout)
 	build_tx_parser.set_defaults(func=cmd_build_tx)
 

@@ -7,6 +7,7 @@ from _satoshiscript import *
 from .. import _base
 from ..transaction import *
 from _satoshitx import STransaction,SVarInt
+import logging
 
 class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
@@ -151,14 +152,22 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def verify_tx(self,txo):
 		setunspents=frozenset(txo.srcs)
-		if(any([x.coin != self for x in txo.srcs])):
-			raise Exception("All the sources must be an on-chain transaction for %r." % (self))
-		if(any([x.coin != self for x in txo.dsts])):
-			raise Exception("All the destinations must be an on-chain transaction for %r" % (self))
 		if(len(setunspents) < len(txo.srcs)):
 			raise Exception("Duplicates detected in sources.  All sources must be unique in a transaction for this coin")
-		src_total=sum([src.iamount for src in txo.srcs])
-		dst_total=sum([dst.iamount for dst in txo.dsts])
+
+		def outlistcheck(outlist):
+			total=0
+			for out in outlist:
+				if(out.coin != self):
+					raise Exception("All the sources or destinations must be an on-chain transaction for %r." % (self))
+				if(out.iamount < 0):
+					raise Exception("All sources or destinations must have a nonnegative amount")
+				total+=out.iamount
+			return total
+		
+		src_total=outlistcheck(txo.srcs)
+		dst_total=outlistcheck(txo.dsts)
+
 		if(src_total < dst_total):
 			raise Exception("The total value of the sources must be more than the total value of the destinations")
 		return src_total,dst_total
@@ -179,8 +188,13 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 				fee=self.estimate_fee(txo,feerate)
 			src_total,dst_total=self.verify_tx(txo)
 			change_iamount=src_total-dst_total
-			change_iamount-=self.denomination_float2whole(fee)
-			txo.dsts[-1].iamount=change_iamount #set the appended change amount to the leftover minus the fee
+			ifee=self.denomination_float2whole(fee)
+			if(change_iamount > ifee):
+				change_iamount-=self.denomination_float2whole(fee)
+				txo.dsts[-1].iamount=change_iamount #set the appended change amount to the leftover minus the fee
+			else:
+				txo.dsts.pop()
+				logging.warning("Not using a change address because the selected fee was more than the leftover change.")
 	
 		self.verify_tx(txo)
 
