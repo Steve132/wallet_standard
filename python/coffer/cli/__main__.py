@@ -9,7 +9,7 @@ import os.path
 import logging
 import _stdbip32
 import sys
-
+from binascii import hexlify,unhexlify
 from coffer.chain import fromchainid
 from coffer.coins import fromticker
 from coffer.transaction import Output,Transaction
@@ -176,7 +176,7 @@ def cmd_build_tx(w,args):
 
 	
 		
-	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.00000087)
+	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.0000087)
 	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
 	json.dump(tx.to_dict(),args.output_file)
 
@@ -197,17 +197,19 @@ def cmd_auth_tx(w,args):
 			else:
 				for gname,aid,acc in subwalletitems(w,[src.chainid],[]):
 					acc.auth_tx(txo,subauth,max_search=100)
-	logging.warning(cha.format_tx(txo))
 	json.dump(txo.to_dict(),args.output_file)
 		
 
 def cmd_send_tx(w,args):
 	txo=Transaction.from_dict(json.load(args.input_file))
 	cha=txo.chain
-	if(args.submit):
-		raise NotImplementedError
+	if(args.submit and hasattr(cha,'format_tx')):
+		bci=cha.blockchain()
+		ftx=cha.format_tx(txo)
+		logging.info(bci.pushtx_bytes(unhexlify(ftx)))
 	if(args.serialize and hasattr(cha,'format_tx')):
 		print(cha.format_tx(txo))
+	logging.warning("fee: %f" % (txo.fee))
 	
 		
 def cmd_list_addresses(w,args):
@@ -223,7 +225,7 @@ def cmd_crypt(w,args):
 	pass
 
 def cmd_ext(w,args):
-	args.func_ext(w,args)
+	args.func_ext(w,args)  /insight-api/tx/send
 
 if __name__=='__main__':
 

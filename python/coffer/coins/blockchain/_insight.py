@@ -192,7 +192,6 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 		#pprint(txs)
 		return txs		
 	
-
 	def pushtx_bytes(self,txbytes):
 		#TODO: error handling
 		data={"rawtx":hexlify(txbytes)}

@@ -37,6 +37,9 @@ class BlockchainInterface(object):
 		self.coin=coin
 		self.retries=retries
 
+	def sendraw(self,rawtx):
+		raise NotImplementedError
+
 	def transactions(self,addressiter,*args,**kwargs):
 		raise NotImplementedError
 

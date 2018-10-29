@@ -37,9 +37,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def format_privkey(self,privkey):
 		oarray=bytearray()
-		oarray+=self.wif_prefix
+		oarray+=bytearray([self.wif_prefix])
 		oarray+=privkey.privkeydata
-		oarray+=(b'\x01' if privkey.is_compressed else b'')
+		oarray+=bytearray([0x01] if privkey.is_compressed else [])
 		return _base.bytes2base58c(oarray)
 
 	#https://www.cryptocompare.com/coins/guides/what-are-the-bitcoin-STransaction-types/
@@ -183,6 +183,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			txo.dsts[-1].iamount=change_iamount #set the appended change amount to the leftover minus the fee
 	
 		self.verify_tx(txo)
+
 		return txo
 
 	def is_src_fully_authorized(self,tx,index):   #TODO This could almost certainly be implemented better by checking the sig and pubkey to see if they verify (verify signatures)

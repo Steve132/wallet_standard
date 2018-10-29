@@ -181,7 +181,7 @@ class STransaction(object):
 		self.ins=ins
 		self.outs=outs
 		self.locktime=locktime
-		self.enforce_deterministic_ordering(False)
+		#self.enforce_deterministic_ordering()
 
 	@staticmethod
 	def _sc_serialize(txo):
@@ -248,10 +248,9 @@ class STransaction(object):
 
 
 	#TODO: does the txid have to be compared backwards here?
-	def enforce_deterministic_ordering(self,doexception=True):
+	def enforce_deterministic_ordering(self): #TODO this isn't implemented correctly.  It can't be implemented correctly with the current API.  Should be a part of buildtx really.
 		if(any([src.has_scriptSig() for src in self.ins])):
-			if(doexception):
-				raise Exception("Some of these inputs are already signed, permuting the transaction ordering could invalidate their signatures.")
+			raise Exception("Some of these inputs are already signed, permuting the transaction ordering would invalidate their signatures.")
 			return
 		
 		def inp_key(inp):
@@ -441,7 +440,6 @@ def legacy_preimage_output(stxo,script,index,input_index,sho):
         else
             ::Serialize(s, txTo.vout[nOutput]);
     }"""
-
 
 
 def legacy_preimage(stxo,script,input_index,nhashtype,amount):

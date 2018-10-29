@@ -8,6 +8,7 @@ import auth
 import itertools
 import mnemonic
 from key import *
+from pprint import pprint
 
 def h(k):
 	return (abs(k) | (0x80000000)) & (0xFFFFFFFF)
@@ -370,6 +371,8 @@ class Bip32Account(account.OnChainAddressSetAccount):
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
 					addrstolookfor.remove(addr)
+
+		
 
 		authorizations=self.coin.signtx(txo,foundkeys)
 		for ref,a in authorizations.items():
