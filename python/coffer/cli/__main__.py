@@ -182,6 +182,7 @@ def cmd_build_tx(w,args):
 		fee=args.fee
 	else:
 		#TODO: estimate fee
+		raise Exception("I don't understand the feerate to use")
 		
 	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.0087)
 	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
