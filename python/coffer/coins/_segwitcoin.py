@@ -62,6 +62,15 @@ class SegwitCoin(SatoshiCoin):
 			return Address(bytearray([78])+unhexlify(addrstring[3:43]),self,{'seg_workaround':True})
 		return super(SegwitCoin,self).parse_addr(addrstring)
 
+	def parse_tx(self,sio):
+		if(isinstance(sio,basestring)):
+			sio=StringIO(unhexlify(sio))
+		return SWitnessTransaction._sc_deserialize(hexlify(sio))
+
+	def txo2internal(self,txo):
+		return SWitnessTransaction.from_txo(txo)
+
+
 	"""def parse_addr(self,addrstring):
 		#handle bech32 addresses...detect either one
 		try:

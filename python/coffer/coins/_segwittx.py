@@ -60,10 +60,60 @@ class SWitnessTransaction(STransaction):
 		locktime=struct.unpack('<L',sio.read(4))[0]
 
 		return SWitnessTransaction(version,flag,ins,outs,witness,locktime)
-	#TODO: from txo that calls coin.signature
+	#TODO: from tx that calls coin.signature
 	def wtxid_hash(self):
 		pass
 
+def segwit_get_prevouthash(stxo):
+	out=bytearray()
+	for inp in stxo.ins:
+		out+=inp.outpoint.serialize()
+
+	return dblsha256(out)
+
+"""template <class T>
+uint256 GetPrevoutHash(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txin : txTo.vin) {
+        ss << txin.prevout;
+    }
+    return ss.GetHash();
+}"""
+
+def segwit_get_sequencehash(stxo):
+	out=bytearray()
+	for inp in stxo.ins:
+		out+=struct.pack('<L',inp.sequence)
+	return dblsha256(out)
+
+"""template <class T>
+uint256 GetSequenceHash(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txin : txTo.vin) {
+        ss << txin.nSequence;
+    }
+    return ss.GetHash();
+}"""
+
+
+def segwit_get_outputshash(stxo):
+	out=bytearray()
+	for outp in stxo.outs:
+		out+=outp.serialize()
+	return dblsha256(out)
+
+"""template <class T>
+uint256 GetOutputsHash(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txout : txTo.vout) {
+        ss << txout;
+    }
+    return ss.GetHash();
+}
+"""
 	
 #TODO: segwit needs the right thing provided in script (redeemscript for p2sh or witness script or scriptPubKey for p2pkh)
 #https://bitcoin.stackexchange.com/questions/57994/what-is-scriptcode
