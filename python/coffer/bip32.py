@@ -189,7 +189,7 @@ def path_join(*pa):
 
 
 
-starpath=0x7FFFFFFF
+starpath=0x7FFFFFE
 PathNum=collections.namedtuple('PathNum', ['value','is_hardened'])
 PathRange=collections.namedtuple('PathRange', ['lower','upper','is_hardened'])
 solidvalre=re.compile(r"(?:(\d+)|\*)([shSH']?)",re.UNICODE)
@@ -256,7 +256,7 @@ def paths(pathstring,maxaddrs=1000000):
 
 	def subpath_iterable(subpath):
 		def subrange_iterable(subrange):
-			return itertools.imap(lambda p: str(p)+('h' if subrange.is_hardened else ''),xrange(subrange.lower.value,subrange.upper.value+1))
+                       return itertools.imap(lambda p: str(p)+('h' if subrange.is_hardened else ''),xrange(subrange.lower.value,subrange.upper.value+1))
 		return itertools.chain.from_iterable([subrange_iterable(sr) for sr in subpath])
 	def subpath_size(subpath):
 		return sum([sr.upper.value-sr.lower.value for sr in subpath])
@@ -277,6 +277,7 @@ def paths(pathstring,maxaddrs=1000000):
 	if(infinite_subpathi is not None):
 		isubpath=subpaths[infinite_subpathi]
 		subpaths=subpaths[:infinite_subpathi]+subpaths[infinite_subpathi+1:]
+		
 		infiter=subpath_iterable(isubpath)
 
 	totalsize=1

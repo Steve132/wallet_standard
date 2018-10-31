@@ -27,10 +27,10 @@ class GroupedWallet(Mapping):
 
 	def add_account(self,groupname,account):
 		aid=account.id()
-		if(aid in self.account2group):
+		if(aid in self.account2group and self.account2group[aid]!=groupname):
 			raise Exception("Error, account %r is already in group %s" % (account,self.account2group[aid]))
-		if(aid in self._accounts):
-			raise Exception("Error, account %r is already in the GroupedWallet" % (account))
+		#if(aid in self._accounts):
+		#	raise Exception("Error, account %r is already in the GroupedWallet" % (account))
 
 		self._accounts[aid]=account
 		self.account2group[aid]=groupname

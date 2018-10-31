@@ -1,0 +1,152 @@
+#https://bitcoincore.org/en/segwit_wallet_dev/
+class SWitnessTransaction(STransaction):
+	def __init__(version,flag,ins,outs,witness,locktime):
+		super(SWitnessTransaction,self).__init__(version,ins,outs,locktime)
+		self.flag=flag
+		self.witness=witness
+
+	def serialize(self):
+		txo=self
+
+		#if(not isinstance(txo,SWitnessTransaction) and isinstance(txo,STransaction)):
+		#	return STransaction._sc_serialize(txo)
+
+		out=bytearray()
+		out+=struct.pack('<L',txo.version)
+		out+=b'\x00'
+		out+=struct.pack('B',txo.flag)
+
+		out+=SVarInt(len(txo.ins)).serialize()
+		for inv in txo.ins:
+			out+=inv.serialize()
+
+		out+=SVarInt(len(txo.outs)).serialize()
+		for ot in txo.outs:
+			out+=ot.serialize()
+
+		if(len(txo.witness) != len(txo.ins)):
+			raise Exception("Witness data not the same length as number of inputs")
+		for wit in txo.witness:		#load witness data
+			out+=SVarInt(len(wit)).serialize()
+			for wititem in wit:
+				out+=SVarInt(len(wititem)).serialize()
+				out+=wititem #TODO: .serialize()
+				
+		out+=struct.pack('<L',txo.locktime)
+		return out
+
+	@staticmethod
+	def _sc_deserialize(sio):
+		version=struct.unpack('<L',sio.read(4))[0]
+		num_ins=SVarInt._sc_deserialize(sio)
+		if(num_ins!=0):	#this is not a witness transaction
+			return STransaction._sc_deserialize(StringIO(sio.getvalue()))
+		flag=ord(sio.read(1))
+	
+		num_ins=SVarInt._sc_deserialize(sio)
+		ins=[SInput._sc_deserialize(sio) for k in range(num_ins)]
+		num_outs=SVarInt._sc_deserialize(sio)
+		outs=[SOutput._sc_deserialize(sio) for k in range(num_outs)]
+		
+		witness=[]
+		for _ in range(num_ins):
+			num_wititems=SVarInt._sc_deserialize(sio)
+			wititems=[]
+			for _ in range(num_wititems):
+				witsize=SVarInt._sc_deserialize(sio)
+				wititmes.append(sio.read(witsize))
+			witness.append(wititems)
+
+		locktime=struct.unpack('<L',sio.read(4))[0]
+
+		return SWitnessTransaction(version,flag,ins,outs,witness,locktime)
+	#TODO: from txo that calls coin.signature
+	def wtxid_hash(self):
+		pass
+
+	
+#TODO: segwit needs the right thing provided in script (redeemscript for p2sh or witness script or scriptPubKey for p2pkh)
+#https://bitcoin.stackexchange.com/questions/57994/what-is-scriptcode
+def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
+	sho=SigHashOptions(sho)
+	hashPrevouts=b'\x00'*32
+	hashSequence=b'\x00'*32
+	hashOutputs=b'\x00'*32
+	nhashtype=int(nhashtype)
+	if(nhashtype < 0):
+		nhashtype+=1 << 32
+
+	"""if (sigversion == SigVersion::WITNESS_V0) {
+		    uint256 hashPrevouts;
+		    uint256 hashSequence;
+		    uint256 hashOutputs;
+		    const bool cacheready = cache && cache->ready;
+
+		    if (!(nHashType & SIGHASH_ANYONECANPAY)) {
+		        hashPrevouts = cacheready ? cache->hashPrevouts : GetPrevoutHash(txTo);
+		    }
+
+		    if (!(nHashType & SIGHASH_ANYONECANPAY) && (nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {
+		        hashSequence = cacheready ? cache->hashSequence : GetSequenceHash(txTo);
+		    }
+
+
+		    if ((nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {
+		        hashOutputs = cacheready ? cache->hashOutputs : GetOutputsHash(txTo);
+		    } else if ((nHashType & 0x1f) == SIGHASH_SINGLE && nIn < txTo.vout.size()) {
+		        CHashWriter ss(SER_GETHASH, 0);
+		        ss << txTo.vout[nIn];
+		        hashOutputs = ss.GetHash();
+		    }"""
+	
+	if(not sho.anyonecanpay):
+		hashPrevouts=segwit_get_prevouthash(stxo)
+		
+	if(not sho.anyonecanpay and sho.mode != SIGHASH_NONE and sho.mode != SIGHASH_SINGLE):
+		hashSequence=segwit_get_sequencehash(stxo)
+
+	if(sho.mode != SIGHASH_SINGLE and sho.mode != SIGHASH_NONE):
+		hashOutputs=segwit_get_outputshash(stxo)
+	elif(sho.mode == SIGHASH_SINGLE and input_index < len(stxo.ins)):
+		hashOutputs=dblsha256(stxo.outs[input_index].serialize())
+
+	"""
+        CHashWriter ss(SER_GETHASH, 0);
+        // Version
+        ss << txTo.nVersion;
+        // Input prevouts/nSequence (none/all, depending on flags)
+        ss << hashPrevouts;
+        ss << hashSequence;
+        // The input being signed (replacing the scriptSig with scriptCode + amount)
+        // The prevout may already be contained in hashPrevout, and the nSequence
+        // may already be contain in hashSequence.
+        ss << txTo.vin[nIn].prevout;
+        ss << scriptCode;
+        ss << amount;
+        ss << txTo.vin[nIn].nSequence;
+        // Outputs (none/one/all, depending on flags)
+        ss << hashOutputs;
+        // Locktime
+        ss << txTo.nLockTime;
+        // Sighash type
+        ss << nHashType;
+
+        return ss.GetHash();"""
+
+	out=bytearray()
+	out+=struct.pack('<L',stxo.version)
+	out+=hashPrevouts
+	out+=hashSequence
+	out+=stxo.ins[input_index].outpoint.serialize()
+	out+=script
+	if(amount is None):
+		a=stxo.ins[input_index].prevout.value
+	else:
+		a=int(amount)
+	out+=struct.pack('<Q',a)
+	out+=struct.pack('<L',stxo.ins[input_index].sequence)
+	out+=hashOutputs;
+	out+=struct.pack('<L',stxo.locktime)
+	out+=sho.to_byte()
+	return out
+	

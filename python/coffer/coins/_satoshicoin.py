@@ -64,8 +64,11 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		return STransaction._sc_deserialize(hexlify(sio))
 
 	def format_tx(self,txo):
-		stxo=STransaction.from_txo(txo)
-		return hexlify(STransaction._sc_serialize(stxo))
+		stxo=self.txo2internal(txo)
+		return hexlify(stxo.serialize())
+
+	def txo2internal(self,txo):
+		return STransaction.from_txo(txo)
 
 
 	#########PUBKEYS, ADDRESSES, and SIGNING
@@ -124,7 +127,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
 	#this is a part of a coin, NOT a chain
 	def signtx(self,tx,addr2keys):
-		satoshitxo=STransaction.from_txo(tx)
+		satoshitxo=self.txo2internal(tx)
 		outauthorizations={}
 
 		for addr,klist in addr2keys.items():
@@ -145,8 +148,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	def sign_msg(self,msg,privkey):
 		preimage=bytearray()
-		preimage+=SVarInt._sc_serialize(len(self.sig_prefix))+self.sig_prefix
-		preimage+=SVarInt._sc_serialize(len(msg))+bytearray(msg)
+		preimage+=SVarInt(len(self.sig_prefix)).serialize()+self.sig_prefix
+		preimage+=SVarInt(len(msg)).serialize()+bytearray(msg)
 		sighash=_base.dblsha256(preimage)
 		return privkey.sign(sighash,use_der=False)
 
@@ -214,7 +217,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	##########################blockchain stuff
 
 	def estimate_fee(self,txo,fee_amount_per_byte,estimate_after_signatures=True):
-		satoshitxo=STransaction.from_txo(txo)
+		satoshitxo=self.txo2internal(txo)
 		#TODO: do this differently for a segwit transaction
 		estimated_post_sig_bytes=0
 		if(estimate_after_signatures):
@@ -223,6 +226,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			estimated_post_sig_bytes=num_unsigned_sigs*bytes_per_signature
 		txbytes=len(unhexlify(self.format_tx(txo)))
 		return (txbytes+estimated_post_sig_bytes)*fee_amount_per_byte
+
+
 
 
 	"""
