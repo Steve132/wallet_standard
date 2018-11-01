@@ -24,7 +24,7 @@ class ETH(_coin.Coin):
 		khash.update(tv)
 		hx=khash.hexdigest()
 		addr=hx[-40:]
-		return Address(unhexlify(addr),self,format_kwargs={'checksum_case':True})
+		return Address(unhexlify(addr),self,'ethaddr',format_kwargs={'checksum_case':True})
 
 	def parse_addr(self,addrstring,ignore_checksum=False):
 		pkshex=addrstring
@@ -38,7 +38,7 @@ class ETH(_coin.Coin):
 			o='0x'+pkshex
 			if(o != _keccak.checksum_encode(byts)):
 				raise Exception("'%s' did not pass the ETH case-based checksum" % (o))
-		return Address(byts,self,format_kwargs={'checksum_case':True})
+		return Address(byts,self,'ethaddr',format_kwargs={'checksum_case':True})
 
 	def format_addr(self,addr,checksum_case=True,*args,**kwargs):
 		return _keccak.checksum_encode(addr.addrdata)

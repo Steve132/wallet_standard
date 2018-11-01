@@ -64,8 +64,11 @@ class SWitnessTransaction(STransaction):
 
 		return SWitnessTransaction(version,flag,ins,outs,witness,locktime)
 	#TODO: from tx that calls coin.signature
+
+	def txid_hash(self):
+		return dblsha256(super(SWitnessTransaction,self).serialize())
 	def wtxid_hash(self):
-		pass
+		return dblsha256(self.serialize())
 
 def segwit_get_prevouthash(stxo):
 	out=bytearray()

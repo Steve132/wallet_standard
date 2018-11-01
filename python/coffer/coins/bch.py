@@ -37,9 +37,11 @@ class BCH(SatoshiCoin,ForkMixin):
 	def parse_cashaddr(self,addrstring):
 		prefix,version_int,payload=_cashaddr.decode(addrstring)
 		addrversions=[self.pkh_prefix,self.sh_prefix]
+		addrtypes=["p2pkh","p2sh"]
+		addrtype=addrtypes[version_int]
 		addrversion=addrversions[version_int]
 	
-		return Address(bytes(chr(addrversion))+payload,self,format_kwargs={'cashaddr':True,'prefix':prefix})
+		return Address(bytes(chr(addrversion))+payload,self,addrtype,format_kwargs={'cashaddr':True,'prefix':prefix})
 	
 	def _write_cashaddr(self,abytes,prefix=None):
 		tprefix=prefix
@@ -48,7 +50,6 @@ class BCH(SatoshiCoin,ForkMixin):
 				tprefix='bchtest'
 			else:
 				tprefix='bitcoincash'
-	
 			
 		addrpayload=abytes[1:]
 		addrversion=abytes[0]
@@ -72,7 +73,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			return self.parse_cashaddr(addrstring)
 		except Exception as caerr:
 			try:
-				return Address(_base.base58c2bytes(addrstring),self,format_kwargs={'cashaddr':False,'prefix':None})
+				return super(BCH,self).parse_addr(self,addrstring)
 			except Exception as err:
 				raise Exception("Could not parse BCH address %s: %r,%r" % (addrstring,err,caerr))
 
@@ -106,6 +107,11 @@ class BCH(SatoshiCoin,ForkMixin):
 
 	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_FORKID|_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
 		return super(BCH,self).authorize_index(stxo,index,addr,redeem_param,nhashtype)
+
+
+
+
+
 
 def bitcoincash_sighash(stxo,input_index,nhashtype,script=None,amount=None,forkIdValue=0):
 	nhashtype|=_satoshitx.SIGHASH_FORKID

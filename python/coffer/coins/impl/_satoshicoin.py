@@ -19,6 +19,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		self.pkh_prefix=pkh_prefix
 		self.sh_prefix=sh_prefix
 		self.sig_prefix=sig_prefix
+		self._p2ps_prefix=0xFF		#USE this for an internal representation of a p2ps address
 
 	######INHERITED METHODS
 	@property
@@ -27,14 +28,22 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	######PARSING AND FORMATTING
 	def format_addr(self,addr,*args,**kwargs):
-		if('p2ps' in kwargs):
+		if(ord(addr.adddrdata[0])==self._p2ps_prefix):
 			return 'p2ps_'+hexlify(addr.addrdata[1:])
 		return _base.bytes2base58c(addr.addrdata)
 
 	def parse_addr(self,addrstring):
 		if(addrstring[:5]=='p2ps_'):
-			return Address(bytearray([0xFF])+unhexlify(addrstring[5:]),self,{'p2ps':True})
-		return Address(_base.base58c2bytes(addrstring),self)
+			return Address(bytearray([self._p2ps_prefix])+unhexlify(addrstring[5:]),self,'p2ps')
+		byt=_base.base58c2bytes(addrstring)
+		v=ord(byt[0])
+		if(v==self.pkh_prefix):
+			addrtype='p2sh'
+		elif(v==self.sh_prefix):
+			addrtype='p2pkh'
+		else:
+			addrtype='unknown_'
+		return Address(byt,self,addrtype)
 
 	def format_privkey(self,privkey):
 		oarray=bytearray()
@@ -80,7 +89,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			raise NotImplementedError
 		else:
 			h160=_base.hash160(pubkeys[0].pubkeydata)
-			return Address(chr(self.pkh_prefix)+h160,self,format_args=args,format_kwargs=kwargs)
+			return Address(chr(self.pkh_prefix)+h160,self,'p2pkh',format_args=args,format_kwargs=kwargs)
 
 	def address2scriptPubKey(self,addr):
 		version=ord(addr.addrdata[0])
@@ -93,13 +102,21 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
 			return bytearray([OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUAL])
+		elif(version=self._p2ps_prefix):
+			return bytearray([])+addrbytes
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
-	def scriptPubKey2address(self,addr):
-		#this is useful to determine segwit addresses and other nonstandard address type from a script_pubkey
-		raise NotImplementedError
+	def scriptPubKey2address(self,scriptPubKey):
+		spk=scriptPubKey
+		if((spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
+			return Address(chr(self.pkh_prefix)+spk[3:23],self,'p2pkh')
+		if((spk[0],spk[22])==(OP_HASH160,OP_EQUAL)):
+			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
+		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
+			
+		
 
 	def authorization2scriptSig(self,authorization,src):
 		pklist=authorization.get('pubs',[])

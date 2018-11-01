@@ -262,7 +262,7 @@ class STransaction(object):
 		self.outs.sort(key=outp_key)
 
 	def txid_hash(self):
-		pass
+		return dblsha256(self.serialize())
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
 	newscript=bytearray([x for x in script if x != _satoshiscript.OP_CODESEPARATOR])
