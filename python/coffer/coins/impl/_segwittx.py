@@ -1,3 +1,6 @@
+from _satoshitx import *
+import struct
+
 #https://bitcoincore.org/en/segwit_wallet_dev/
 class SWitnessTransaction(STransaction):
 	def __init__(version,flag,ins,outs,witness,locktime):

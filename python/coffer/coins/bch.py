@@ -1,12 +1,14 @@
 from ..wallet import *
 from _coin import *
-from _satoshicoin import *
+
 from .. import _base
-import _cashaddr
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
-import _satoshitx
-import _segwittx
+
+from impl._satoshicoin import *
+import impl._cashaddr as _cashaddr
+import impl._satoshitx as _satoshitx
+import impl._segwittx as _segwittx
 
 class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False):

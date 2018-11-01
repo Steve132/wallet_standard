@@ -4,10 +4,9 @@ from ..transaction import *
 from .. import bip32
 from binascii import hexlify,unhexlify
 from ..lib.index import IndexBase
-from _slip44 import lookups as slip44table
-#todo change this to own bip32 as an object
 from collections import namedtuple
 from ..chain import Chain,Denomination
+from impl._slip44 import lookups as slip44table
 
 class ForkMixin(object):
 	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD'])

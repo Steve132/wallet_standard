@@ -7,7 +7,7 @@ from .. import _base
 from ..transaction import *
 import _coin
 from binascii import hexlify,unhexlify
-import _keccak
+import impl._keccak as _keccak
 
 class ETH(_coin.Coin):
 	def __init__(self,is_testnet=False):

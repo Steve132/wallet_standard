@@ -1,11 +1,11 @@
 import struct
-from _coin import *
-from ..wallet import *
+from .._coin import *
+from coffer.wallet import *
 from cStringIO import StringIO
 from binascii import hexlify,unhexlify
 from _satoshiscript import *
-from .. import _base
-from ..transaction import *
+import coffer._base as _base
+from coffer.transaction import *
 from _satoshitx import STransaction,SVarInt
 import logging
 

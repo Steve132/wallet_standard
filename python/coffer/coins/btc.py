@@ -1,9 +1,10 @@
 from ..wallet import *
 from _coin import *
-from _segwitcoin import *
 from ..bip32 import Bip32
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
+
+from impl._segwitcoin import *
 
 class BTC(SegwitCoin):
 	def __init__(self,is_testnet=False):

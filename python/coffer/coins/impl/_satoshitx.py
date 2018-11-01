@@ -2,8 +2,7 @@ import struct
 from binascii import hexlify,unhexlify
 from cStringIO import StringIO
 import _satoshiscript
-import coffer._crypto
-from .._base import dblsha256
+from coffer._base import dblsha256
 import coffer.transaction as transaction
 
 #https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
