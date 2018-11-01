@@ -2,7 +2,7 @@ from _interface import *
 from binascii import hexlify,unhexlify
 from ...transaction import *
 from ...key import Address
-
+from coffer.lib.make_request import make_json_request as mjr
 from pprint import pprint
 
 def _mkpid(txid,n):
@@ -47,19 +47,21 @@ def _lazygetval(coin,vs):
 		logging.warning("Detected a transaction input or output without a value!")
 		return None
 
-def _json2tx(coin,jtx):
+def _json2tx(httpi,coin,jtx):
 	sigs={}
 	txid=jtx['txid']
 	inputs=[None]*len(jtx['vin'])
 	for jsin in jtx['vin']:
 		spenttx=TransactionReference(coin.ticker,txid)
 		
-		
 		#TODO: fix implementation of detecting segwit addresses from insight!
 		#if addr=None hash the 
 		if('addr' not in jsin or jsin['addr'] is None):
-			logging.warning("The address is probably a segwit address which insight and coffer cannot handle at the moment.  This address is a workaround")
-			addr=coin.parse_addr("seg"+jsin['txid'][:40])
+			logging.warning("The address is probably a segwit address which insight and coffer cannot handle at the moment.  Trying to get the scriptPubKey")
+			newjs=httpi.make_json_request('GET','/tx/%s' % (jsin['txid']))
+			oidx=int(jsin['vout'])
+			spkh=newjs['vout'][oidx]['scriptPubKey']['hex']
+			addr=coin.scriptPubKey2address(bytearray()+unhexlify(spkh))
 		else:
 			addr=coin.parse_addr(jsin['addr'])  #insight doesn't support pure segwit transactions or weird transaction types sometimes the address cannot be parsed from the scriptPubKey..so insight bugs out here.
 												#really long term the solution is to rely on electrum servers for this and get rid of insight and parse the address from the raw transactions
@@ -92,9 +94,9 @@ def _json2tx(coin,jtx):
 			pmeta['legacy_multisig']=True
 			logging.warning("Detected a legacy multisig payment!")
 		if(len(detectaddr) < 1):
-			pmeta['no_addr']=True
-			logging.warning("Could not detect an address for a txout")
-			detectaddr=['p2ps_'+pubkey]
+			#pmeta['no_addr']=True
+			#logging.warning("Could not detect an address for a txout")
+			detectaddr=[coin.scriptPubKey2address(bytearray()+unhexlify(pubkey))]
 		haddr=detectaddr[0]
 		addr=None if haddr is None else coin.parse_addr(haddr)
 		#pprint(jsout)
@@ -139,6 +141,8 @@ def _json2tx(coin,jtx):
 		meta=tmeta)
 
 	return tx
+
+
 	
 default_gap=20
 class InsightBlockchainInterface(HttpBlockchainInterface):
@@ -183,7 +187,7 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 			for sp in kkk:
 				#logging.warning(kkk)
 				done=False
-				txo=_json2tx(self.coin,sp)
+				txo=_json2tx(self,self.coin,sp)
 				#print(txo)
 				txs[txo.ref]=txo
 
@@ -196,6 +200,12 @@ class InsightBlockchainInterface(HttpBlockchainInterface):
 		#TODO: error handling
 		data={"rawtx":hexlify(txbytes)}
 		return self.make_json_request('POST','/tx/send',data)
+
+
+
+
+
+	
 
 
 """
