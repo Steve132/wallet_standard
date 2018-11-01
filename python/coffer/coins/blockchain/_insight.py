@@ -141,8 +141,6 @@ def _json2tx(httpi,coin,jtx):
 		meta=tmeta)
 
 	return tx
-
-
 	
 default_gap=20
 class InsightBlockchainInterface(HttpBlockchainInterface):
