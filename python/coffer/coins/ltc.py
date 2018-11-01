@@ -6,17 +6,6 @@ from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
 
 
-
-_settings_table=[
-	(False,False,0x0488ADE4,0x0488B21E),
-	(False,True,0x019d9cfe,0x019da462),
-	(True,False,0x04358394,0x043587CF),
-	(True,True,0x0436ef7d,0x0436f6e1)
-]
-_priv_table={v[2]:v for v in _settings_table}
-_pub_table={v[3]:v for v in _settings_table}
-_s_table={(v[0],v[1]):v for v in _settings_table}
-
 class LTC(SegwitCoin):
 	def __init__(self,is_testnet=False):
 		#https://github.com/litecoin-project/litecoin/blob/master/src/chainparams.cpp#L238
@@ -40,12 +29,34 @@ class LTC(SegwitCoin):
 			sig_prefix=sig_prefix,
 			bech32_prefix=bech32_prefix)
 
-	def _load_bip32_settings(self,prefix_private=None,prefix_public=None,use_ltpub=True):
+	def load_bip32_settings(self,prefix_private=None,prefix_public=None,use_ltpub=True,segwit=False,p2wsh=False,bech32=False,embed_in_legacy=False,*args,**kwargs):
+		entry=None
+		if(not use_ltpub):
+			return super(LTC,self).load_bip32_settings(prefix_private,prefix_public,p2wsh=p2wsh,*args,**kwargs)
+
+		if(p2wsh):
+			raise Exception("There is no ltpub version prefix defined for p2wsh prefixes in litecoin")
+
+		if(self.is_testnet):
+			if(segwit):
+				raise Exception("There is no ltpub version prefix defined for segwit prefixes in litecoin testnet")
+			elif(prefix_private==0x0436ef7d or prefix_public==0x0436f6e1 or (prefix_private,prefix_public)==(None,None)):
+				return Bip32Settings(prefix_private=0x0436ef7d,prefix_public=0x0436f6e1,use_ltpub=True,segwit=False,p2wsh=p2wsh,*args,**kwargs)
+		else:
+			if(not segwit):
+				if(prefix_private==0x019d9cfe or prefix_public==0x019da462 or (prefix_private,prefix_public)==(None,None)):
+					return Bip32Settings(prefix_private=0x019d9cfe,prefix_public=0x019da462,use_ltpub=True,segwit=False,embed_in_legacy=False,bech32=False,*args,**kwargs)
+			elif(bech32):
+				raise Exception("There is no ltpub version prefix defined for bech32 segwit prefixes in litecoin")
+			elif(prefix_private==0x01b26792 or prefix_public==0x01b26ef6 or (prefix_private,prefix_public)==(None,None)):
+				return Bip32Settings(prefix_private=0x01b26792,prefix_public=0x01b26ef6,use_ltpub=True,segwit=False,bech32=False,embed_in_legacy=True,p2wsh=p2wsh,*args,**kwargs)
+		
+		return super(LTC,self).load_bip32_settings(prefix_private,prefix_public,p2wsh=p2wsh,*args,**kwargs)
+				
+		if(self.is_testnet):
+			if(use_ltpub		
 		if(prefix_private is not None):
-			priv_e=_priv_table.get(prefix_private,None)
-			if(priv_e is None or priv_e[0] != self.is_testnet):
-				raise Exception("Private Prefix %X does not match any expected prefix for coin %s" % (prefix_private,self.ticker))
-			return Bip32Settings(priv_e[2],priv_e[3],use_ltpub=priv_e[1])
+			if(
 		if(prefix_public is not None):
 			pub_e=_pub_table.get(prefix_public,None)
 			if(pub_e is None or pub_e[0] != self.is_testnet):
@@ -53,12 +64,6 @@ class LTC(SegwitCoin):
 			return Bip32Settings(pub_e[2],pub_e[3],use_ltpub=pub_e[1])
 		s_e=_s_table[(self.is_testnet,self.use_ltpub)]
 		return Bip32Settings(s_e[2],s_e[3],use_ltpub=s_e[1])
-		
-
-		#TODO ALL SEGWIT STUFF: segwit=False,embed_in_legacy=True,bech32=False,use_ltpub=False
-
-	
-
 
 	def blockchain(self,*args,**kwargs):
 		subcoins=[]

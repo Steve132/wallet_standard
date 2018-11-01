@@ -160,6 +160,12 @@ class Bip32(object):
 			xkey=ExtendedKey(xkey)
 		return xkey
 
+
+
+
+
+
+
 import re,itertools,collections
 #this represents a security bug of a sort.  It has to.  Because you can pass 0-20320301h to a path.  And 0-200202321h to a path.
 #you could stop it with a warning error message but it's some kind of security problem without a threshold.  Even low thresholds would be a target for multiple paths.

@@ -35,6 +35,50 @@ class SegwitCoin(SatoshiCoin):
 		if(len(frozenset([sh_prefix,pkh_prefix]) & frozenset([self._b142p2wpkh_prefix,self._b142p2wsh_prefix])) > 0):
 			raise Exception("The chosen prefix %X for this coin conflicts with internal bip142 representation")
 
+	###########################addresses and prefixes
+	_segwit_b32_table_main={
+			0x049d7cb2:(0x049d7878,True,False),				  #Pub:(Priv,Embed_in_legacy,WSH (multisig?))
+			0x04b24746:(0x04b2430c,False,False),
+			0x0295b43f:(0x0295b005,True,True),
+			0x02aa7ed3:(0x02aa7a99,False,True)}
+	_segwit_b32_table_test={
+			0x043587cf:(0x044a4e28,True,False),				  #Pub:(Priv,Embed_in_legacy,WSH (multisig?))
+			0x044a5262:(0x024285b5,False,False),
+			0x024289ef:(0x045f18bc,True,True),
+			0x02575483:(0x02575048,False,True)}
+	#https://github.com/satoshilabs/slips/blob/master/slip-0132.md
+	def load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,segwit=False,embed_in_legacy=False,p2wsh=False,bech32=False,**kwargs):
+		if(not segwit):
+			return super(SegwitCoin,self).load_bip32_settings(prefix_private,prefix_public,*args,segwit=segwit,embed_in_legacy=embed_in_legacy,p2wsh=p2wsh,bech32=bech32,**kwargs)
+
+		table=_segwit_b32_table_main if not self.is_testnet else _segwit_b32_table_test
+		entry=None
+		if(prefix_public is not None):
+			if(prefix_public in table):
+				entry=table[prefix_public]
+		else:
+			if(prefix_private is not None):
+				for k,v in table.items():
+					if(v[0]==prefix_private):
+						entry=e
+			else:
+				if(embed_in_legacy == bech32):
+					logging.warning("bech32 and embed_in_legacy are mutually exclusive unless you are incorrectly seeking bip142 support.  If segwit is enabled the correct value has been selected based on the bech32 setting")
+					if(not bech32):
+						bech32=True
+					else:
+						embed_in_legacy=False
+
+				for k,v in table.items():
+					if(v[1]==embed_in_legacy and v[2]==p2wsh):	#if both relevant flags are true
+						entry=e
+				
+		if(entry is None):
+			return super(SegwitCoin,self).load_bip32_settings(prefix_private,prefix_public,*args,segwit=segwit,embed_in_legacy=embed_in_legacy,p2wsh=p2wsh,bech32=bech32,**kwargs)
+		else:
+			return Bip32Settings(*args,prefix_private=entry[1],prefix_public=entry[0],segwit=True,embed_in_legacy=entry[2],bech32=bech32,p2wsh=entry[3],**kwargs)
+
+
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
 	def pubkeys2addr(self,pubkeys,segwit=False,bech32=False,embed_in_legacy=True):
 		multisig=len(pubkeys) > 1

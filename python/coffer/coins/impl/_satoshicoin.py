@@ -82,6 +82,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 	#########PUBKEYS, ADDRESSES, and SIGNING
 
+
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
 	def pubkeys2addr(self,pubkeys,*args,**kwargs):
 		multisig=len(pubkeys) > 1
