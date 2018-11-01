@@ -46,6 +46,7 @@ class SegwitCoin(SatoshiCoin):
 				pass #TODO IMPLEMENT THIS
 			else:#P2WPKH
 				pass #TODO IMPLEMENT THIS"""
+
 	#def pubkeys2addr(self,pubkeys,*args,**kwargs):
 	#	if(bech32):
 	#		raise NotImplementedError
@@ -86,3 +87,14 @@ class SegwitCoin(SatoshiCoin):
 		if(hasattr(stxo,'witness')):
 			return _segwittx.segwit_sighash(stxo,index,nhashtype)
 		return _satoshitx.legacy_sighash(stxo,index,nhashtype)
+
+
+
+
+
+
+def bip173_encode(self,prefix,payload):
+	pass
+
+def bip173_decode(self,prefix,payload):
+	pass
