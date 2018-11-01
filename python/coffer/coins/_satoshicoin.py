@@ -122,27 +122,50 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 
 	#################BUILDING AND SIGNING
-		
-	#addr2keys is a mapping from an address to a privkey or (list of privkeys for signing an on-chain transaction
-	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
-	#this is a part of a coin, NOT a chain
-	def signtx(self,tx,addr2keys):
-		satoshitxo=self.txo2internal(tx)
-		outauthorizations={}
 
-		for addr,klist in addr2keys.items():
-			naddr=addr
-			if(isinstance(naddr,basestring)):
-				naddr=self.parse_addr(naddr)
-			
+	def _sighash(self,stxo,index,nhashtype):
+		return legacy_sighash(stxo,index,nhashtype)
+
+	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
+		version=ord(src.address.addrdata[0])
+		if(version==self.pkh_prefix):
+			siglist=[]
+			pklist=[]
 			if(isinstance(klist,basestring)):
 				klist=[self.parse_privkey(privkey)]
 			elif(isinstance(klist,PrivateKey)):
 				klist=[klist]
 
+			for key in klist:
+				sighash=self._sighash(stxo,index,nhashtype)
+				signature=key.sign(sighash,use_der=True)
+				signature+=chr(int(nhashtype) & 0xFF)
+				signature=hexlify(signature)
+				pubkey=hexlify(key.pub().pubkeydata)
+				siglist.append(signature)
+				pklist.append(pubkey)
+			authorization={'sigs':siglist,'pubs':pklist}
+			return authorization
+		else:
+			raise NotImplementedError
+
+
+	#addr2keys is a mapping from an address to a privkey or (list of privkeys for signing an on-chain transaction, or a redeem_param (multisig p2sh, or just p2sh)
+
+	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
+	#this is a part of a coin, NOT a chain
+	def sign_tx(self,tx,addr2redeem):
+		satoshitxo=self.txo2internal(tx)
+		outauthorizations={}
+
+		for addr,redeem_param in addr2keys.items():
+			naddr=addr
+			if(isinstance(naddr,basestring)):
+				naddr=self.parse_addr(naddr)
+			
 			for index,inp in enumerate(satoshitxo.ins):
 				if(self.address2scriptPubKey(naddr)==inp.prevout.scriptPubKey):
-					outauthorizations[inp.outpoint.to_outref(self.chainid)]=satoshitxo.signature_authorization(index,klist) #TODO multiple address authorizations?  That's weird/wrong
+					outauthorizations[inp.outpoint.to_outref(self.chainid)]=self.authorize_index(satoshitxo,index,addr,redeem_param) #TODO multiple address authorizations?  That's weird/wrong
 
 		return outauthorizations
 
@@ -211,6 +234,8 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		az=tx.authorizations[src.ref]
 		if('sigs' in az and 'pubs' in az and len(az['sigs']) > 0 and len(az['pubs']) > 0):
 			return True
+
+		#TODO: check signatures
 
 		return False
 		

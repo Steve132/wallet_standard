@@ -80,3 +80,9 @@ class SegwitCoin(SatoshiCoin):
 
 	def signature2witness(self,signature):
 		raise NotImplementedError
+	########SIGNING AND BUILDING
+
+	def _sighash(self,stxo,index,nhashtype):
+		if(hasattr(stxo,'witness')):
+			return _segwittx.segwit_sighash(stxo,index,nhashtype)
+		return _satoshitx.legacy_sighash(stxo,index,nhashtype)

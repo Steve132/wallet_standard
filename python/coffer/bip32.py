@@ -375,7 +375,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 
 		
 
-		authorizations=self.coin.signtx(txo,foundkeys)
+		authorizations=self.coin.sign_tx(txo,foundkeys)
 		for ref,a in authorizations.items():
 			if(a is not None):
 				txo.authorizations[ref]=a

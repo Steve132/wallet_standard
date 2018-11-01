@@ -5,6 +5,7 @@ from .. import _base
 import _cashaddr
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
+import _satoshitx
 
 class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False):
@@ -92,6 +93,24 @@ class BCH(SatoshiCoin,ForkMixin):
 		insights=[InsightBlockchainInterface(self,insighturls)]
 		subcoins.extend(insights)
 		return MultiBlockchainInterface(self,subcoins).select()
-
-
 	
+
+	def _sighash(self,stxo,index,nhashtype):
+		if(nhashtype & _satoshitx.SIGHASH_FORKID):
+			return bitcoincash_sighash(stxo,index,nhashtype,forkIdValue=0)
+		else:
+			return super(BCH,self)._sighash(self,stxo,index,nhashtype)
+
+	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_FORKID|_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
+		return super(BCH,self).authorize_index(stxo,index,addr,redeem_param,nhashtype)
+
+def bitcoincash_sighash(stxo,input_index,nhashtype,script=None,amount=None,forkIdValue=0):
+	nhashtype|=_satoshitx.SIGHASH_FORKID
+	nhashtype|= (forkIdValue & 0xFFFFFF) << 8;
+	if(script is None):
+		script=stxo.ins[input_index].prevout.scriptPubKey		#TODO: is this correct?  script seems to be the redeemScript for p2sh and other stuff 
+
+	preimage=_segwittx.segwit_preimage(stxo,script,input_index,nhashtype,amount)
+	return dblsha256(preimage)
+
+

@@ -18,7 +18,6 @@ SIGHASH_ALL=0x00000001
 SIGHASH_NONE=0x00000002
 SIGHASH_SINGLE=0x00000003
 SIGHASH_FORKID=0x00000040
-
 sighash_null_value=0xFFFFFFFFFFFFFFFF
 class SigHashOptions(object):
 	def __init__(self,nHashTypeInt):
@@ -265,27 +264,6 @@ class STransaction(object):
 
 	def txid_hash(self):
 		pass
-	
-	def signature_authorization(self,index,klist,nhashtype=SIGHASH_ALL): #TODO get from coin of inputs.
-		sho=SigHashOptions(nhashtype)
-		siglist=[]
-		pklist=[]
-		for key in klist:
-			sighash=legacy_sighash(self,index,nhashtype)
-			signature=key.sign(sighash,use_der=True)
-			signature+=chr(int(nhashtype) & 0xFF)
-			signature=hexlify(signature)
-			pubkey=hexlify(key.pub().pubkeydata)
-			siglist.append(signature)
-			pklist.append(pubkey)
-		authorization={'sigs':siglist,'pubs':pklist}
-		return authorization
-
-	def validate_values(self):
-		total_input=sum([inp.prevout.value for inp in self.ins])
-		total_output=sum([outp.value for outp in self.outs])
-		if(total_output > total_input):
-			raise Exception("Transaction spends more than is input")
 
 def legacy_preimage_scriptcode(stxo,script,input_index,sho):
 	newscript=bytearray([x for x in script if x != _satoshiscript.OP_CODESEPARATOR])

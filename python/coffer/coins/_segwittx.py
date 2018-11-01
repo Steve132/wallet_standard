@@ -118,13 +118,12 @@ uint256 GetOutputsHash(const T& txTo)
 #TODO: segwit needs the right thing provided in script (redeemscript for p2sh or witness script or scriptPubKey for p2pkh)
 #https://bitcoin.stackexchange.com/questions/57994/what-is-scriptcode
 def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
-	sho=SigHashOptions(sho)
 	hashPrevouts=b'\x00'*32
 	hashSequence=b'\x00'*32
 	hashOutputs=b'\x00'*32
 	nhashtype=int(nhashtype)
-	if(nhashtype < 0):
-		nhashtype+=1 << 32
+	
+	sho=SigHashOptions(nhashtype)
 
 	"""if (sigversion == SigVersion::WITNESS_V0) {
 		    uint256 hashPrevouts;
@@ -197,6 +196,11 @@ def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
 	out+=struct.pack('<L',stxo.ins[input_index].sequence)
 	out+=hashOutputs;
 	out+=struct.pack('<L',stxo.locktime)
-	out+=sho.to_byte()
+	out+=struct.pack('<L',sho.nhashtype)
 	return out
 	
+def segwit_sighash(stxo,input_index,nhashtype,script=None,amount=None):
+	if(script is None):
+		script=stxo.ins[input_index].prevout.scriptPubKey		#TODO: is this correct?  script seems to be the redeemScript for p2wsh and other stuff 
+	preimage=segwit_preimage(stxo,script,input_index,nhashtype,amount)
+	return dblsha256(preimage)
