@@ -6,6 +6,7 @@ import _cashaddr
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface
 import _satoshitx
+import _segwittx
 
 class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False):
