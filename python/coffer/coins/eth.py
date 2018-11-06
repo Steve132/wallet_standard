@@ -43,12 +43,6 @@ class ETH(_coin.Coin):
 	def format_addr(self,addr,checksum_case=True,*args,**kwargs):
 		return _keccak.checksum_encode(addr.addrdata)
 
-	def parse_privkey(self,pkstring):
-		return super(ETH,self).parse_privkey(pkstring)
-
-	def format_privkey(self,privkey):
-		return super(ETH,self).format_privkey(privkey)
-
 	def parse_tx(self,txstring):
 		raise NotImplementedError
 
@@ -59,9 +53,28 @@ class ETH(_coin.Coin):
 	def denomination_scale(self):
 		return 1000000000000000000.0
 
-	def signtx(self,tx,privkeys):
+	########### BUILD AND SIGN
+
+	#privkeys is a mapping from an address to a list of privkeys for signing an on-chain transaction
+	#returns a dictionary mapping to an authorization (can be directly stored later)
+	#this is a part of a coin, NOT a chain
+	def sign_tx(self,tx,privkeys):
 		raise NotImplementedError
 
+	def build_tx(self,unspents,outputs,changeaddr,fee=None,feerate=None):
+		raise NotImplementedError
+
+	def is_src_fully_authorized(self,tx,index):
+		raise NotImplementedError
+
+	##########  BLOCKCHAIN STUFF
 	def blockchain(self,*args,**kwargs):
 		raise Exception("Could not find a suitable block-explorer interface instance for '%s'" % (self.ticker))
+
+	def estimate_fee(self,txo,fee_amount_per_byte=None):
+		raise NotImplementedError
+
+
+
+
 		

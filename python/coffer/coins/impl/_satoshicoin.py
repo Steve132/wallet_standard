@@ -9,7 +9,7 @@ from coffer.transaction import *
 from _satoshitx import STransaction,SVarInt
 import logging
 
-class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
+class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 		super(SatoshiCoin,self).__init__(
 			ticker=ticker,
@@ -116,6 +116,9 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 		if((spk[0],spk[22])==(OP_HASH160,OP_EQUAL)):
 			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
 		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
+
+	def script2addr(self,scriptData,*args,**kwargs):
+		raise NotImplementedError
 			
 		
 
@@ -144,7 +147,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 	def _sighash(self,stxo,index,nhashtype):
 		return legacy_sighash(stxo,index,nhashtype)
 
-	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
+	def _authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
 		version=ord(src.address.addrdata[0])
 		if(version==self.pkh_prefix):
 			siglist=[]
@@ -169,7 +172,6 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 
 
 	#addr2keys is a mapping from an address to a privkey or (list of privkeys for signing an on-chain transaction, or a redeem_param (multisig p2sh, or just p2sh)
-
 	#returns a dictionary mapping the src ref to an authorization (an authorization is always a dictionary but in this case is a signature,pubkey pair) (can be directly stored later)
 	#this is a part of a coin, NOT a chain
 	def sign_tx(self,tx,addr2redeem):
@@ -183,7 +185,7 @@ class SatoshiCoin(Coin): #a coin with code based on satoshi's codebase
 			
 			for index,inp in enumerate(satoshitxo.ins):
 				if(self.address2scriptPubKey(naddr)==inp.prevout.scriptPubKey):
-					outauthorizations[inp.outpoint.to_outref(self.chainid)]=self.authorize_index(satoshitxo,index,addr,redeem_param) #TODO multiple address authorizations?  That's weird/wrong
+					outauthorizations[inp.outpoint.to_outref(self.chainid)]=self._authorize_index(satoshitxo,index,addr,redeem_param) #TODO multiple address authorizations?  That's weird/wrong
 
 		return outauthorizations
 

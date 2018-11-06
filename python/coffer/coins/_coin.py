@@ -13,6 +13,16 @@ class ForkMixin(object):
 	def fork_info(self):
 		raise NotImplementedError
 
+class ScriptableMixin(object):
+	def assembleScript(self,scriptAsm):
+		raise NotImplementedError
+	def disassembleScript(self,scriptBytes):
+		raise NotImplementedError
+	def script2addr(self,scriptData,*args,**kwargs):
+		raise NotImplementedError
+	def addr2script(self,addr,*args,**kwargs):
+		raise NotImplementedError
+
 class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def __init__(self,ticker,is_testnet):
 		super(Coin,self).__init__()

@@ -187,3 +187,8 @@ class SegwitCoin(SatoshiCoin):
 			return _segwittx.segwit_sighash(stxo,index,nhashtype)
 		return _satoshitx.legacy_sighash(stxo,index,nhashtype)
 
+	self._authorize_index(satoshitxo,index,addr,redeem_param) #TODO multiple address authorizations?  That's weird/wrong
+		if(hasattr(satoshitxo,'witness')):
+			raise Exception("Segwit signing not implemented yet")
+		return super(SegwitCoin,self)._authorize_index(satoshitxo,index,addr,redeem_param)
+
