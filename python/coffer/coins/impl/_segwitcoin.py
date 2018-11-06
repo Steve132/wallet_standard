@@ -137,7 +137,7 @@ class SegwitCoin(SatoshiCoin):
 
 		return Address(bytearay([wvb142,witversion,0])+witprogram,wtype,self,format_kwargs={'bech32':True})
 
-	def scriptPubKey2addressess(self,scriptPubKey):
+	def scriptPubKey2address(self,scriptPubKey):
 		spk=scriptPubKey
 		if(spk[0]==OP_0 or (spk[0]>=OP_1 and spk[0] <= OP_16)):
 			wversion=0 if spk[0]==OP_0 else (1+(spk[0]-OP_1))
@@ -145,7 +145,7 @@ class SegwitCoin(SatoshiCoin):
 			wdata=scriptPubKey[2:(2+wdatalen)]
 			return self._address_from_wdata(wversion,wdata)
 
-		return super(SegwitCoin,self).scriptPubKey2addressess(scriptPubKey)
+		return super(SegwitCoin,self).scriptPubKey2address(scriptPubKey)
 
 	#############parsing and formatting
 	def format_addr(self,addr,*args,**kwargs):

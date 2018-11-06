@@ -109,7 +109,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
-	def scriptPubKey2addressess(self,scriptPubKey):
+	def scriptPubKey2address(self,scriptPubKey):
 		spk=scriptPubKey
 		if((spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
 			return Address(chr(self.pkh_prefix)+spk[3:23],self,'p2pkh')
@@ -117,11 +117,12 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
 		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
 
-	def script2address(self,scriptData,*args,**kwargs):
+	def script2address(self,redeemScript=None,scriptPubKey=None,*args,**kwargs):
+		if(redeemScript is None and scriptPubKey is None):
+			raise Exception("No script specified, must specify a script either redeemScript (p2sh) or a scriptPubKey for the output")
+		
 		raise NotImplementedError
 			
-		
-
 	def authorization2scriptSig(self,authorization,src):
 		pklist=authorization.get('pubs',[])
 		siglist=authorization.get('sigs',[])
