@@ -322,12 +322,12 @@ class XPubAddressSet(account.AddressSet):
 		for p in paths(self.path):
 			yield self.coin.descend(self.xpub,p)
 
-	def xpub2addr(self,vpub):
-		return self.coin.pubkeys2addr([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
+	def xpub2address(self,vpub):
+		return self.coin.pubkeys2address([vpub.key()],*self.settings.pkargs,**self.settings.pkkwargs)
 
 	def __iter__(self):
 		for vpub in self.xpub_iter():
-			yield self.xpub2addr(vpub)
+			yield self.xpub2address(vpub)
 
 
 class Bip32Account(account.OnChainAddressSetAccount):
@@ -374,7 +374,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 			numsearched+=1
 			for p in iep:
 				privkey=self.coin.descend(b32a.xpriv,p).key()
-				addr=self.coin.pubkeys2addr([privkey.pub()],*self.bip32args,**self.bip32kwargs)
+				addr=self.coin.pubkeys2address([privkey.pub()],*self.bip32args,**self.bip32kwargs)
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
 					addrstolookfor.remove(addr)

@@ -84,7 +84,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 
 
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
+	def pubkeys2address(self,pubkeys,*args,**kwargs):
 		multisig=len(pubkeys) > 1
 		if(multisig):  #P2SH multisig
 			raise NotImplementedError
@@ -109,7 +109,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
-	def scriptPubKey2address(self,scriptPubKey):
+	def scriptPubKey2addressess(self,scriptPubKey):
 		spk=scriptPubKey
 		if((spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
 			return Address(chr(self.pkh_prefix)+spk[3:23],self,'p2pkh')
@@ -117,7 +117,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
 		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
 
-	def script2addr(self,scriptData,*args,**kwargs):
+	def script2address(self,scriptData,*args,**kwargs):
 		raise NotImplementedError
 			
 		

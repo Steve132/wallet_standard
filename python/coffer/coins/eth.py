@@ -13,7 +13,7 @@ class ETH(_coin.Coin):
 	def __init__(self,is_testnet=False):
 		super(ETH,self).__init__(ticker='ETH',is_testnet=is_testnet) 
 	
-	def pubkeys2addr(self,pubkeys,*args,**kwargs):
+	def pubkeys2address(self,pubkeys,*args,**kwargs):
 		if(len(pubkeys) > 1):
 			raise NotImplementedError("TODO: ETH implementation doesn't support multiple pubkeys")
 		khash=_keccak.Keccak256()

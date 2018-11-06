@@ -61,7 +61,7 @@ def _json2tx(httpi,coin,jtx):
 			newjs=httpi.make_json_request('GET','/tx/%s' % (jsin['txid']))
 			oidx=int(jsin['vout'])
 			spkh=newjs['vout'][oidx]['scriptPubKey']['hex']
-			addr=coin.scriptPubKey2address(bytearray()+unhexlify(spkh))
+			addr=coin.scriptPubKey2addressess(bytearray()+unhexlify(spkh))
 		else:
 			addr=coin.parse_addr(jsin['addr'])  #insight doesn't support pure segwit transactions or weird transaction types sometimes the address cannot be parsed from the scriptPubKey..so insight bugs out here.
 												#really long term the solution is to rely on electrum servers for this and get rid of insight and parse the address from the raw transactions
@@ -96,7 +96,7 @@ def _json2tx(httpi,coin,jtx):
 		if(len(detectaddr) < 1):
 			#pmeta['no_addr']=True
 			#logging.warning("Could not detect an address for a txout")
-			detectaddr=[coin.scriptPubKey2address(bytearray()+unhexlify(pubkey))]
+			detectaddr=[coin.scriptPubKey2addressess(bytearray()+unhexlify(pubkey))]
 		haddr=detectaddr[0]
 		addr=None if haddr is None else coin.parse_addr(haddr)
 		#pprint(jsout)

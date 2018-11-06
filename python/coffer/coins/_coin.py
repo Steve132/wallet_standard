@@ -18,7 +18,7 @@ class ScriptableMixin(object):
 		raise NotImplementedError
 	def disassembleScript(self,scriptBytes):
 		raise NotImplementedError
-	def script2addr(self,scriptData,*args,**kwargs):
+	def script2address(self,scriptData,*args,**kwargs):
 		raise NotImplementedError
 	def addr2script(self,addr,*args,**kwargs):
 		raise NotImplementedError
@@ -123,7 +123,7 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 
 
 	###### BUILD AND SIGN
-	def pubkeys2addr(self,pubkeys,xpub=None,*args,**kwargs):
+	def pubkeys2address(self,pubkeys,xpub=None,*args,**kwargs):
 		raise NotImplementedError
 
 

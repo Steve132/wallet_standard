@@ -20,5 +20,5 @@ xpub=""
 for k,p in zip(range(100),paths("*/0-1")):
 	print(p)
 	pubkey=btc1.descend(xpub,p).key()
-	addr=btc1.pubkeys2addr([pubkey])
+	addr=btc1.pubkeys2address([pubkey])
 	print(k,addr)

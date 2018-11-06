@@ -262,7 +262,7 @@ def pubkey2segwith160(p):
     s = pubkey2h160(p, 1)
     return hash160("\x00\x14" + s)
     
-def pubkey2addr(p, compressed):
+def pubkey2address(p, compressed):
     s = pubkey2h160(p, compressed)
     return b58encode("\x00" + s)
     

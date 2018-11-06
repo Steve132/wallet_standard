@@ -80,12 +80,12 @@ class SegwitCoin(SatoshiCoin):
 
 
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
-	def pubkeys2addr(self,pubkeys,segwit=False,bech32=False,embed_in_legacy=True):
+	def pubkeys2address(self,pubkeys,segwit=False,bech32=False,embed_in_legacy=True):
 		multisig=len(pubkeys) > 1
 		if(multisig):
 			raise NotImplementedError
 		if(not segwit):
-			return super(SegwitCoin,self).pubkeys2addr(pubkeys)
+			return super(SegwitCoin,self).pubkeys2address(pubkeys)
 
 		if(not embed_in_legacy and not bech32):
 			raise Exception("if embed_in_legacy is false and bech32 is false, that implies you are trying to activate BIP142 mode, which is deprecated")
@@ -137,7 +137,7 @@ class SegwitCoin(SatoshiCoin):
 
 		return Address(bytearay([wvb142,witversion,0])+witprogram,wtype,self,format_kwargs={'bech32':True})
 
-	def scriptPubKey2address(self,scriptPubKey):
+	def scriptPubKey2addressess(self,scriptPubKey):
 		spk=scriptPubKey
 		if(spk[0]==OP_0 or (spk[0]>=OP_1 and spk[0] <= OP_16)):
 			wversion=0 if spk[0]==OP_0 else (1+(spk[0]-OP_1))
@@ -145,7 +145,7 @@ class SegwitCoin(SatoshiCoin):
 			wdata=scriptPubKey[2:(2+wdatalen)]
 			return self._address_from_wdata(wversion,wdata)
 
-		return super(SegwitCoin,self).scriptPubKey2address(scriptPubKey)
+		return super(SegwitCoin,self).scriptPubKey2addressess(scriptPubKey)
 
 	#############parsing and formatting
 	def format_addr(self,addr,*args,**kwargs):
