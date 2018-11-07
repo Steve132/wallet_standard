@@ -7,11 +7,14 @@ def classes():
 		from .bch import BCH
 		from .ltc import LTC
 		from .eth import ETH
+		from .btg import BTG
 
-		lclasses={'BTC':BTC,
+		lclasses={
+			 'BTC':BTC,
 			 'BCH':BCH,
 			 'LTC':LTC,
-			 'ETH':ETH			
+			 'ETH':ETH,
+			 'BTG':BTG	
 		}
 		_all_classes=lclasses
 

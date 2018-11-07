@@ -120,7 +120,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 	def script2address(self,redeemScript=None,scriptPubKey=None,*args,**kwargs):
 		if(redeemScript is None and scriptPubKey is None):
 			raise Exception("No script specified, must specify a script either redeemScript (p2sh) or a scriptPubKey for the output")
-		
+		#TODO: implement p2sh logic here
 		raise NotImplementedError
 			
 	def authorization2scriptSig(self,authorization,src):

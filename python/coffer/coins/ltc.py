@@ -53,18 +53,6 @@ class LTC(SegwitCoin):
 		
 		return super(LTC,self).load_bip32_settings(prefix_private,prefix_public,p2wsh=p2wsh,*args,**kwargs)
 				
-		if(self.is_testnet):
-			if(use_ltpub		
-		if(prefix_private is not None):
-			if(
-		if(prefix_public is not None):
-			pub_e=_pub_table.get(prefix_public,None)
-			if(pub_e is None or pub_e[0] != self.is_testnet):
-				raise Exception("Private Prefix %X does not match any expected prefix for coin %s" % (prefix_private,self.ticker))
-			return Bip32Settings(pub_e[2],pub_e[3],use_ltpub=pub_e[1])
-		s_e=_s_table[(self.is_testnet,self.use_ltpub)]
-		return Bip32Settings(s_e[2],s_e[3],use_ltpub=s_e[1])
-
 	def blockchain(self,*args,**kwargs):
 		subcoins=[]
 	

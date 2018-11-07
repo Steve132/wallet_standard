@@ -20,7 +20,7 @@ class ScriptableMixin(object):
 		raise NotImplementedError
 	def script2address(self,scriptData,*args,**kwargs):
 		raise NotImplementedError
-	def addr2script(self,addr,*args,**kwargs):
+	def address2script(self,addr,*args,**kwargs):
 		raise NotImplementedError
 
 class Coin(bip32.Bip32,Chain,Denomination,IndexBase):

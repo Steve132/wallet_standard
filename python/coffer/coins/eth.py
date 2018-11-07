@@ -2,12 +2,13 @@
 #curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0x7cB57B5A97eAbe94205C07890BE4c1aD31E486A8", "latest"],"id":1}' https://api.myetherapi.com/eth
 #curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getTransactionCount","params":["0xc94770007dda54cF92009BFF0dE90c06F603a09f","latest"],"id":1}'
 
-from ..key import *
-from .. import _base
-from ..transaction import *
+from coffer.key import *
+import coffer._base as _base
+from coffer.transaction import *
 import _coin
 from binascii import hexlify,unhexlify
 import impl._keccak as _keccak
+import impl._ethtx as _ethtx
 
 class ETH(_coin.Coin):
 	def __init__(self,is_testnet=False):

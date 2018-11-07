@@ -22,7 +22,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			sh_prefix=0xC4
 			wif_prefix=0xEF
 
-		sig_prefix=b'\x18Bitcoin Signed Message:\n'
+		sig_prefix=b'Bitcoin Signed Message:\n'
 		
 		super(BCH,self).__init__('BCH',is_testnet=is_testnet,
 			pkh_prefix=pkh_prefix,

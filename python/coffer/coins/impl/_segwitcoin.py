@@ -69,6 +69,11 @@ class SegwitCoin(SatoshiCoin):
 					else:
 						embed_in_legacy=False
 
+				if(self.bech32_prefix is None):
+					if(embed_in_legacy==False):
+						logging.warning("This coin does not have a valid bech32 prefix defined in slip173, so we can't use bech32 addresses")
+					embed_in_legacy=True
+
 				for k,v in table.items():
 					if(v[1]==embed_in_legacy and v[2]==p2wsh):	#if both relevant flags are true
 						entry=e
