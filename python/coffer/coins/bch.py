@@ -10,6 +10,7 @@ import impl._cashaddr as _cashaddr
 import impl._satoshitx as _satoshitx
 import impl._segwittx as _segwittx
 
+@ForkMixin.fork_decorator
 class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False):
 		
@@ -31,7 +32,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			sig_prefix=sig_prefix)
 
 	def fork_info(self):
-		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558,forkUSD=277.0)
+		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558,forkUSD=277.0,ratio=1.0)
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):
@@ -73,7 +74,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			return self.parse_cashaddr(addrstring)
 		except Exception as caerr:
 			try:
-				return super(BCH,self).parse_addr(self,addrstring)
+				return super(BCH,self).parse_addr(addrstring)
 			except Exception as err:
 				raise Exception("Could not parse BCH address %s: %r,%r" % (addrstring,err,caerr))
 

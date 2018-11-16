@@ -82,7 +82,7 @@ def intlist2bytes(code_list):
     else:
         output = bytearray()
         for code in code_list:
-            output += code
+            output += bytearray([code])
     return bytes(output)
 
 def bytes2intlist(s):

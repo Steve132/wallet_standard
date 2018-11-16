@@ -7,6 +7,8 @@ from bch import bitcoincash_sighash
 
 from impl._segwitcoin import *
 
+
+@ForkMixin.fork_decorator
 class BTG(SegwitCoin,ForkMixin):
 	def __init__(self,is_testnet=False):
 
@@ -30,7 +32,7 @@ class BTG(SegwitCoin,ForkMixin):
 			sig_prefix=sig_prefix,bech32_prefix=bech32_prefix)
 
 	def fork_info(self):
-		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1510493641,height=491407,forkUSD=138.0)
+		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1510493641,height=491407,forkUSD=138.0,ratio=1.0)
 		
 	def blockchain(self,*args,**kwargs):
 		subcoins=[]

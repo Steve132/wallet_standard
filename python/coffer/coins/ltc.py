@@ -1,6 +1,6 @@
 from ..wallet import *
 from _coin import *
-from _segwitcoin import *
+from impl._segwitcoin import *
 from ..bip32 import Bip32,Bip32Settings
 from blockchain._insight import InsightBlockchainInterface
 from blockchain._interface import MultiBlockchainInterface

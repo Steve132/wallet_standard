@@ -9,9 +9,15 @@ from ..chain import Chain,Denomination
 from impl._slip44 import lookups as slip44table
 
 class ForkMixin(object):
-	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD'])
+	ForkInfo=namedtuple('ForkInfo',['ticker','timestamp','height','forkUSD','ratio'])
+	allforks=set()
 	def fork_info(self):
 		raise NotImplementedError
+	
+	@staticmethod
+	def fork_decorator(cls):
+		allforks.add(cls)
+		return cls
 
 class ScriptableMixin(object):
 	def assembleScript(self,scriptAsm):

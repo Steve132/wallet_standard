@@ -6,7 +6,7 @@ from binascii import hexlify,unhexlify
 from _satoshiscript import *
 import coffer._base as _base
 from coffer.transaction import *
-from _satoshitx import STransaction,SVarInt
+from _satoshitx import STransaction,SVarInt,SIGHASH_ALL
 import logging
 
 class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's codebase
@@ -28,7 +28,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 
 	######PARSING AND FORMATTING
 	def format_addr(self,addr,*args,**kwargs):
-		if(ord(addr.adddrdata[0])==self._p2ps_prefix):
+		if(ord(addr.addrdata[0])==self._p2ps_prefix):
 			return 'p2ps_'+hexlify(addr.addrdata[1:])
 		return _base.bytes2base58c(addr.addrdata)
 
@@ -103,7 +103,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
 			return bytearray([OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUAL])
-		elif(version=self._p2ps_prefix):
+		elif(version==self._p2ps_prefix):
 			return bytearray([])+addrbytes
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
@@ -148,7 +148,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 	def _sighash(self,stxo,index,nhashtype):
 		return legacy_sighash(stxo,index,nhashtype)
 
-	def _authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
+	def _authorize_index(self,stxo,index,addr,redeem_param,nhashtype=SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
 		version=ord(src.address.addrdata[0])
 		if(version==self.pkh_prefix):
 			siglist=[]

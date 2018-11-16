@@ -1,9 +1,8 @@
 from _satoshicoin import *
 from _satoshiscript import *
 import coffer._base as _base
+import _segwitaddr
 
-def parsebech32(addrstring):
-	raise NotImplementedError
 	
 #https://github.com/satoshilabs/slips/blob/master/slip-0132.md
 
@@ -47,7 +46,7 @@ class SegwitCoin(SatoshiCoin):
 			0x024289ef:(0x045f18bc,True,True),
 			0x02575483:(0x02575048,False,True)}
 	#https://github.com/satoshilabs/slips/blob/master/slip-0132.md
-	def load_bip32_settings(self,prefix_private=None,prefix_public=None,*args,segwit=False,embed_in_legacy=False,p2wsh=False,bech32=False,**kwargs):
+	def load_bip32_settings(self,prefix_private=None,prefix_public=None,segwit=False,embed_in_legacy=False,p2wsh=False,bech32=False,*args,**kwargs):
 		if(not segwit):
 			return super(SegwitCoin,self).load_bip32_settings(prefix_private,prefix_public,*args,segwit=segwit,embed_in_legacy=embed_in_legacy,p2wsh=p2wsh,bech32=bech32,**kwargs)
 
@@ -85,7 +84,7 @@ class SegwitCoin(SatoshiCoin):
 
 
 	#https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#p2wpkh
-	def pubkeys2address(self,pubkeys,segwit=False,bech32=False,embed_in_legacy=True):
+	def pubkeys2address(self,pubkeys,segwit=False,bech32=False,p2wsh=False,embed_in_legacy=True):
 		multisig=len(pubkeys) > 1
 		if(multisig):
 			raise NotImplementedError
@@ -155,7 +154,7 @@ class SegwitCoin(SatoshiCoin):
 	#############parsing and formatting
 	def format_addr(self,addr,*args,**kwargs):
 		v=ord(addr.addrdata[0])
-		if(v in [self._b142p2wpkh_prefix,self._b142p2pkh_prefix,self._p2uw_prefix]):
+		if(v in [self._b142p2wpkh_prefix,self._b142p2wsh_prefix,self._p2uw_prefix]):
 			if(not addr.get('bech32',False)):
 				logging.warning("Youve requested to format a segwit address without bech32.  This is specified in bip142, which is DEPRECATED!")
 				return _base.bytes2base58c(addr.addrdata)
@@ -192,7 +191,7 @@ class SegwitCoin(SatoshiCoin):
 			return _segwittx.segwit_sighash(stxo,index,nhashtype)
 		return _satoshitx.legacy_sighash(stxo,index,nhashtype)
 
-	self._authorize_index(satoshitxo,index,addr,redeem_param) #TODO multiple address authorizations?  That's weird/wrong
+	def _authorize_index(self,satoshitxo,index,addr,redeem_param): #TODO multiple address authorizations?  That's weird/wrong
 		if(hasattr(satoshitxo,'witness')):
 			raise Exception("Segwit signing not implemented yet")
 		return super(SegwitCoin,self)._authorize_index(satoshitxo,index,addr,redeem_param)

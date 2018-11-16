@@ -3,7 +3,7 @@
 #https://ethereum.github.io/yellowpaper/paper.pdf
 #https://lsongnotes.wordpress.com/2018/01/14/signing-an-ethereum-transaction-the-hard-way/
 
-https://github.com/ethereum/wiki/wiki/RLP
+#https://github.com/ethereum/wiki/wiki/RLP
 def rlp_encode(inp):
     if isinstance(inp,str):
         if len(inp) == 1 and ord(inp) < 0x80: return inp
