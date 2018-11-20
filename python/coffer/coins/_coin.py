@@ -16,7 +16,7 @@ class ForkMixin(object):
 	
 	@staticmethod
 	def fork_decorator(cls):
-		allforks.add(cls)
+		ForkMixin.allforks.add(cls)
 		return cls
 
 class ScriptableMixin(object):

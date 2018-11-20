@@ -1,5 +1,6 @@
 import mnemonic
 import account
+from lib.index import UuidBase
 from binascii import unhexlify,hexlify
 
 
@@ -10,7 +11,7 @@ class OfflineAuthMixin(object):
 	pass
 
 #TODO: Refactor this to be 'Authorizer' or 'Credentials'
-class Auth(object):
+class Auth(UuidBase):
 	def __init__(self,refname):
 		self.refname=refname
 	
@@ -26,6 +27,9 @@ class OnChainAddressSetAuth(Auth,OfflineAuthMixin):
 class PrivateKeySetAuth(OnChainAddressSetAuth):
 	def __init__(self,keys=[]):
 		self.keys=[PrivateKey(k) for k in keys]
+
+	def _reftuple(self):
+		return (frozenset(self.keys))
 
 
 

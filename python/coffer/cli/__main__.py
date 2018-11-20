@@ -97,8 +97,12 @@ def cmd_balance(w,args):
 def cmd_sync(w,args):
 	gwiter=subwalletitems(w,args.chain,args.group)
 	for gname,aid,acc in gwiter:
-		logging.info("Attempting to sync account %s..." % (_build_prefix(gname,aid,acc)))
-		acc.sync(retries=args.retries,targets=args.sync_targets)
+		pref=_build_prefix(gname,aid,acc)
+		logging.info("Attempting to sync account %s..." % (pref))
+		try:
+			acc.sync(retries=args.retries,targets=args.sync_targets)
+		except Exception as e:
+			logging.warning("Failed to sync account %s...%r" % (pref,e))
 
 #TODO: this needs to be refactored to not be a part of the gui
 #URGENT TODO:Accounts need to have a way to specify the change address desired for the account beyond just the first one in the list
@@ -107,13 +111,14 @@ def cmd_add_account_auth(w,args):
 	for p in args.paths:
 		coin=fromticker(p.ticker)
 		for subauth in allauths:
+			auth_id=subauth.id()
 			if(p.pa is not None):
-				acc=subauth.to_account(coin,authref=args.authname,root=p.pa)
+				acc=subauth.to_account(coin,authid=auth_id,root=p.pa)
 				w.add_account(groupname=args.group,account=acc)
 			else:
-				for cov in _stdbip32.coverage(coin,args):
+				for cov in _stdbip32.coverage(coin,args.accounts,'broad'):
 					label,path,internal_path,external_path,b32args,b32kwargs=cov
-					acc=subauth.to_account(coin,authref=args.authname,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
+					acc=subauth.to_account(coin,authid=auth_id,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
 					acc.label=label
 					w.add_account(groupname=args.group,account=acc)
 
@@ -233,7 +238,7 @@ def cmd_crypt(w,args):
 	pass
 
 def cmd_ext(w,args):
-	args.func_ext(w,args)  /insight-api/tx/send
+	args.func_ext(w,args)
 
 if __name__=='__main__':
 
@@ -254,7 +259,6 @@ if __name__=='__main__':
 
 	auth_parser=argparse.ArgumentParser(description="Account Authorization Options",add_help=False)
 	auth_parser.add_argument('--auth_file','-a',help="Auth file",required=True,type=argparse.FileType('r'))
-	auth_parser.add_argument('--authname','-an',help="Auth name",default='default',type=str)
 	auth_parser.add_argument('--mnemonic_passphrase',help="The bip39 passphrase for a bip39 mnemonic (default none)",type=str)
 
 	parser=argparse.ArgumentParser(description='The Coffer standalone CLI wallet tool')
@@ -275,7 +279,7 @@ if __name__=='__main__':
 	add_account_auth_parser.add_argument('--group','-g',help="The wallet group(s) to add the account to",default='main')
 	add_account_auth_parser.add_argument('paths',nargs='+',help="A series of paths,each in the form <chain>:[/root/path]",type=PathType)
 	add_account_auth_parser.add_argument('--coverage',help="the coverage algorithm for pathless chains",type=str,default='broad')
-	add_account_auth_parser.add_argument('--num_accounts',help="The number of accounts to check for a bip32 wallet (default1)",type=int,default=1)
+	add_account_auth_parser.add_argument('--account_numbers','-n',nargs='+',help="The numbers of accounts to check for a bip32 wallet (default0)",type=int,default=0)
 	#add_account_auth.add_argument('--store','-s',action="store_true",help="Save encrypted private key for the account to file")
 	add_account_auth_parser.set_defaults(func=cmd_add_account_auth)
 

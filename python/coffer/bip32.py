@@ -405,6 +405,9 @@ class Bip32SeedAuth(auth.Auth):
 		b32a=b32a.descend(root)
 		return b32a.to_account(coin,internal_path=internal_path,external_path=external_path,authref=authref,*bip32args,**bip32kwargs)
 
+	def _reftuple(self):
+		return (hash(self.seed))
+
 class Bip32Auth(auth.Auth):
 	def __init__(self,coin,xpriv,root=None,bip32_settings=None,*bip32args,**bip32kwargs):
 		self.coin=coin
@@ -422,6 +425,9 @@ class Bip32Auth(auth.Auth):
 
 	def descend(self,directory):
 		return Bip32Auth(coin=self.coin,xpriv=self.coin.descend(self.xpriv,directory),root=path_join(self.root,directory),bip32_settings=self.bip32_settings)
+
+	def _reftuple(self):
+		return (self.xpriv)
 		
 #TODO: there should be a new standard that simply does this https://github.com/satoshilabs/slips/blob/master/slip-0032.md
 #TODO: http://docs.electrum.org/en/latest/transactions.html include bip32 derivation if possible (is it possible? 2*k bytes for the root makes no sense THE CODE SAYS ITS A BUG)

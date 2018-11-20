@@ -51,7 +51,7 @@ class CliAccount(object):
 			coin=coins.fromticker(ctick)
 			wa=bip32.Bip32Account(coin,
 				root=dic['root'],
-				authref=dic['authref'],
+				authref=dic.get('authref',None),
 				internal_path=dic['internal_path'],
 				external_path=dic['external_path'],
 				xkey=dic['xpub'],
@@ -153,6 +153,7 @@ class CliWallet(GroupedWallet):
 	def _write_accountgroup_arc(self,group_aids,fn,arc):
 		g=[self[ak] for ak in group_aids]
 		data=CliAccountGroup.to_dict(g)
+		data=sorted(data,key=lambda gitem: (gitem['root'],gitem['chain']))
 		arc.writestr(fn,json.dumps(data,indent=4,sort_keys=True))
 
 	def _add_metadata_file(self,gn,ext,fo):

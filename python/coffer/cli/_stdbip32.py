@@ -1,6 +1,8 @@
-def coverage(coin,args):
-	if(args.coverage!='broad'):
+def coverage(coin,accounts=[0],algorithm='broad'):
+	if(algorithm!='broad'):
 		raise Exception("Unknown wallet coverage algorithm")
+	if(isinstance(accounts,int)):
+		accounts=[accounts]
 
 	
 	#bitcoind core (https://github.com/bitcoin/bitcoin/pull/8035)
@@ -10,7 +12,7 @@ def coverage(coin,args):
 
 	unhardened=coin.bip44_id-0x80000000
 	#https://github.com/ConsenSys/eth-lightwallet/issues/80	
-	for accdex in range(args.num_accounts): 	
+	for accdex in accounts: 	
 		#COIN bip44 account
 		yield "bip44 (account %d)" % accdex,"m/44h/%dh/%dh" % (unhardened,accdex),"1/*","0/*",[],{}
 		#BTC bip44 account (this is just really common.  E.g. electrum
