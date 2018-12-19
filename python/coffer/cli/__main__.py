@@ -16,6 +16,7 @@ from coffer.transaction import Output,Transaction
 from coffer.ticker import get_current_price
 from coffer.lib import appdirs
 import coffer.ext.cli as extm
+from cliwallet import subwalletitems
 
 
 #this is a synced balance	
@@ -48,14 +49,7 @@ def _build_prefix(gname,aid,acc):
 	prefix="%s/%s/%s(%s)" % (gname,tick,aid[:8],acc.label)
 	return prefix
 
-def subwalletitems(wallet,selchains,selgroups):
-	selgroups=frozenset([x.lower() for x in selgroups])
-	selchains=frozenset([x.lower() for x in selchains])
-	for aid,acc in wallet.items():
-		gname=wallet.account2group[aid]
-		if(len(selgroups)==0 or gname in selgroups):
-			if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
-				yield gname,aid,acc
+
 
 def cmd_balance(w,args):
 	gwiter=subwalletitems(w,args.chain,args.group)
@@ -321,7 +315,7 @@ if __name__=='__main__':
 	ext_parser=subparsers.add_parser('ext',help="Run an extension plugin command",parents=[wallet_parser])
 	extsubparsers=ext_parser.add_subparsers(title='ext',description="EXT DESCRIPTION",dest="ext_command",help="EXT HELP")
 	ext_parser.set_defaults(func=cmd_ext)
-	extm.load_cli_exts_subparsers(extsubparsers,parents_available={'wallet_parser':wallet_parser,'peraccount_parser':peraccount_parser})
+	extm.load_cli_exts_subparsers(extsubparsers,parents_available={'wallet_parser':wallet_parser,'peraccount_parser':peraccount_parser,'auth_parser':auth_parser})
 
 	args=parser.parse_args()
 

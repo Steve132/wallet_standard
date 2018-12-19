@@ -9,6 +9,11 @@ from coffer.transaction import *
 from _satoshitx import STransaction,SVarInt,SIGHASH_ALL
 import logging
 
+
+#TODO: Refactor Address to be object oriented.  Because that's really the underlying problem here.  The different address types each do different things and the coin parses and formats each one.
+#there should be internal implementations for each one...this is really object oriented.  FOR NOW just implement p2sh and refactor later.
+
+
 class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
 		super(SatoshiCoin,self).__init__(
@@ -117,46 +122,71 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
 		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
 
-	def script2address(self,redeemScript=None,scriptPubKey=None,*args,**kwargs):
-		if(redeemScript is None and scriptPubKey is None):
-			raise Exception("No script specified, must specify a script either redeemScript (p2sh) or a scriptPubKey for the output")
-		#TODO: implement p2sh logic here
-		raise NotImplementedError
-			
+	def script2scriptPubKey(self,redeemScript,p2ps=False):
+		if(p2ps):
+			return redeemScript
+		else:
+			scriptHash=_base.hash160(redeemScript)
+			scriptPubKey=bytearray([OP_HASH160,20])+scriptHash
+			scriptPubKey+=bytearray([OP_EQUAL])
+			return scriptPubKey
+
+	def script2address(self,redeemScript=None,p2ps=False,*args,**kwargs):
+		sPK=self.script2scriptPubKey(redeemScript=redeemScript,p2ps,*args,**kwargs)
+		return self.scriptPubKey2address(sPK,*args,**kwargs)
+
+	#def _authorization2redeemScript(self
+
 	def authorization2scriptSig(self,authorization,src):
+		version=ord(src.address.addrdata[0])	
+
 		pklist=authorization.get('pubs',[])
 		siglist=authorization.get('sigs',[])
+			
 		multisig=len(pklist) > 1 or len(siglist) > 1
-		if(multisig):
-			raise NotImplementedError
-		version=ord(src.address.addrdata[0])
-		if(version!=self.pkh_prefix):
-			raise NotImplementedError
-		sig0=unhexlify(siglist[0])
-		pk0=unhexlify(pklist[0])
-		
-		out=bytearray()
-		out+=bytearray([len(sig0)])
-		out+=sig0
-		out+=bytearray([len(pk0)])
-		out+=pk0
-		return out
 
+		if(version==self.pkh_prefix):
+			if(multisig):
+				raise Exception("p2pkh addresses never have multisig")
+			sig0=unhexlify(siglist[0])
+			pk0=unhexlify(pklist[0])
+		
+			out=bytearray()
+			out+=bytearray([len(sig0)])
+			out+=sig0
+			out+=bytearray([len(pk0)])
+			out+=pk0
+			return out
+
+		if(version==self.sh_prefix):				
+			if(multisig):
+				raise NotImplementedError #p2sh multisig TODO
+			##if(
+			
+		if(version==self.p2ps_prefix):
+			if(multisig):
+				raise NotImplementedError #bare multisig TODO  #https://bitcoin.org/en/glossary/multisig
+			return authorization.get('inputs',bytearray())
+	
+		raise NotImplementedError
+		
 
 	#################BUILDING AND SIGNING
 
 	def _sighash(self,stxo,index,nhashtype):
 		return legacy_sighash(stxo,index,nhashtype)
 
+	#TODO refactor all of this
+
 	def _authorize_index(self,stxo,index,addr,redeem_param,nhashtype=SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
 		version=ord(src.address.addrdata[0])
 		if(version==self.pkh_prefix):
 			siglist=[]
 			pklist=[]
-			if(isinstance(klist,basestring)):
+			if(isinstance(redeem_param,basestring)):
 				klist=[self.parse_privkey(privkey)]
-			elif(isinstance(klist,PrivateKey)):
-				klist=[klist]
+			elif(isinstance(redeem_param,PrivateKey)):
+				klist=[redeem_param]
 
 			for key in klist:
 				sighash=self._sighash(stxo,index,nhashtype)

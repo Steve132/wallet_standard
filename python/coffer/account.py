@@ -13,7 +13,6 @@ try:
 except:
 	from collections.abc import Iterable
 
-
 class AddressSet(Iterable):
 	def __init__(self,coin):
 		self.coin=coin
@@ -156,3 +155,4 @@ class OnChainAddressSetAccount(Account):
 
 	def authtx(self,txo,auth,maxsearch=1000):
 		raise NotImplementedError	
+

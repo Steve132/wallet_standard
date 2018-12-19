@@ -42,6 +42,15 @@ class GroupedWallet(Mapping):
 		return iter(self._accounts)
 	def __len__(self):
 		return len(self._accounts)
+	
+	def subwalletitems(self,selchains,selgroups):
+		selgroups=frozenset([x.lower() for x in selgroups])
+		selchains=frozenset([x.lower() for x in selchains])
+		for aid,acc in self.items():
+			gname=self.account2group[aid]
+			if(len(selgroups)==0 or gname in selgroups):
+				if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
+					yield gname,aid,acc
 
 class CliAccount(object):
 	@staticmethod
@@ -217,13 +226,9 @@ class CliWallet(GroupedWallet):
 			fn=(f+'.group')
 			wal._write_accountgroup_arc(group_aids,fn,arc)
 			wal._write_metadata_arc(f,arc)
-
-
-
-
-	
 		
-
+def subwalletitems(wallet,selchains,selgroups):
+	return wallet.subwalletitems(selchains,selgroups)
 
 				
 					
