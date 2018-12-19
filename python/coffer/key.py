@@ -52,21 +52,16 @@ class PrivateKey(IndexBase):
 		return (self.privkeydata,self.is_compressed)
 
 class Address(IndexBase):
-	def __init__(self,addrdata,coin,addrtype,format_args=[],format_kwargs={}):
-		self.addrdata=addrdata
+	def __init__(self,coin,version,addrdata):
 		self.coin=coin
-		self.afargs=format_args
-		self.afkwargs=format_kwargs
-		#self.addrtype=addrtype			#TODO: remove addrtype from Address, it's not used anywhere except as an annotation 
-
+		self.version=version
+		self.addrdata=addrdata
+		
 	def _reftuple(self):
 		return (self.addrdata) #TODO should include coin and addrdata?
 		
 	def __str__(self):
-		if(self.coin is None):
-			return "genericaddrdata:%s" % (hexlify(self.addrdata))
-
-		return self.coin.format_addr(self,*self.afargs,**self.afkwargs)
+		return "genericaddr_%s:%02h_%s" % (self.coin.ticker else '',self.version,hexlify(self.addrdata))
 
 	def __repr__(self):
 		return 'Address(%s)' % (str(self))

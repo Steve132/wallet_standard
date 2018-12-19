@@ -8,6 +8,22 @@ import _segwitaddr
 
 #TODO switch all properties to true property implementations.
 #TODO: add ypub and slip132 implementations here
+
+#TODO make this part of Segwitaddresstemplate WPKH,UW,WSH,WPKH-SH WSH-SH
+"""	def format_addr(self,addr,*args,**kwargs):
+		v=addr.version
+		if(v in [self._b142p2wpkh_prefix,self._b142p2wsh_prefix,self._p2uw_prefix]):
+			if(not addr.get('bech32',False)):
+				logging.warning("Youve requested to format a segwit address without bech32.  This is specified in bip142, which is DEPRECATED!")
+				return super(SegwitCoin,self).format_addr(
+			else:
+				return _segwitaddr.encode(self.bech32_prefix,ord(addr.addrdata[1]),addr.addrdata[2:])
+		
+		return super(SegwitCoin,self).format_addr(addr,*args,**kwargs)
+
+"""
+
+
 class SegwitCoin(SatoshiCoin):
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix,bech32_prefix=None):
 
@@ -23,6 +39,7 @@ class SegwitCoin(SatoshiCoin):
 		#embed and bech32 should be considered to be one variable exclusive in that context
 		#we will still use bip142 support and use it as an internal representation to go in line with the serialized format from other address forms 
 		#this should be fine according to https://github.com/libbitcoin/libbitcoin/wiki/Altcoin-Version-Mappings
+		
 		if(not is_testnet):
 			self._b142p2wpkh_prefix=0x06
 			self._b142p2wsh_prefix=0x0A
@@ -94,7 +111,6 @@ class SegwitCoin(SatoshiCoin):
 		if(not embed_in_legacy and not bech32):
 			raise Exception("if embed_in_legacy is false and bech32 is false, that implies you are trying to activate BIP142 mode, which is deprecated")
 		
-
 		if(self.embed_in_legacy):
 			raise NotImplementedError
 		else:
@@ -106,17 +122,17 @@ class SegwitCoin(SatoshiCoin):
 				pass #TODO IMPLEMENT THIS"""
 
 	def address2scriptPubKey(self,addr):
-		version=ord(addr.addrdata[0])
+		version=addr.version
 		addrbytes=bytearray()
-		addrbytes+=addr.addrdata[1:]
+		addrbytes+=addr.addrdata
 		
 		if(version in [self._b142p2wpkh_prefix,self._b142p2wsh_prefix,self._p2uw_prefix]):
-			wversion=ord(addr.addrdata[1])
+			wversion=ord(addrbytes[0])
 			if(wversion > 16):
 				raise Exception("Invalid witness version. Must be in range 0-16")
 			opcode_wversion=OP_0 if wversion==0 else OP_1+(wversion-1)
 		
-			witnessprogram=addr.addrdata[3:]	#Bip142 internal representation, witness program is on byte 3.  
+			witnessprogram=addr.addrdata[2:]	#Bip142 internal representation, witness program is on byte 3.  
 			if(len(witnessprogram) > 40):
 				raise Exception("Witness program cannot be more than 40 bytes")
 			return bytearray([opcode_wversion,len(witnessprogram)])+witnessprogram
@@ -129,17 +145,15 @@ class SegwitCoin(SatoshiCoin):
 		if(witversion==0):
 			if(len(witprogram)==20):						#store the witness version into an address using bip142 serialization ONLY INTERNAL REPRESENTATION!
 				wvb142=self._b142p2wpkh_prefix
-				wtype='p2wpkh'
 			elif(len(witprogram)==32):
 				wvb142=self._b142p2wsh_prefix
-				wtype='p2wsh'
 			else:
 				raise Exception("Unexpected witness program length for version")
 		else:
 			wvb142=self._p2uw_prefix
-			wtype='p2uw'
 
-		return Address(bytearay([wvb142,witversion,0])+witprogram,wtype,self,format_kwargs={'bech32':True})
+		#return Address(bytearay([wvb142,witversion,0])+witprogram,wtype,self,format_kwargs={'bech32':True})
+		raise NotImplementedError
 
 	def scriptPubKey2address(self,scriptPubKey):
 		spk=scriptPubKey
@@ -152,17 +166,7 @@ class SegwitCoin(SatoshiCoin):
 		return super(SegwitCoin,self).scriptPubKey2address(scriptPubKey)
 
 	#############parsing and formatting
-	def format_addr(self,addr,*args,**kwargs):
-		v=ord(addr.addrdata[0])
-		if(v in [self._b142p2wpkh_prefix,self._b142p2wsh_prefix,self._p2uw_prefix]):
-			if(not addr.get('bech32',False)):
-				logging.warning("Youve requested to format a segwit address without bech32.  This is specified in bip142, which is DEPRECATED!")
-				return _base.bytes2base58c(addr.addrdata)
-			else:
-				return _segwitaddr.encode(self.bech32_prefix,ord(addr.addrdata[1]),addr.addrdata[2:])
-		
-		return super(SegwitCoin,self).format_addr(addr,*args,**kwargs)
-
+	
 	def parse_addr(self,addrstring):
 		bech32_result=_segwitaddr.decode(self.bech32_prefix, addrstring)
 		if(bech32_result==(None,None)):

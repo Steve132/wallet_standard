@@ -10,6 +10,27 @@ import impl._cashaddr as _cashaddr
 import impl._satoshitx as _satoshitx
 import impl._segwittx as _segwittx
 
+
+def make_cash_address_type(name,SatoshiAddressBase):
+	class CashAddressTemplate(SatoshiAddressBase):
+		def __init__(self,coin,addrdata,prefix=None,cashaddr=True):
+			super(CashAddressTemplate,self).__init__(coin,addrdata=addrdata)
+			self.cashaddr=cashaddr
+			self.prefix=prefix
+		
+		def __str__(self):
+			if(self.cashaddr):
+				return self.coin._write_cashaddr(self.version,self.addrdata,self.prefix)
+			else:
+				return super(CashAddressTemplate,self).__str__()
+	CashAddressTemplate.__name__=name
+	return CashAddressTemplate
+
+CashPKHAddress=make_cash_address_type('CashPKHAddress',SatoshiPKHAddress)
+CashSHAddress=make_cash_address_type('CashSHAddress',SatoshiSHAddress)
+CashPSAddress=make_cash_address_type('CashPSAddress',SatoshiPSAddress)
+
+	
 @ForkMixin.fork_decorator
 class BCH(SatoshiCoin,ForkMixin):
 	def __init__(self,is_testnet=False):
@@ -31,20 +52,22 @@ class BCH(SatoshiCoin,ForkMixin):
 			wif_prefix=wif_prefix,
 			sig_prefix=sig_prefix)
 
+		self._prefix_to_class={self.pkh_prefix:CashPKHAddress,self.sh_prefix:CashSHAddress,self.ps_prefix:CashPSAddress}
+
 	def fork_info(self):
 		return ForkMixin.ForkInfo(ticker='BTC',timestamp=1501593374,height=478558,forkUSD=277.0,ratio=1.0)
 	
 	#https://github.com/bitcoincashorg/spec/blob/master/cashaddr.md
 	def parse_cashaddr(self,addrstring):
 		prefix,version_int,payload=_cashaddr.decode(addrstring)
-		addrversions=[self.pkh_prefix,self.sh_prefix]
-		addrtypes=["p2pkh","p2sh"]
-		addrtype=addrtypes[version_int]
+		addrversions=[self.pkh_prefix,self.sh_prefix,self.ps_prefix]
+		addrclasses=[self._prefix_to_class[v] for v in addrversions] #TODO implement cashaddr p2ps
+		addrclass=addrclasses[version_int]
 		addrversion=addrversions[version_int]
+		
+		return addrclass(self,addrversion,bytearray()+payload,prefix=prefix)
 	
-		return Address(bytes(chr(addrversion))+payload,self,addrtype,format_kwargs={'cashaddr':True,'prefix':prefix})
-	
-	def _write_cashaddr(self,abytes,prefix=None):
+	def _write_cashaddr(self,version,addrdata,prefix):
 		tprefix=prefix
 		if(prefix==None or prefix==True or prefix==False or len(prefix)==0):
 			if(self.is_testnet):
@@ -52,20 +75,21 @@ class BCH(SatoshiCoin,ForkMixin):
 			else:
 				tprefix='bitcoincash'
 			
-		addrpayload=abytes[1:]
-		addrversion=abytes[0]
-		vint=[self.pkh_prefix,self.sh_prefix].index(ord(addrversion))
+		addrpayload=abytes
+		addrversion=version
+		vint=[self.pkh_prefix,self.sh_prefix,self.ps_prefix].index(version)
 		out=_cashaddr.encode(tprefix,vint,addrpayload)
 		if(prefix==None or prefix==False):
 			return out.split(':')[1]
 		
 		return out
 
-	def format_addr(self,addr,cashaddr=True,prefix=None,*args,**kwargs):
-		if(cashaddr):
-			return self._write_cashaddr(addr.addrdata,prefix)
-		else:
-			return super(BCH,self).format_addr(addr,*args,**kwargs)
+
+	#https://en.bitcoin.it/wiki/List_of_address_prefixes
+	def make_address(self,version,addrdata,cashaddr=True,prefix=None,*args,**kwargs):
+		if(not cashaddr):
+			return super(BCH,self).make_address(pubkeys,*args,**kwargs)	
+		return self._prefix_to_class[addr.version](self,add.addrdata,cashaddr=cashaddr,prefix=prefix)
 
 	def parse_addr(self,addrstring):
 		if(':' in addrstring):
@@ -108,10 +132,6 @@ class BCH(SatoshiCoin,ForkMixin):
 
 	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_FORKID|_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
 		return super(BCH,self).authorize_index(stxo,index,addr,redeem_param,nhashtype)
-
-
-
-
 
 
 def bitcoincash_sighash(stxo,input_index,nhashtype,script=None,amount=None,forkIdValue=0):

@@ -13,6 +13,28 @@ import logging
 #TODO: Refactor Address to be object oriented.  Because that's really the underlying problem here.  The different address types each do different things and the coin parses and formats each one.
 #there should be internal implementations for each one...this is really object oriented.  FOR NOW just implement p2sh and refactor later.
 
+class SatoshiAddress(Address):
+	def __init__(self,coin,version,addrdata):
+		super(SatoshiAddress,self).__init__(coin,version,addrdata)
+
+	def __str__(self):
+		if(self.version==self.ps_prefix):
+			return 'p2ps_'+hexlify(self.addrdata)
+		return _base.bytes2base58c(bytearray([self.version])+self.addrdata)
+		
+
+class SatoshiPKHAddress(SatoshiAddress):
+	def __init__(self,coin,addrdata):
+		super(SatoshiPKHAddress,self).__init__(coin,coin.pkh_prefix,addrdata)
+
+class SatoshiSHAddress(SatoshiAddress):
+	def __init__(self,coin,addrdata):
+		super(SatoshiSHAddress,self).__init__(coin,coin.sh_prefix,addrdata)
+
+class SatoshiPSAddress(SatoshiAddress):
+	def __init__(self,coin,addrdata):
+		super(SatoshiPSAddress,self).__init__(coin,coin.ps_prefix,addrdata)
+
 
 class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's codebase
 	def __init__(self,ticker,is_testnet,wif_prefix,pkh_prefix,sh_prefix,sig_prefix):
@@ -24,7 +46,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 		self.pkh_prefix=pkh_prefix
 		self.sh_prefix=sh_prefix
 		self.sig_prefix=sig_prefix
-		self._p2ps_prefix=0xFF		#USE this for an internal representation of a p2ps address
+		self.ps_prefix=0xFF		#USE this for an internal representation of a p2ps address
 
 	######INHERITED METHODS
 	@property
@@ -32,23 +54,23 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 		return 100000000.0
 
 	######PARSING AND FORMATTING
-	def format_addr(self,addr,*args,**kwargs):
-		if(ord(addr.addrdata[0])==self._p2ps_prefix):
-			return 'p2ps_'+hexlify(addr.addrdata[1:])
-		return _base.bytes2base58c(addr.addrdata)
 
-	def parse_addr(self,addrstring):
+	def make_addr(self,version,addrdata,*args,**kwargs):
+		if(v==self.pkh_prefix):
+			return SatoshiPKHAddress(self,byt[1:])
+		elif(v==self.sh_prefix):
+			return SatoshiSHAddress(self,byt[1:])
+		elif(v==self.ps_prefix):
+			return SatoshiPSAddress(self,byt[1:])
+		return Address(self,v,byt[1:])
+
+	def parse_addr(self,addrstring,*args,**kwargs):
 		if(addrstring[:5]=='p2ps_'):
-			return Address(bytearray([self._p2ps_prefix])+unhexlify(addrstring[5:]),self,'p2ps')
+			return SatoshiPSAddress(self,unhexlify(addrstring[5:]))
+
 		byt=_base.base58c2bytes(addrstring)
 		v=ord(byt[0])
-		if(v==self.pkh_prefix):
-			addrtype='p2sh'
-		elif(v==self.sh_prefix):
-			addrtype='p2pkh'
-		else:
-			addrtype='unknown_'
-		return Address(byt,self,addrtype)
+		return self.make_addr(v,byt,*args,**kwargs)
 
 	def format_privkey(self,privkey):
 		oarray=bytearray()
@@ -89,16 +111,16 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 
 
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def pubkeys2address(self,pubkeys,*args,**kwargs):
+	def pubkeys2address(self,pubkeys,bare_multisig=False,*args,**kwargs):
 		multisig=len(pubkeys) > 1
-		if(multisig):  #P2SH multisig
+		if(multisig):  #P2SH multisig TODO
 			raise NotImplementedError
 		else:
 			h160=_base.hash160(pubkeys[0].pubkeydata)
-			return Address(chr(self.pkh_prefix)+h160,self,'p2pkh',format_args=args,format_kwargs=kwargs)
+			return self.make_addr(self.pkh_version,h160,*args,**kwargs)
 
 	def address2scriptPubKey(self,addr):
-		version=ord(addr.addrdata[0])
+		version=addr.version
 		addrbytes=bytearray()
 		addrbytes+=addr.addrdata[1:]
 		
@@ -108,19 +130,19 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return bytearray([OP_DUP,OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 		elif(version==self.sh_prefix):
 			return bytearray([OP_HASH160,len(addrbytes)])+addrbytes+bytearray([OP_EQUAL])
-		elif(version==self._p2ps_prefix):
+		elif(version==self.ps_prefix):
 			return bytearray([])+addrbytes
 		else:
 			raise Exception("Invalid Address Version %h for address %s" % (version,addr))
 		raise NotImplementedError
 
-	def scriptPubKey2address(self,scriptPubKey):
+	def scriptPubKey2address(self,scriptPubKey,*args,**kwargs):
 		spk=scriptPubKey
 		if((spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
-			return Address(chr(self.pkh_prefix)+spk[3:23],self,'p2pkh')
+			return self.make_addr(self.pkh_prefix,spk[3:23],*args,**kwargs)
 		if((spk[0],spk[22])==(OP_HASH160,OP_EQUAL)):
-			return Address(chr(self.sh_prefix)+spk[2:22],self,'p2sh')
-		return Address(chr(self._p2ps_prefix)+spk,self,'p2ps')
+			return self.make_addr(self.sh_prefix),spk[2:22],*args,**kwargs)
+		return self.make_addr(self.ps_prefix,spk,*args,**kwargs)
 
 	def script2scriptPubKey(self,redeemScript,p2ps=False):
 		if(p2ps):
@@ -132,13 +154,13 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return scriptPubKey
 
 	def script2address(self,redeemScript=None,p2ps=False,*args,**kwargs):
-		sPK=self.script2scriptPubKey(redeemScript=redeemScript,p2ps,*args,**kwargs)
+		sPK=self.script2scriptPubKey(redeemScript=redeemScript,p2ps=p2ps,*args,**kwargs)
 		return self.scriptPubKey2address(sPK,*args,**kwargs)
 
 	#def _authorization2redeemScript(self
 
 	def authorization2scriptSig(self,authorization,src):
-		version=ord(src.address.addrdata[0])	
+		version=src.address.version	
 
 		pklist=authorization.get('pubs',[])
 		siglist=authorization.get('sigs',[])
@@ -283,11 +305,17 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			return False
 		
 		az=tx.authorizations[src.ref]
-		if('sigs' in az and 'pubs' in az and len(az['sigs']) > 0 and len(az['pubs']) > 0):
-			return True
+		if(src.address.version == self.pkh_version):
+			if('sigs' in az and 'pubs' in az and len(az['sigs']) > 0 and len(az['pubs']) > 0):
+				return True
 
-		#TODO: check signatures
+		if(src.address.version == self.sh_version):
+			if('redeem' in az and 'inputs' in az):
+				return True		
 
+		if(src.address.version == self.ps_version):
+			if('inputs' in az):
+				return True
 		return False
 		
 	##########################blockchain stuff

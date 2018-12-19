@@ -81,8 +81,8 @@ class Coin(bip32.Bip32,Chain,Denomination,IndexBase):
 	def parse_addr(self,addrstring):
 		raise NotImplementedError
 
-	def format_addr(self,addr,*args,**kwargs):
-		raise NotImplementedError
+	def format_addr(self,addr):
+		return str(addr)
 
 	def parse_privkey(self,pkstring):
 		pkshex=pkstring
