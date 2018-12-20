@@ -49,8 +49,9 @@ class GroupedWallet(Mapping):
 		for aid,acc in self.items():
 			gname=self.account2group[aid]
 			if(len(selgroups)==0 or gname in selgroups):
-				if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
-					yield gname,aid,acc
+				if(acc.coin.ticker not in coins.excludes):
+					if(len(selchains)==0 or acc.coin.ticker.lower() in selchains):
+						yield gname,aid,acc
 
 class CliAccount(object):
 	@staticmethod

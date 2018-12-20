@@ -23,6 +23,7 @@ def make_cash_address_type(name,SatoshiAddressBase):
 				return self.coin._write_cashaddr(self.version,self.addrdata,self.prefix)
 			else:
 				return super(CashAddressTemplate,self).__str__()
+
 	CashAddressTemplate.__name__=name
 	return CashAddressTemplate
 
@@ -63,9 +64,8 @@ class BCH(SatoshiCoin,ForkMixin):
 		addrversions=[self.pkh_prefix,self.sh_prefix,self.ps_prefix]
 		addrclasses=[self._prefix_to_class[v] for v in addrversions] #TODO implement cashaddr p2ps
 		addrclass=addrclasses[version_int]
-		addrversion=addrversions[version_int]
 		
-		return addrclass(self,addrversion,bytearray()+payload,prefix=prefix)
+		return addrclass(self,bytearray()+payload,prefix=prefix)
 	
 	def _write_cashaddr(self,version,addrdata,prefix):
 		tprefix=prefix
@@ -75,7 +75,7 @@ class BCH(SatoshiCoin,ForkMixin):
 			else:
 				tprefix='bitcoincash'
 			
-		addrpayload=abytes
+		addrpayload=addrdata
 		addrversion=version
 		vint=[self.pkh_prefix,self.sh_prefix,self.ps_prefix].index(version)
 		out=_cashaddr.encode(tprefix,vint,addrpayload)
@@ -86,10 +86,10 @@ class BCH(SatoshiCoin,ForkMixin):
 
 
 	#https://en.bitcoin.it/wiki/List_of_address_prefixes
-	def make_address(self,version,addrdata,cashaddr=True,prefix=None,*args,**kwargs):
+	def make_addr(self,version,addrdata,cashaddr=True,prefix=None,*args,**kwargs):
 		if(not cashaddr):
 			return super(BCH,self).make_address(pubkeys,*args,**kwargs)	
-		return self._prefix_to_class[addr.version](self,add.addrdata,cashaddr=cashaddr,prefix=prefix)
+		return self._prefix_to_class[version](self,addrdata,*args,**kwargs)
 
 	def parse_addr(self,addrstring):
 		if(':' in addrstring):
@@ -124,15 +124,14 @@ class BCH(SatoshiCoin,ForkMixin):
 		return MultiBlockchainInterface(self,subcoins).select()
 	
 
-	def _sighash(self,stxo,index,nhashtype):
+	def _sighash(self,stxo,index,nhashtype,add_forkid=True):
+		if(add_forkid):
+			nhashtype |= _satoshitx.SIGHASH_FORKID
+			
 		if(nhashtype & _satoshitx.SIGHASH_FORKID):
 			return bitcoincash_sighash(stxo,index,nhashtype,forkIdValue=0)
 		else:
 			return super(BCH,self)._sighash(self,stxo,index,nhashtype)
-
-	def authorize_index(self,stxo,index,addr,redeem_param,nhashtype=_satoshitx.SIGHASH_FORKID|_satoshitx.SIGHASH_ALL): #redeem_param is a private key for p2pk, a list of private keys for a multisig, redeemscript for p2sh, etc.
-		return super(BCH,self).authorize_index(stxo,index,addr,redeem_param,nhashtype)
-
 
 def bitcoincash_sighash(stxo,input_index,nhashtype,script=None,amount=None,forkIdValue=0):
 	nhashtype|=_satoshitx.SIGHASH_FORKID

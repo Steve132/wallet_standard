@@ -17,7 +17,7 @@ import _segwitaddr
 				logging.warning("Youve requested to format a segwit address without bech32.  This is specified in bip142, which is DEPRECATED!")
 				return super(SegwitCoin,self).format_addr(
 			else:
-				return _segwitaddr.encode(self.bech32_prefix,ord(addr.addrdata[1]),addr.addrdata[2:])
+				return _segwitaddr.encode(self.bech32_prefix,addr.addrdata[1],addr.addrdata[2:])
 		
 		return super(SegwitCoin,self).format_addr(addr,*args,**kwargs)
 
@@ -127,7 +127,7 @@ class SegwitCoin(SatoshiCoin):
 		addrbytes+=addr.addrdata
 		
 		if(version in [self._b142p2wpkh_prefix,self._b142p2wsh_prefix,self._p2uw_prefix]):
-			wversion=ord(addrbytes[0])
+			wversion=addrbytes[0]
 			if(wversion > 16):
 				raise Exception("Invalid witness version. Must be in range 0-16")
 			opcode_wversion=OP_0 if wversion==0 else OP_1+(wversion-1)
@@ -173,7 +173,7 @@ class SegwitCoin(SatoshiCoin):
 			return super(SegwitCoin,self).parse_addr(addrstring)	#this technically allows bip142
 	
 		witversion,witprogram=bech32_result
-		if(ord(witversion)!=0):
+		if(witversion!=0):
 			logging.warning("Unsupported witness version in address %s!" % (addrstring))
 		return self._address_from_wdata(witversion,witprogram)
 		

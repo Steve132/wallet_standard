@@ -46,7 +46,7 @@ class DestinationType(object):
  
 def _build_prefix(gname,aid,acc):
 	tick=acc.coin.ticker
-	prefix="%s/%s/%s(%s)" % (gname,tick,aid[:8],acc.label)
+	prefix='%s/%s/%s\t%s' % (gname,tick,aid[:8],acc.label)
 	return prefix
 
 

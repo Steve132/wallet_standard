@@ -86,12 +86,14 @@ def intlist2bytes(code_list):
     return bytes(output)
 
 def bytes2intlist(s):
+	
     output=[]
     if sys.version_info > (3, 0):
         return list(bytes(s))
     else:
+        s=bytearray()+s
         for code in s:
-            output += [ord(code)]
+            output += [code]
     return output
     
 

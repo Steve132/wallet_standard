@@ -55,6 +55,8 @@ def bytes2baseX(x,chs,extend=False):
 	return outchrs
 
 def baseX2bytes(x,chs):
+	#x=bytearray()+x
+	#chs=bytearray()+chs
 	xi=0
 	b=len(chs)
 	u=1
@@ -76,9 +78,10 @@ def _countleading(it,lead):
 	return cnt
 
 #IMPORTANT SPEC STUFF HERE
-_b58cs=b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+_b58cs="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 def bytes2base58c(byts):
-	nz=_countleading(byts,b'\x00')
+	byts=bytearray()+byts
+	nz=_countleading(byts,0)
 	csb=bytes2checksum(byts)
 	bytscs=byts+csb
 	
@@ -87,7 +90,8 @@ def bytes2base58c(byts):
 
 def base58c2bytes(b58str):
 	nz=_countleading(b58str,'1')
-	bytscs=b'\x00'*nz + baseX2bytes(b58str[nz:],_b58cs)
+	bytscs=bytearray()
+	bytscs+=b'\x00'*nz + baseX2bytes(b58str[nz:],_b58cs)
 	byts,cs=bytscs[:-4],bytscs[-4:]
 	csvalidated=bytes2checksum(byts)
 	#print(hexlify(cs),hexlify(csvalidated),hexlify(byts))

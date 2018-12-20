@@ -8,7 +8,7 @@ from impl._segwitcoin import *
 
 class BTC(SegwitCoin):
 	def __init__(self,is_testnet=False):
-
+		#self.supported=True
 		if(not is_testnet):
 			pkh_prefix=0x00
 			sh_prefix=0x05

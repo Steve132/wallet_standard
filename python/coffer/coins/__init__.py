@@ -42,3 +42,5 @@ def fromticker(ticker,*args,**kwargs):
 		
 	coincls=classfromticker(ticker)
 	return coincls(is_testnet=is_testnet,*args,**kwargs)
+
+excludes=set(['ETH','ETH-TEST'])

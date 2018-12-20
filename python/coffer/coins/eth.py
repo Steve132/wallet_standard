@@ -12,7 +12,7 @@ import impl._ethtx as _ethtx
 
 class ETH(_coin.Coin):
 	def __init__(self,is_testnet=False):
-		super(ETH,self).__init__(ticker='ETH',is_testnet=is_testnet) 
+		super(ETH,self).__init__(ticker='ETH',is_testnet=is_testnet)
 	
 	def pubkeys2address(self,pubkeys,*args,**kwargs):
 		if(len(pubkeys) > 1):

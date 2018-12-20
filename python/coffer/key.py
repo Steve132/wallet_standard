@@ -61,7 +61,7 @@ class Address(IndexBase):
 		return (self.addrdata) #TODO should include coin and addrdata?
 		
 	def __str__(self):
-		return "genericaddr_%s:%02h_%s" % (self.coin.ticker else '',self.version,hexlify(self.addrdata))
+		return "genericaddr_%s:%02h_%s" % (self.coin.ticker,self.version,hexlify(self.addrdata))
 
 	def __repr__(self):
 		return 'Address(%s)' % (str(self))
