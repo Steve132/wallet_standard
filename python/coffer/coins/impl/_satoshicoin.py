@@ -47,16 +47,11 @@ class SatoshiPKHAddress(SatoshiAddress):
 		return bytearray([OP_DUP,OP_HASH160,len(self.addrdata)])+self.addrdata+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 
 	def _authorization2scriptSig(self,authorization):
-		pklist=authorization.get('pub',[])
-		#siglist=authorization.get('scriptSig',[])
-			
-		multisig=len(pklist) > 1 or len(siglist) > 1
-
-		if(multisig):
-				raise Exception("p2pkh addresses never have multisig")
+		pk0h=authorization.get('pub',None)
+		sig0h=authorization.get('sig',None)
 		
-		sig0=unhexlify(siglist[0])
-		pk0=unhexlify(pklist[0])
+		sig0=unhexlify(sig0h)
+		pk0=unhexlify(pk0h)
 	
 		out=bytearray()
 		out+=bytearray([len(sig0)])
@@ -65,17 +60,19 @@ class SatoshiPKHAddress(SatoshiAddress):
 		out+=pk0
 		return out
 
-	def _authorize_index(satoshitxo,index,redeem_param):
+	def _authorize_index(self,satoshitxo,index,redeem_param):
 		if(isinstance(redeem_param,basestring)):
 			key=self.parse_privkey(redeem_param)
 		elif(isinstance(redeem_param,PrivateKey)):
 			key=redeem_param
-
-		signature,pubkey=self.coin._sigpair(key,satoshitxo,index,_satoshitx.SIGHASH_ALL)				
+		
+		signature,pubkey=self.coin._sigpair(key,satoshitxo,index,SIGHASH_ALL)	
+				
 		authorization={'sig':hexlify(signature),'pub':hexlify(pubkey)}
+
 		return authorization
 
-	def _is_authorized(az,tx,index):
+	def _is_authorized(self,az,tx,index):
 		if('sig' in az and 'pub' in az):
 			return True
 		return False
@@ -105,7 +102,7 @@ class SatoshiSHAddress(SatoshiAddress):
 		#	raise NotImplementedError
 		return {'inputs':hexlify(redeem_param['inputs']),'redeem':hexlify(redeem_param['redeem'])}
 
-	def _is_authorized(az,tx,index):
+	def _is_authorized(self,az,tx,index):
 		if('inputs' in az and 'redeem' in az):
 			return True
 		return False
@@ -255,7 +252,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 	def _sigpair(self,key,stxo,index,nhashtype):
 		sighash=self._sighash(stxo,index,nhashtype)
 		signature=key.sign(sighash,use_der=True)
-		signature+=chr(int(nhashtype) & 0xFF)
+		signature+=chr(int(nhashtype) & 0xFF)	    
 		pubkey=key.pub().pubkeydata
 		return signature,pubkey
 
@@ -355,6 +352,5 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 			estimated_post_sig_bytes=num_unsigned_sigs*bytes_per_signature
 		txbytes=len(unhexlify(self.format_tx(txo)))
 		return (txbytes+estimated_post_sig_bytes)*fee_amount_per_byte
-
 
 

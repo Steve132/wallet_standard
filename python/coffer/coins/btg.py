@@ -51,6 +51,11 @@ class BTG(SegwitCoin,ForkMixin):
 		subcoins.extend(insights)
 		return MultiBlockchainInterface(self,subcoins).select()
 
+
+	def _sigpair(self,key,stxo,index,nhashtype):
+		nhashtype |= _satoshitx.SIGHASH_FORKID
+		return super(BCH,self)._sigpair(key,stxo,index,nhashtype)
+
 	def _sighash(self,stxo,index,nhashtype):
 		return btg_sighash(stxo,index,nhashtype)
 		

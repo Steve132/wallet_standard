@@ -193,7 +193,10 @@ def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
 	out+=hashPrevouts
 	out+=hashSequence
 	out+=stxo.ins[input_index].outpoint.serialize()
+
+	out+=SVarInt(len(script)).serialize()
 	out+=script
+
 	if(amount is None):
 		a=stxo.ins[input_index].prevout.value
 	else:
@@ -203,10 +206,15 @@ def segwit_preimage(stxo,script,input_index,nhashtype,amount=None):
 	out+=hashOutputs;
 	out+=struct.pack('<L',stxo.locktime)
 	out+=struct.pack('<L',sho.nhashtype)
+	
 	return out
 	
 def segwit_sighash(stxo,input_index,nhashtype,script=None,amount=None):
 	if(script is None):
-		script=stxo.ins[input_index].prevout.scriptPubKey		#TODO: is this correct?  script seems to be the redeemScript for p2wsh and other stuff 
+		#if(p2pkh)USE for 
+		script=stxo.ins[input_index].prevout.scriptPubKey		#TODO: is this correct?  script seems to be the redeemScript for p2sh and other stuff YEAH use for p2sh when redeemScript includes CHECKSIG
+		#if(p2sh)
+			#script=stxo.ins[input_index].scriptSig[0] 				#redeemscript from scriptSig of input gives pubkey o
+ 
 	preimage=segwit_preimage(stxo,script,input_index,nhashtype,amount)
 	return dblsha256(preimage)

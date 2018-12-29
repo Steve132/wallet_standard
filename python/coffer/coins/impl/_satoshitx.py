@@ -136,8 +136,6 @@ class SInput(object):
 	def has_scriptSig(self):
 		return len(self.scriptSig) > 0
 		
-
-	
 class SOutput(object):
 	def __init__(self,value,scriptPubKey):
 		self.value=value
@@ -404,6 +402,6 @@ def legacy_preimage(stxo,script,input_index,nhashtype,amount):
 
 def legacy_sighash(stxo,input_index,nhashtype,script=None,amount=None):
 	if(script is None):
-		script=stxo.ins[input_index].prevout.scriptPubKey
+		script=stxo.ins[input_index].prevout.scriptPubKey  #TODO Error here?  Should this be a redeemScript?  This part is hella confusing...EDIT not really, when signing a p2sh script that uses standard redeemscript
 	preimage=legacy_preimage(stxo,script,input_index,nhashtype,amount)
 	return dblsha256(preimage)

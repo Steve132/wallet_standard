@@ -383,7 +383,7 @@ class Bip32Account(account.OnChainAddressSetAccount):
 				privkey=self.coin.descend(b32a.xpriv,p).key()
 				addr=self.coin.pubkeys2address([privkey.pub()],*self.bip32args,**self.bip32kwargs)
 				if(addr in addrstolookfor):
-					foundkeys[addr]=[privkey]
+					foundkeys[addr]=privkey			#TODO: redeem_param for this address type is just a private key.  Side note this needs to have a key2redeem or something
 					addrstolookfor.remove(addr)
 
 		authorizations=self.coin.sign_tx(txo,foundkeys)

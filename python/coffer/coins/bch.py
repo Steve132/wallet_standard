@@ -124,10 +124,16 @@ class BCH(SatoshiCoin,ForkMixin):
 		return MultiBlockchainInterface(self,subcoins).select()
 	
 
+	def _sigpair(self,key,stxo,index,nhashtype,add_forkid=True):
+		if(add_forkid):
+			nhashtype |= _satoshitx.SIGHASH_FORKID
+		
+		return super(BCH,self)._sigpair(key,stxo,index,nhashtype)
+
 	def _sighash(self,stxo,index,nhashtype,add_forkid=True):
 		if(add_forkid):
 			nhashtype |= _satoshitx.SIGHASH_FORKID
-			
+		
 		if(nhashtype & _satoshitx.SIGHASH_FORKID):
 			return bitcoincash_sighash(stxo,index,nhashtype,forkIdValue=0)
 		else:
@@ -136,10 +142,8 @@ class BCH(SatoshiCoin,ForkMixin):
 def bitcoincash_sighash(stxo,input_index,nhashtype,script=None,amount=None,forkIdValue=0):
 	nhashtype|=_satoshitx.SIGHASH_FORKID
 	nhashtype|= (forkIdValue & 0xFFFFFF) << 8;
-	if(script is None):
-		script=stxo.ins[input_index].prevout.scriptPubKey		#TODO: is this correct?  script seems to be the redeemScript for p2sh and other stuff 
-
-	preimage=_segwittx.segwit_preimage(stxo,script,input_index,nhashtype,amount)
-	return dblsha256(preimage)
+	
+	sh=_segwittx.segwit_sighash(stxo,input_index,nhashtype,script,amount)
+	return sh
 
 

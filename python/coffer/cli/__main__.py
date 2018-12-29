@@ -137,7 +137,7 @@ def cmd_build_tx(w,args):
 			unspents.update(incoming)
 			selected_unspent_mapping.setdefault(acc,set()).update(incoming)
 				
-	if(args.input_selection == "stdin"):
+	elif(args.input_selection == "stdin"):
 		inputs=set(sys.stdin)
 		for gname,aid,acc in gwiter:
 			wlist.append((gname,aid,acc))
@@ -185,10 +185,10 @@ def cmd_build_tx(w,args):
 	elif(args.fee is not None):
 		fee=args.fee
 	else:
-		#TODO: estimate fee
+		#estimatefee from blockchain
 		raise Exception("I don't understand the feerate to use")
 		
-	tx=coin.build_tx(unspents,outs,changeaddr,feerate=0.0087)
+	tx=coin.build_tx(unspents,outs,changeaddr,feerate=feerate,fee=fee)
 	logging.warning("The generated transaction has a fee of %f" % (tx.fee))
 	json.dump(tx.to_dict(),args.output_file)
 
