@@ -58,7 +58,7 @@ class Address(IndexBase):
 		self.addrdata=addrdata
 		
 	def _reftuple(self):
-		return (self.addrdata) #TODO should include coin and addrdata?
+		return (hexlify(self.addrdata)) #TODO should include coin and addrdata?
 		
 	def __str__(self):
 		return "genericaddr_%s:%02h_%s" % (self.coin.ticker,self.version,hexlify(self.addrdata))

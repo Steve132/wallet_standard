@@ -10,6 +10,11 @@ import mnemonic
 from key import *
 from pprint import pprint
 
+try:
+	from collections.abc import Iterable
+except:
+	from collections import Iterable
+
 def h(k):
 	return (abs(k) | (0x80000000)) & (0xFFFFFFFF)
 
@@ -302,10 +307,10 @@ def paths(pathstring,maxaddrs=1000000):
 			yield '/'.join(a)
 
 
-
-class XPubAddressSet(account.AddressSet):
+#TODO: an address set doesn't need to exist at all.  The coin can be specified here AND as a part of the OnChainAddressSet account type.
+class XPubAddresses(Iterable):
 	def __init__(self,coin,xkey,path="0/*",root=None,*bip32args,**bip32kwargs): #change is "1/*"
-		super(XPubAddressSet,self).__init__(coin)
+		self.coin=coin
 		xkey=coin.parse_xkey(xkey)
 		if(xkey.is_private()):
 			bip32_settings=coin.load_bip32_settings(prefix_private=xkey.version,*bip32args,**bip32kwargs)
@@ -329,18 +334,20 @@ class XPubAddressSet(account.AddressSet):
 		for vpub in self.xpub_iter():
 			yield self.xpub2address(vpub)
 
+	
+
 
 class Bip32Account(account.OnChainAddressSetAccount):
 	def __init__(self,coin,xkey,root,internal_path="1/*",external_path="0/*",authref=None,*bip32args,**bip32kwargs):
 		self.coin=coin
 		self.type='bip32'
 		self.root=root
-		internal=XPubAddressSet(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
-		external=XPubAddressSet(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
+		internal=XPubAddresses(coin,xkey=xkey,path=internal_path,root=root,*bip32args,**bip32kwargs)
+		external=XPubAddresses(coin,xkey=xkey,path=external_path,root=root,*bip32args,**bip32kwargs)
 		self.xpub=internal.xpub
 		self.bip32args=bip32args
 		self.bip32kwargs=bip32kwargs
-		super(Bip32Account,self).__init__(internal=[internal],external=[external],authref=authref)
+		super(Bip32Account,self).__init__(coin=coin,internal=[internal],external=[external],authref=authref)
 
 	def _reftuple(self):
 		idt=tuple([(ass.xpub,ass.coin.ticker,ass.path) for ass in self.internal+self.external])
@@ -378,8 +385,6 @@ class Bip32Account(account.OnChainAddressSetAccount):
 				if(addr in addrstolookfor):
 					foundkeys[addr]=[privkey]
 					addrstolookfor.remove(addr)
-
-		
 
 		authorizations=self.coin.sign_tx(txo,foundkeys)
 		for ref,a in authorizations.items():

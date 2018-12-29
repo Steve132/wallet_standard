@@ -34,7 +34,7 @@ CashPSAddress=make_cash_address_type('CashPSAddress',SatoshiPSAddress)
 	
 @ForkMixin.fork_decorator
 class BCH(SatoshiCoin,ForkMixin):
-	def __init__(self,is_testnet=False):
+	def __init__(self,is_testnet=False,ticker='BCH'):
 		
 		if(not is_testnet):
 			pkh_prefix=0x00
@@ -47,7 +47,7 @@ class BCH(SatoshiCoin,ForkMixin):
 
 		sig_prefix=b'Bitcoin Signed Message:\n'
 		
-		super(BCH,self).__init__('BCH',is_testnet=is_testnet,
+		super(BCH,self).__init__(ticker,is_testnet=is_testnet,
 			pkh_prefix=pkh_prefix,
 			sh_prefix=sh_prefix,
 			wif_prefix=wif_prefix,

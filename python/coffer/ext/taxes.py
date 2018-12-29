@@ -1,6 +1,6 @@
 from collections import namedtuple
 from copy import deepcopy
-
+#from cliwallet import subwalletitems
 
 #todo adapt this to correct filtering
 
@@ -171,7 +171,7 @@ def sync(witer,args):
 			sync_tx(tx)
 		
 def cmd_taxes(w,args):
-	print("TAXES!")
+	gwiter=subwalletitems(w,args.chain,args.group)
 
 def load_cli_subparsers(extsubparsers,parents_available):
 	taxes_parser=extsubparsers.add_parser('taxes',help="Modules and options related to taxes")

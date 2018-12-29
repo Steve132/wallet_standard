@@ -107,12 +107,12 @@ def cmd_add_account_auth(w,args):
 		for subauth in allauths:
 			auth_id=subauth.id()
 			if(p.pa is not None):
-				acc=subauth.to_account(coin,authid=auth_id,root=p.pa)
+				acc=subauth.to_account(coin,authref=auth_id,root=p.pa)
 				w.add_account(groupname=args.group,account=acc)
 			else:
-				for cov in _stdbip32.coverage(coin,args.accounts,'broad'):
+				for cov in _stdbip32.coverage(coin,args.account_numbers,'broad'):
 					label,path,internal_path,external_path,b32args,b32kwargs=cov
-					acc=subauth.to_account(coin,authid=auth_id,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
+					acc=subauth.to_account(coin,authref=auth_id,root=path,internal_path=internal_path,external_path=external_path,*b32args,**b32kwargs)
 					acc.label=label
 					w.add_account(groupname=args.group,account=acc)
 
@@ -137,6 +137,11 @@ def cmd_build_tx(w,args):
 			unspents.update(incoming)
 			selected_unspent_mapping.setdefault(acc,set()).update(incoming)
 				
+	if(args.input_selection == "stdin"):
+		inputs=set(sys.stdin)
+		for gname,aid,acc in gwiter:
+			wlist.append((gname,aid,acc))
+			
 	else:
 		raise Exception("Error, build_tx only supports the 'sweep' input selection method at the moment") #TODO: implement the other methods. #TODO refactor this into generic interactions
 

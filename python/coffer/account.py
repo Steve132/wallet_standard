@@ -13,21 +13,6 @@ try:
 except:
 	from collections.abc import Iterable
 
-class AddressSet(Iterable):
-	def __init__(self,coin):
-		self.coin=coin
-
-	def __iter__(self):
-		not ImplementedError
-
-class SetAddressSet(AddressSet):
-	def __init__(self,coin,addresses):
-		super(SingleAddress,self).__init__(coin)
-		self.addrset=addrset
-
-	def __iter__(self):
-		return itertools.cycle(self.addrset)
-
 class Account(UuidBase):
 	def __init__(self,coin,authref=None):
 		self.coin=coin
@@ -99,13 +84,16 @@ def gaptakewhile(it,predicate,gap):
 			if(gap <= 0):
 				break
 
+#TODO: Refactor this so that change addresses aren't always enabled for this (inherit to two calsses)
 class OnChainAddressSetAccount(Account):
-	def __init__(self,external,internal=[],authref=None,gap=20):
-		coincmps=set([x.coin for x in internal+external])
-		if(len(coincmps) != 1):
-			raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
+	def __init__(self,coin,external,internal=[],authref=None,gap=20):
+		#coincmps=set([x.coin for x in internal+external])
+		#if(len(coincmps) != 1):
+		#	raise Exception("Account requires change addresses blockchain and all public address blockchains to be the same")
+		#if(coincmps[0] != coin):
+		#	raise Exception("Account requires onchain address sets to be the same")
 
-		super(OnChainAddressSetAccount,self).__init__(external[0].coin,authref)
+		super(OnChainAddressSetAccount,self).__init__(coin,authref)
 		
 		self.external=external
 		self.internal=internal if len(internal) > 0 else external
@@ -155,4 +143,6 @@ class OnChainAddressSetAccount(Account):
 
 	def authtx(self,txo,auth,maxsearch=1000):
 		raise NotImplementedError	
+
+
 

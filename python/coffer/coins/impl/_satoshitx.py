@@ -5,6 +5,7 @@ import _satoshiscript
 from coffer._base import dblsha256
 import coffer.transaction as transaction
 
+
 #https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/networks.js
 #https://github.com/iancoleman/bip39/blob/master/src/js/bitcoinjs-extensions.js
 
@@ -186,8 +187,8 @@ class STransaction(object):
 
 	def serialize(self):
 		txo=self
-		if(isinstance(txo,SWitnessTransaction)):
-			return SWitnessTransaction._sc_serialize(txo)
+		#if(isinstance(txo,SWitnessTransaction)):
+		#	return SWitnessTransaction._sc_serialize(txo)
 		out=bytearray()
 		out+=struct.pack('<L',txo.version)
 		out+=SVarInt(len(txo.ins)).serialize()
@@ -203,8 +204,8 @@ class STransaction(object):
 	def _sc_deserialize(sio):
 		version=struct.unpack('<L',sio.read(4))[0]
 		num_ins=SVarInt._sc_deserialize(sio)
-		if(num_ins==0):	#this is a witness transaction
-			return SWitnessTransaction._sc_deserialize(StringIO(sio.getvalue()))
+		#if(num_ins==0):	#this is a witness transaction
+		#	return SWitnessTransaction._sc_deserialize(StringIO(sio.getvalue()))
 		ins=[SInput._sc_deserialize(sio) for k in range(num_ins)]
 		num_outs=SVarInt._sc_deserialize(sio)
 		outs=[SOutput._sc_deserialize(sio) for k in range(num_outs)]

@@ -42,7 +42,7 @@ class SatoshiPKHAddress(SatoshiAddress):
 		super(SatoshiPKHAddress,self).__init__(coin,coin.pkh_prefix,addrdata)
 
 	def _scriptPubKey(self):
-		if(len(addrbytes) != 20):
+		if(len(self.addrdata) != 20):
 			raise Exception("legacy Address does not have 20 bytes")
 		return bytearray([OP_DUP,OP_HASH160,len(self.addrdata)])+self.addrdata+bytearray([OP_EQUALVERIFY,OP_CHECKSIG])
 
@@ -67,11 +67,11 @@ class SatoshiPKHAddress(SatoshiAddress):
 
 	def _authorize_index(satoshitxo,index,redeem_param):
 		if(isinstance(redeem_param,basestring)):
-			key=self.parse_privkey(privkey)
+			key=self.parse_privkey(redeem_param)
 		elif(isinstance(redeem_param,PrivateKey)):
 			key=redeem_param
 
-		signature,pubkey=self._sigpair(key,satoshitxo,index,_satoshitx.SIGHASH_ALL)				
+		signature,pubkey=self.coin._sigpair(key,satoshitxo,index,_satoshitx.SIGHASH_ALL)				
 		authorization={'sig':hexlify(signature),'pub':hexlify(pubkey)}
 		return authorization
 
@@ -87,11 +87,23 @@ class SatoshiSHAddress(SatoshiAddress):
 	def _scriptPubKey(self):
 		return bytearray([OP_HASH160,len(self.addrdata)])+self.addrdata+bytearray([OP_EQUAL])
 
-	def _authorization2scriptSig(self,authorization):
+	def _authorization2scriptSig(self,authorization):			#TODO refactor all script stuff to use script type and serialize/compile from lists of bytes objects
 		out=bytearray()
-		out+=unhexlify(authorization.get('inputs',bytearray()))
-		out+=unhexlify(authorization.get('redeem',bytearray()))
+		inputs=authorization.get('inputs',bytearray())
+		out+=unhexlify(inputs)
+		redeem=unhexlify(authorization.get('redeem',bytearray()))
+		out+=bytearray([len(redeem)])
+		out+=redeem
 		return out
+
+	def _authorize_index(self,satoshitxo,index,redeem_param):
+		#if(isinstance(redeem_param,basestring)):
+		#	r
+		#if(isinstance(redeem_param,dict)):
+		#	raise NotImplementedError
+		#if(isinstance(redeem_param,list)):
+		#	raise NotImplementedError
+		return {'inputs':hexlify(redeem_param['inputs']),'redeem':hexlify(redeem_param['redeem'])}
 
 	def _is_authorized(az,tx,index):
 		if('inputs' in az and 'redeem' in az):
@@ -110,11 +122,14 @@ class SatoshiPSAddress(SatoshiAddress):
 			raise NotImplementedError #bare multisig TODO  #https://bitcoin.org/en/glossary/multisig
 		return unhexlify(authorization.get('inputs',bytearray()))
 
-	def _is_authorized(az,tx,index):
+	def _is_authorized(self,az,tx,index):
 		if('inputs' in az):
 			return True
 
 		return False
+
+	def _authorize_index(self,satoshitxo,index,redeem_param):
+		return {'inputs':hexlify(redeem_param['inputs'])}
 
 
 class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's codebase
@@ -207,9 +222,10 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 
 	def scriptPubKey2address(self,scriptPubKey,*args,**kwargs):
 		spk=scriptPubKey
-		if((spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
+
+		if(len(spk) > 24 and (spk[0],spk[1],spk[23],spk[24])==(OP_DUP,OP_HASH160,OP_EQUALVERIFY,OP_CHECKSIG)):
 			return self.make_addr(self.pkh_prefix,spk[3:23],*args,**kwargs)
-		if((spk[0],spk[22])==(OP_HASH160,OP_EQUAL)):
+		if(len(spk) > 22 and (spk[0],spk[22])==(OP_HASH160,OP_EQUAL)):
 			return self.make_addr(self.sh_prefix,spk[2:22],*args,**kwargs)
 		return self.make_addr(self.ps_prefix,spk,*args,**kwargs)
 
@@ -229,7 +245,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 	#def _authorization2redeemScript(self
 
 	def authorization2scriptSig(self,authorization,src):
-		return src.addr.authorization2scriptSig(authorization)
+		return src.address._authorization2scriptSig(authorization)
 		
 	#################BUILDING AND SIGNING
 
@@ -251,7 +267,7 @@ class SatoshiCoin(Coin,ScriptableMixin): #a coin with code based on satoshi's co
 		satoshitxo=self.txo2internal(tx)
 		outauthorizations={}
 
-		for addr,redeem_param in addr2keys.items():
+		for addr,redeem_param in addr2redeem.items():
 			naddr=addr
 			if(isinstance(naddr,basestring)):
 				naddr=self.parse_addr(naddr)
